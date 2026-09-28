@@ -1,5 +1,6 @@
 import pyarrow.parquet as pq
 
+from atlas.sitedata.fixtures import fixture_tables
 from atlas.sitedata.tables import BADGES, LANES, SITE_TABLES, write_fixtures
 
 
@@ -55,6 +56,32 @@ def test_findings_statuses_and_finding_evidence_consistency(tmp_path):
         assert len(rows) == f["n_comments"][i]
         contra = [j for j in rows if fe["role"][j] == "contradicting"]
         assert len(contra) == f["contradicting_n"][i]
+
+
+def test_breadth_shares_sum_to_one_per_period():
+    rows = fixture_tables(0)["domain_share"].to_pylist()
+    breadth = [r for r in rows if r["lane"] == "breadth"]
+    by_period = {}
+    for r in breadth:
+        by_period.setdefault(r["period"], []).append(r)
+    for period_rows in by_period.values():
+        assert len(period_rows) == 8
+        shares = [r["weighted_share"] for r in period_rows]
+        assert all(s is not None for s in shares)
+        assert abs(sum(shares) - 1) < 1e-9
+        total = f"{sum(r['n'] for r in period_rows):,}"
+        for r in period_rows:
+            assert total in r["denominator"]
+    for r in rows:
+        if r["lane"] == "discovery":
+            assert r["weighted_share"] is None
+
+
+def test_breadth_intervals_bracket_the_share():
+    rows = fixture_tables(0)["domain_share"].to_pylist()
+    for r in rows:
+        if r["lane"] == "breadth" and not r["too_few"]:
+            assert r["ci_low"] <= r["weighted_share"] <= r["ci_high"]
 
 
 def test_no_text_or_author_columns():

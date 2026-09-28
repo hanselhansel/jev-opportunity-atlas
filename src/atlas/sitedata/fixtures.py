@@ -56,28 +56,11 @@ def _domain_share(rng: np.random.Generator) -> dict[str, list]:
         "too_few", "badge", "run_id", "question_set", "denominator",
     )}
 
-    def emit(lane, domain, period, n):
+    def emit(lane, domain, period, n, share, low, high, too_few, badge, denom):
         cols["lane"].append(lane)
         cols["domain"].append(domain)
         cols["period"].append(period)
         cols["n"].append(int(n))
-        if lane == "discovery":
-            share = low = high = None
-            too_few = False
-            badge = "measured"
-            denom = "of the ranked discovery evidence set"
-        elif domain == "Domain H":
-            share = low = high = None
-            too_few = True
-            badge = "estimated"
-            denom = "of 1,200 weighted breadth comments"
-        else:
-            share = float(rng.uniform(0.02, 0.3))
-            spread = float(rng.uniform(0.01, 0.04))
-            low, high = max(0.0, share - spread), share + spread
-            too_few = False
-            badge = "estimated"
-            denom = "of 1,200 weighted breadth comments"
         cols["weighted_share"].append(share)
         cols["ci_low"].append(low)
         cols["ci_high"].append(high)
@@ -88,15 +71,48 @@ def _domain_share(rng: np.random.Generator) -> dict[str, list]:
         cols["denominator"].append(denom)
 
     for lane in ("breadth", "discovery"):
-        for domain in DOMAINS:
-            total = 0
-            for period in PERIODS:
-                n = int(rng.integers(2, 25)) if domain == "Domain H" else int(
+        counts = {
+            d: [
+                int(rng.integers(2, 25)) if d == "Domain H" else int(
                     rng.integers(30, 200)
                 )
-                emit(lane, domain, period, n)
-                total += n
-            emit(lane, domain, "all", total)
+                for _ in PERIODS
+            ]
+            for d in DOMAINS
+        }
+        totals = {
+            p: sum(counts[d][i] for d in DOMAINS)
+            for i, p in enumerate(PERIODS)
+        }
+        totals["all"] = sum(totals.values())
+        for domain in DOMAINS:
+            for i, period in enumerate(PERIODS + ["all"]):
+                n = counts[domain][i] if period != "all" else sum(counts[domain])
+                if lane == "discovery":
+                    emit(
+                        lane, domain, period, n, None, None, None, False,
+                        "measured", "of the ranked discovery evidence set",
+                    )
+                else:
+                    share = n / totals[period]
+                    too_few = domain == "Domain H"
+                    if too_few:
+                        low = high = None
+                    else:
+                        spread = float(rng.uniform(0.005, 0.02))
+                        low, high = (
+                            max(0.0, share - spread),
+                            min(1.0, share + spread),
+                        )
+                    denom = (
+                        f"all {totals[period]:,} breadth comments"
+                        + ("" if period == "all" else f" in {period}")
+                        + f" across {len(DOMAINS)} domains"
+                    )
+                    emit(
+                        lane, domain, period, n, share, low, high, too_few,
+                        "estimated", denom,
+                    )
     return cols
 
 
