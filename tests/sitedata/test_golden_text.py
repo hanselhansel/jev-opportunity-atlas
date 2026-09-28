@@ -32,6 +32,7 @@ def test_js_port_matches_golden():
         ["node", str(REPO / "site" / "scripts" / "check-golden.mjs")],
         capture_output=True,
         text=True,
+        check=False,
     )
     assert r.returncode == 0, r.stderr
     assert "golden: ok" in r.stdout
