@@ -3,28 +3,18 @@
 ```js
 import {banner} from "./components/badges.js";
 import {onHashChange, readState, setState} from "./components/filters.js";
-import {rowsOf} from "./components/data.js";
+import {metaOf, rowsOf} from "./components/data.js";
 import {responsiveTable} from "./components/table.js";
 import {commentCard} from "./components/comment.js";
-
-const esc = (s) => String(s).replaceAll("'", "''");
 ```
 
 ```js
-const db = DuckDBClient.of({
-  evidence: FileAttachment("data/evidence.parquet"),
-  finding_evidence: FileAttachment("data/finding_evidence.parquet"),
-  meta: FileAttachment("data/meta.parquet"),
-});
+const meta = metaOf(await FileAttachment("data/meta.parquet").parquet());
 ```
 
 ```js
-const meta = Object.fromEntries(
-  rowsOf(await db.query("select key, value from meta")).map((r) => [r.key, r.value])
-);
+display(banner(meta));
 ```
-
-${banner(meta)}
 
 ```js
 const state0 = readState(location.hash);
@@ -40,9 +30,14 @@ const lane = view(laneInput);
 ```
 
 ```js
-const domains = rowsOf(
-  await db.query("select distinct domain from evidence order by domain")
-).map((r) => r.domain);
+const evidence = FileAttachment("data/evidence.parquet").parquet().then(
+  (t) => ({rows: rowsOf(t), error: null}),
+  (error) => ({rows: [], error})
+);
+```
+
+```js
+const domains = [...new Set(evidence.rows.map((r) => r.domain))].sort();
 const domainInput = Inputs.select(["", ...domains], {
   label: "Domain",
   value: state0.domain ?? "",
@@ -115,17 +110,21 @@ const weights = Generators.observe((change) => {
 ```
 
 ```js
-const rows = rowsOf(
-  await db.query(
-    `select * from evidence where lane = '${esc(lane)}'` +
-      (domain ? ` and domain = '${esc(domain)}'` : "") +
-      (hashState.subtopic ? ` and subtopic = '${esc(hashState.subtopic)}'` : "")
-  )
+const results = display(html`<div class="evidence-results">
+  <p class="skeleton">Loading evidence…</p></div>`);
+```
+
+```js
+const filtered = evidence.rows.filter(
+  (r) =>
+    r.lane === lane &&
+    (!domain || r.domain === domain) &&
+    (!hashState.subtopic || r.subtopic === hashState.subtopic)
 );
 ```
 
 ```js
-const scored = rows
+const scored = filtered
   .map((r) => {
     const p = JSON.parse(r.probabilities_json ?? "{}");
     const terms = [
@@ -145,10 +144,17 @@ const scored = rows
 ```
 
 ```js
-if (!scored.length) {
-  display(html`<p><em>No evidence rows for this lane and domain.</em></p>`);
+if (evidence.error) {
+  results.replaceChildren(
+    html`<p class="state-error">Could not load evidence data:
+      ${evidence.error.message}</p>`
+  );
+} else if (!scored.length) {
+  results.replaceChildren(
+    html`<p><em>No evidence rows for this lane and domain.</em></p>`
+  );
 } else {
-  display(
+  results.replaceChildren(
     responsiveTable(scored.slice(0, 200), [
       {key: "comment_id", label: "comment"},
       {key: "domain"},
@@ -172,14 +178,9 @@ if (!scored.length) {
 ```
 
 ```js
-const selected =
-  hashState.comment && Number.isFinite(Number(hashState.comment))
-    ? rowsOf(
-        await db.query(
-          `select * from evidence where comment_id = ${Number(hashState.comment)}`
-        )
-      )[0]
-    : null;
+const selected = hashState.comment
+  ? evidence.rows.find((r) => String(r.comment_id) === hashState.comment) ?? null
+  : null;
 ```
 
 ```js

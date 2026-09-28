@@ -2,15 +2,16 @@
 
 ```js
 import {banner} from "./components/badges.js";
+import {metaOf} from "./components/data.js";
 ```
 
 ```js
-const meta = Object.fromEntries(
-  (await FileAttachment("data/meta.parquet").parquet()).map((r) => [r.key, r.value])
-);
+const meta = metaOf(await FileAttachment("data/meta.parquet").parquet());
 ```
 
-${banner(meta)}
+```js
+display(banner(meta));
+```
 
 ## What this is
 

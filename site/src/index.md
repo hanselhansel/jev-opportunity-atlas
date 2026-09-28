@@ -3,7 +3,7 @@
 ```js
 import {banner, badge} from "./components/badges.js";
 import {chart} from "./components/chart.js";
-import {rowsOf} from "./components/data.js";
+import {metaOf, rowsOf} from "./components/data.js";
 ```
 
 ```js
@@ -18,7 +18,7 @@ Promise.all([
 ])
   .then(([metaT, findingsT, shareT]) =>
     render(
-      Object.fromEntries(rowsOf(metaT).map((r) => [r.key, r.value])),
+      metaOf(metaT),
       rowsOf(findingsT),
       rowsOf(shareT)
     )

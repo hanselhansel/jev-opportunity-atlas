@@ -230,6 +230,13 @@
   font-style: italic;
 }
 
+.state-error {
+  color: var(--atlas-fg);
+  border: 1px solid var(--badge-unknown);
+  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
+}
+
 .breadcrumbs {
   font-size: var(--fs-small);
   color: var(--atlas-muted);
