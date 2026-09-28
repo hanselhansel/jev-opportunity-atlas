@@ -3,6 +3,7 @@
 ```js
 import {banner, badge} from "./components/badges.js";
 import {chart} from "./components/chart.js";
+import {rowsOf} from "./components/data.js";
 ```
 
 ```js
@@ -15,11 +16,11 @@ Promise.all([
   FileAttachment("data/findings.parquet").parquet(),
   FileAttachment("data/domain_share.parquet").parquet(),
 ])
-  .then(([metaRows, findings, domainShare]) =>
+  .then(([metaT, findingsT, shareT]) =>
     render(
-      Object.fromEntries(metaRows.map((r) => [r.key, r.value])),
-      findings,
-      domainShare
+      Object.fromEntries(rowsOf(metaT).map((r) => [r.key, r.value])),
+      rowsOf(findingsT),
+      rowsOf(shareT)
     )
   )
   .catch((e) =>

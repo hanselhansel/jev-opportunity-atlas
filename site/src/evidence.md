@@ -3,8 +3,11 @@
 ```js
 import {banner} from "./components/badges.js";
 import {onHashChange, readState, setState} from "./components/filters.js";
+import {rowsOf} from "./components/data.js";
 import {responsiveTable} from "./components/table.js";
 import {commentCard} from "./components/comment.js";
+
+const esc = (s) => String(s).replaceAll("'", "''");
 ```
 
 ```js
@@ -17,7 +20,7 @@ const db = DuckDBClient.of({
 
 ```js
 const meta = Object.fromEntries(
-  (await db.query("select key, value from meta")).map((r) => [r.key, r.value])
+  rowsOf(await db.query("select key, value from meta")).map((r) => [r.key, r.value])
 );
 ```
 
@@ -37,7 +40,7 @@ const lane = view(laneInput);
 ```
 
 ```js
-const domains = (
+const domains = rowsOf(
   await db.query("select distinct domain from evidence order by domain")
 ).map((r) => r.domain);
 const domainInput = Inputs.select(["", ...domains], {
@@ -45,16 +48,37 @@ const domainInput = Inputs.select(["", ...domains], {
   value: state0.domain ?? "",
   format: (d) => d || "All domains",
 });
-domainInput.addEventListener("input", () =>
-  setState({domain: domainInput.value || null})
+// A trusted (user) change clears deeper breadcrumb levels; a programmatic set
+// from a hash restore keeps them.
+domainInput.addEventListener("input", (e) =>
+  setState(
+    e.isTrusted
+      ? {domain: domainInput.value || null, subtopic: null, comment: null}
+      : {domain: domainInput.value || null}
+  )
 );
 const domain = view(domainInput);
 ```
 
 ```js
 onHashChange((s) => {
-  if (s.lane !== laneInput.value) laneInput.value = s.lane;
-  if ((s.domain ?? "") !== domainInput.value) domainInput.value = s.domain ?? "";
+  if (s.lane !== laneInput.value) {
+    laneInput.value = s.lane;
+    laneInput.dispatchEvent(new Event("input", {bubbles: true}));
+  }
+  if ((s.domain ?? "") !== domainInput.value) {
+    domainInput.value = s.domain ?? "";
+    domainInput.dispatchEvent(new Event("input", {bubbles: true}));
+  }
+});
+```
+
+```js
+const hashState = Generators.observe((change) => {
+  const on = () => change(readState(location.hash));
+  addEventListener("hashchange", on);
+  on();
+  return () => removeEventListener("hashchange", on);
 });
 ```
 
@@ -91,12 +115,13 @@ const weights = Generators.observe((change) => {
 ```
 
 ```js
-const rows = (
+const rows = rowsOf(
   await db.query(
-    `select * from evidence where lane = '${lane}'` +
-      (domain ? ` and domain = '${String(domain).replaceAll("'", "''")}'` : "")
+    `select * from evidence where lane = '${esc(lane)}'` +
+      (domain ? ` and domain = '${esc(domain)}'` : "") +
+      (hashState.subtopic ? ` and subtopic = '${esc(hashState.subtopic)}'` : "")
   )
-).map((r) => ({...r}));
+);
 ```
 
 ```js
@@ -147,20 +172,14 @@ if (!scored.length) {
 ```
 
 ```js
-const hashState = Generators.observe((change) => {
-  const on = () => change(readState(location.hash));
-  addEventListener("hashchange", on);
-  on();
-  return () => removeEventListener("hashchange", on);
-});
-```
-
-```js
-const selected = hashState.comment
-  ? (await db.query(
-      `select * from evidence where comment_id = ${Number(hashState.comment)}`
-    ))[0]
-  : null;
+const selected =
+  hashState.comment && Number.isFinite(Number(hashState.comment))
+    ? rowsOf(
+        await db.query(
+          `select * from evidence where comment_id = ${Number(hashState.comment)}`
+        )
+      )[0]
+    : null;
 ```
 
 ```js
