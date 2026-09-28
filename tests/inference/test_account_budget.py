@@ -5,8 +5,8 @@ import sys
 
 import pytest
 
+from atlas import cli, paths
 from atlas import contracts as c
-from atlas import paths
 from atlas.inference.budget import BudgetExceeded, BudgetGuard, BudgetLocked
 from atlas.inference.ledger import Ledger
 
@@ -192,3 +192,47 @@ def test_account_total_read_from_config(tmp_path, monkeypatch):
         assert g.account_total == 0.5
     finally:
         g.close()
+
+
+def test_jev_budget_read_only(tmp_path, monkeypatch, capsys):
+    runs = tmp_path / "runs"
+    configs = tmp_path / "configs"
+    configs.mkdir()
+    (configs / "budgets.toml").write_text(
+        "account_total = 0.001\n"
+        "pilot = 0.0005\n"
+        "screen = 6.5\n"
+        "worst_case_tokens_per_unknown_attempt = 8000\n",
+        encoding="utf-8",
+    )
+    (configs / "prices.toml").write_text(
+        '[[price]]\nversion = "v"\nmodel = "jev-1.13.0"\n'
+        "input_usd_per_million = 0.042\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(paths, "RUNS", runs)
+    monkeypatch.setattr(paths, "CONFIGS", configs)
+    _run_dir_with_rows(
+        runs, "A", "pilot", [ledger_row(run_id="A", cost_usd=0.0002)]
+    )
+    _run_dir_with_rows(
+        runs, "B", "mystery", [ledger_row(run_id="B", cost_usd=0.0001)]
+    )
+    # read-only: must work while a run holds both locks
+    g = _guard("screen", account_total=0.001)
+    try:
+        args = cli.build_parser().parse_args(["jev", "budget"])
+        args.func(args)
+    finally:
+        g.close()
+    out = json.loads(capsys.readouterr().out)
+    assert out["names"]["pilot"]["cap_usd"] == 0.0005
+    assert out["names"]["pilot"]["calculated_usd"] == pytest.approx(0.0002)
+    assert out["names"]["pilot"]["committed_usd"] == pytest.approx(0.0002)
+    assert out["names"]["pilot"]["remaining_usd"] == pytest.approx(0.0003)
+    assert out["names"]["screen"]["calculated_usd"] == 0.0
+    assert out["names"]["mystery"]["cap_usd"] is None
+    assert out["names"]["mystery"]["remaining_usd"] is None
+    assert out["account"]["total_usd"] == 0.001
+    assert out["account"]["committed_usd"] == pytest.approx(0.0003)
+    assert out["account"]["remaining_usd"] == pytest.approx(0.0007)

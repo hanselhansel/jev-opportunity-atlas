@@ -2,8 +2,8 @@ import json
 
 import pytest
 
+from atlas import cli, paths
 from atlas import contracts as c
-from atlas import paths
 from atlas.inference.balance import balance_path, reconcile, record_balance
 from atlas.inference.ledger import Ledger
 
@@ -123,3 +123,35 @@ def test_reconcile_unexplained(tmp_path, monkeypatch):
     assert iv["provider_delta"] == pytest.approx(5.0)
     assert iv["calculated"] == 0.0
     assert iv["status"] == "unexplained"
+
+
+def test_jev_balance_record_and_reconcile(tmp_path, monkeypatch, capsys):
+    runs = tmp_path / "runs"
+    configs = tmp_path / "configs"
+    configs.mkdir()
+    (configs / "budgets.toml").write_text(
+        "account_total = 25.0\nworst_case_tokens_per_unknown_attempt = 8000\n",
+        encoding="utf-8",
+    )
+    (configs / "prices.toml").write_text(
+        '[[price]]\nversion = "v"\nmodel = "jev-1.13.0"\n'
+        "input_usd_per_million = 0.042\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(paths, "RUNS", runs)
+    monkeypatch.setattr(paths, "CONFIGS", configs)
+    args = cli.build_parser().parse_args(
+        ["jev", "balance", "record", "25.0", "--note", "start"]
+    )
+    args.func(args)
+    out = json.loads(capsys.readouterr().out)
+    assert out["usd"] == 25.0 and out["note"] == "start"
+    args = cli.build_parser().parse_args(["jev", "balance", "record", "20.0"])
+    args.func(args)
+    capsys.readouterr()
+    args = cli.build_parser().parse_args(["jev", "balance", "reconcile"])
+    args.func(args)
+    out = json.loads(capsys.readouterr().out)
+    assert len(out) == 1
+    assert out[0]["provider_delta"] == pytest.approx(5.0)
+    assert out[0]["status"] == "unexplained"

@@ -1,7 +1,11 @@
+import json
 import math
 
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
+from atlas import cli, paths
 from atlas import contracts as c
 from atlas.inference.estimate import (
     body_bytes,
@@ -114,3 +118,29 @@ def test_rows_without_items_or_calculated_are_skipped(tmp_path):
     cal = fit_calibration([lp], [ITEMS[0]])  # only one item keyed
     for label in MEASURED:
         assert cal[label]["n"] == 1
+
+
+def test_jev_estimate_cli(tmp_path, monkeypatch, capsys):
+    runs = tmp_path / "runs"
+    monkeypatch.setattr(paths, "RUNS", runs)
+    _write_ledger(runs / "m1" / "ledger.jsonl")
+    (runs / "m1" / "run_manifest.json").write_text(
+        json.dumps({"run_id": "m1", "budget": "measure"})
+    )
+    items_path = tmp_path / "items.parquet"
+    pq.write_table(
+        pa.table({k: [it[k] for it in ITEMS] for k in ITEMS[0]}), items_path
+    )
+    args = cli.build_parser().parse_args(
+        ["jev", "estimate", "--set", "screen@1", "--items", str(items_path)]
+    )
+    args.func(args)
+    out = json.loads(capsys.readouterr().out)
+    assert out["question_set"] == "screen@1"
+    assert out["method"] == "calibrated"
+    assert out["calls"] == 3
+    assert out["est_input_tokens"] == pytest.approx(498 + 560 + 776, rel=0.10)
+    assert out["est_usd"] == pytest.approx(out["est_input_tokens"] * PRICE)
+    spent = sum(sum(t) for t in MEASURED.values()) * PRICE
+    assert out["account_remaining_usd"] == pytest.approx(25.0 - spent)
+    assert 0 < out["share_of_remaining"] < 1

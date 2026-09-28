@@ -14,8 +14,20 @@ import pyarrow.parquet as pq
 
 from atlas import paths
 from atlas.inference import keys
-from atlas.inference.budget import BudgetGuard
+from atlas.inference.balance import reconcile, record_balance
+from atlas.inference.budget import (
+    BudgetGuard,
+    budget_names,
+    load_budgets,
+    scan_runs,
+)
 from atlas.inference.client import JevClient
+from atlas.inference.estimate import (
+    estimate_cost,
+    fit_calibration,
+    input_price,
+    load_label,
+)
 from atlas.inference.ledger import summarize
 from atlas.inference.questions import load_question_set
 from atlas.inference.runner import RunContext, run_batch
@@ -58,9 +70,133 @@ def register(sub) -> None:
     ledger_p.add_argument("--by", default=None, choices=["question_set"])
     ledger_p.set_defaults(func=_cmd_ledger)
 
+    budget_p = commands.add_parser(
+        "budget", help="per-name and account headroom (read-only)"
+    )
+    budget_p.set_defaults(func=_cmd_budget)
+
+    est_p = commands.add_parser(
+        "estimate", help="estimated cost of an items parquet before dispatch"
+    )
+    est_p.add_argument("--set", dest="question_set", required=True)
+    est_p.add_argument("--items", required=True)
+    est_p.add_argument("--calibrate-with", dest="calibrate_with", default=None)
+    est_p.set_defaults(func=_cmd_estimate)
+
+    bal_p = commands.add_parser("balance", help="credit balance log")
+    bal_sub = bal_p.add_subparsers(dest="balance_command", required=True)
+    bal_rec = bal_sub.add_parser(
+        "record", help="record the balance shown in the TypeSafe console"
+    )
+    bal_rec.add_argument("usd", type=float)
+    bal_rec.add_argument("--note", default="")
+    bal_rec.set_defaults(func=_cmd_balance_record)
+    bal_recon = bal_sub.add_parser(
+        "reconcile", help="compare balance deltas against ledger spend"
+    )
+    bal_recon.set_defaults(func=_cmd_balance_reconcile)
+
 
 def _cmd_ledger(args) -> None:
     print(json.dumps(summarize(paths.ledger_path(args.run), by=args.by), indent=1))
+
+
+_EMPTY_SCAN = {
+    "calculated_usd": 0.0,
+    "unknown_attempts": 0,
+    "pending_attempts": 0,
+    "runs": 0,
+}
+
+
+def _committed_usd(entry: dict, worst: float, price: float) -> float:
+    """Committed spend as the guard sees it: calculated plus every unknown
+    attempt (settled or still pending) at the flat worst case."""
+    return entry["calculated_usd"] + entry["unknown_attempts"] * worst * price
+
+
+def _name_status(cap, entry: dict, worst: float, price: float) -> dict:
+    pending = entry["pending_attempts"]
+    unknown_usd = (entry["unknown_attempts"] - pending) * worst * price
+    reserved_usd = pending * worst * price
+    committed = _committed_usd(entry, worst, price)
+    has_cap = isinstance(cap, (int, float)) and not isinstance(cap, bool)
+    return {
+        "cap_usd": cap if has_cap else None,
+        "calculated_usd": entry["calculated_usd"],
+        "unknown_attempts": entry["unknown_attempts"] - pending,
+        "unknown_usd": unknown_usd,
+        "reserved_usd": reserved_usd,
+        "committed_usd": committed,
+        "remaining_usd": cap - committed if has_cap else None,
+    }
+
+
+def _cmd_budget(args) -> None:
+    # Read-only: takes no locks, so it works while a run holds them.
+    cfg = load_budgets()
+    price = input_price(MODEL)
+    worst = cfg.get("worst_case_tokens_per_unknown_attempt", 0)
+    scan = scan_runs()
+    names = {
+        name: _name_status(cfg.get(name), scan.get(name, _EMPTY_SCAN), worst, price)
+        for name in sorted(set(budget_names(cfg)) | set(scan))
+    }
+    committed = sum(
+        _committed_usd(scan.get(name, _EMPTY_SCAN), worst, price) for name in names
+    )
+    total = cfg.get("account_total")
+    print(
+        json.dumps(
+            {
+                "names": names,
+                "account": {
+                    "total_usd": total,
+                    "committed_usd": committed,
+                    "remaining_usd": (
+                        total - committed if total is not None else None
+                    ),
+                },
+            },
+            indent=1,
+        )
+    )
+
+
+def _cmd_estimate(args) -> None:
+    qs = load_label(args.question_set)
+    items = pq.read_table(args.items).to_pylist()
+    cal_items = (
+        pq.read_table(args.calibrate_with).to_pylist()
+        if args.calibrate_with
+        else items
+    )
+    calibration = fit_calibration(
+        sorted(paths.RUNS.glob("*/ledger.jsonl")), cal_items, model=MODEL
+    )
+    price = input_price(MODEL)
+    out = estimate_cost(items, qs, MODEL, calibration, usd_per_input_token=price)
+    cfg = load_budgets()
+    worst = cfg.get("worst_case_tokens_per_unknown_attempt", 0)
+    remaining = None
+    if cfg.get("account_total") is not None:
+        committed = sum(
+            _committed_usd(s, worst, price) for s in scan_runs().values()
+        )
+        remaining = cfg["account_total"] - committed
+    out["account_remaining_usd"] = remaining
+    out["share_of_remaining"] = (
+        out["est_usd"] / remaining if remaining and remaining > 0 else None
+    )
+    print(json.dumps(out, indent=1))
+
+
+def _cmd_balance_record(args) -> None:
+    print(json.dumps(record_balance(args.usd, note=args.note), indent=1))
+
+
+def _cmd_balance_reconcile(args) -> None:
+    print(json.dumps(reconcile(), indent=1))
 
 
 def _smoke_checks(run_dir, qs, n_sentences: int) -> dict:
@@ -79,7 +215,7 @@ def _smoke_checks(run_dir, qs, n_sentences: int) -> dict:
 def _cmd_smoke(args) -> None:
     budgets = tomllib.loads((paths.CONFIGS / "budgets.toml").read_text(encoding="utf-8"))
     prices = tomllib.loads((paths.CONFIGS / "prices.toml").read_text(encoding="utf-8"))
-    if args.budget not in budgets or args.budget.startswith("worst_case"):
+    if args.budget not in budget_names(budgets):
         raise SystemExit(f"unknown budget {args.budget!r} in {paths.CONFIGS / 'budgets.toml'}")
     cap = budgets[args.budget]
     worst = budgets["worst_case_tokens_per_unknown_attempt"]
