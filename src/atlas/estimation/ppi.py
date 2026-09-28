@@ -135,8 +135,9 @@ def _theta(a: np.ndarray, g: np.ndarray, k: int, lam: float | None):
     return theta, lam_arr, m_all, my
 
 
-def _prepare(yhat_all, y_gold, yhat_gold, w_all, w_gold, sel_prob_gold, strata_all,
-             strata_gold, clusters_all, clusters_gold, mask_all=None, mask_gold=None):
+def _prepare(yhat_all, y_gold, yhat_gold, w_all=None, w_gold=None, sel_prob_gold=None,
+             strata_all=None, strata_gold=None, clusters_all=None, clusters_gold=None,
+             mask_all=None, mask_gold=None):
     yh_a, y_g, yh_g = _as_2d(yhat_all, "yhat_all"), _as_2d(y_gold, "y_gold"), _as_2d(yhat_gold, "yhat_gold")
     n_all, n_gold = yh_a.shape[0], y_g.shape[0]
     k = yh_a.shape[1]
@@ -220,6 +221,97 @@ def ppi_mean(yhat_all, y_gold, yhat_gold, w_all=None, w_gold=None, sel_prob_gold
         "lambda": float(res["lambdas"][0]),
         "naive_model_estimate": float(res["naive"][0]),
         "gold_only_estimate": float(res["gold_only"][0]),
+        "n_all": n_all,
+        "n_gold": n_gold,
+        "method": METHOD,
+        "replicates": res["replicates"],
+        "n_failed_replicates": res["n_failed_replicates"],
+    }
+
+
+def _common(kwargs: dict) -> dict:
+    allowed = {"w_all", "w_gold", "sel_prob_gold", "strata_all", "strata_gold",
+               "clusters_all", "clusters_gold", "lam", "n_boot", "seed", "alpha"}
+    extra = set(kwargs) - allowed
+    if extra:
+        raise TypeError(f"unexpected arguments: {sorted(extra)}")
+    return {"lam": None, "n_boot": 2000, "seed": 0, "alpha": 0.05, **kwargs}
+
+
+def _split(kw: dict):
+    run_kw = {k: kw.pop(k) for k in ("lam", "n_boot", "seed", "alpha")}
+    return kw, run_kw
+
+
+def ppi_ratio(num, den, **kwargs) -> dict:
+    """Ratio of two PPI++ means, e.g. P(billing and firsthand) / P(firsthand).
+
+    ``num`` and ``den`` are each ``(yhat_all, y_gold, yhat_gold)`` for the joint event
+    and the base event. Each part is corrected on its own; the ratio is taken per
+    bootstrap replicate over the same resampled threads. Other keyword arguments are
+    those of ``ppi_mean``.
+    """
+    prep_kw, run_kw = _split(_common(kwargs))
+    stacked = [np.column_stack([np.asarray(a, dtype=float).ravel(), np.asarray(b, dtype=float).ravel()])
+               for a, b in zip(num, den, strict=True)]
+    part_all, part_gold, k, n_all, n_gold = _prepare(*stacked, **prep_kw)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        res = _run((part_all, part_gold), k, combine=lambda t: t[:, 0] / t[:, 1], **run_kw)
+        naive = float(res["naive"][0] / res["naive"][1])
+        gold_only = float(res["gold_only"][0] / res["gold_only"][1])
+    return {
+        "estimate": res["estimate"],
+        "ci_low": res["ci_low"],
+        "ci_high": res["ci_high"],
+        "numerator": float(res["thetas"][0]),
+        "denominator": float(res["thetas"][1]),
+        "lambda": [float(x) for x in res["lambdas"]],
+        "naive_model_estimate": naive,
+        "gold_only_estimate": gold_only,
+        "n_all": n_all,
+        "n_gold": n_gold,
+        "method": METHOD,
+        "replicates": res["replicates"],
+        "n_failed_replicates": res["n_failed_replicates"],
+    }
+
+
+def ppi_difference(yhat_all, y_gold, yhat_gold, group_all, group_gold, groups=None,
+                   **kwargs) -> dict:
+    """Change in a PPI++ mean between two known groups, e.g. half-years H1 and H2.
+
+    ``group_*`` give each item's group (known exactly, never predicted). ``groups`` is
+    ``(a, b)``; the default is the two sorted distinct values of ``group_all``. The
+    estimate is ``mean_b - mean_a``, from one joint bootstrap over both groups. Other
+    keyword arguments are those of ``ppi_mean``.
+    """
+    prep_kw, run_kw = _split(_common(kwargs))
+    g_all, g_gold = np.asarray(group_all).ravel(), np.asarray(group_gold).ravel()
+    if groups is None:
+        found = np.unique(g_all)
+        if found.size != 2:
+            raise ValueError(f"expected exactly two groups, found {found.size}")
+        groups = (found[0].item(), found[1].item())
+    a, b = groups
+    yh_a = np.asarray(yhat_all, dtype=float).ravel()
+    y_g, yh_g = np.asarray(y_gold, dtype=float).ravel(), np.asarray(yhat_gold, dtype=float).ravel()
+    if g_all.size != yh_a.size or g_gold.size != y_g.size:
+        raise ValueError("group arrays must match the item arrays in length")
+    mask_all = np.column_stack([g_all == a, g_all == b]).astype(float)
+    mask_gold = np.column_stack([g_gold == a, g_gold == b]).astype(float)
+    part_all, part_gold, k, n_all, n_gold = _prepare(
+        *(np.column_stack([x, x]) for x in (yh_a, y_g, yh_g)), mask_all=mask_all, mask_gold=mask_gold, **prep_kw)
+    res = _run((part_all, part_gold), k, combine=lambda t: t[:, 1] - t[:, 0], **run_kw)
+    return {
+        "estimate": res["estimate"],
+        "ci_low": res["ci_low"],
+        "ci_high": res["ci_high"],
+        "groups": (a, b),
+        "estimate_a": float(res["thetas"][0]),
+        "estimate_b": float(res["thetas"][1]),
+        "lambda": [float(x) for x in res["lambdas"]],
+        "naive_model_estimate": float(res["naive"][1] - res["naive"][0]),
+        "gold_only_estimate": float(res["gold_only"][1] - res["gold_only"][0]),
         "n_all": n_all,
         "n_gold": n_gold,
         "method": METHOD,
