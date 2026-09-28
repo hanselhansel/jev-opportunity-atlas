@@ -178,3 +178,76 @@ def test_labeler_never_reads_answers_or_runs():
   - `evaluate --set <label_set> --run <run_id> --question firsthand_problem [--target-recall 0.9]`: joins latest labels with the run's answers, drops `unsure`, prints `binary_metrics`, `threshold_for_recall`, `reliability_bins`, and the keyword baseline's metrics on the same rows, and writes `runs/<run_id>/eval_<label_set>.json`.
 - [ ] **Step 2:** Test `evaluate` on synthetic labels and answers in `tmp_path` (monkeypatch `atlas.paths`).
 - [ ] **Step 3: Commit, push, ruff, pytest, open the PR, print PR URL and pytest line.**
+
+---
+
+## Amendments from the plan review (2026-09-29). These override anything above.
+
+**A1. Rubric gate.** Task 4.1 writes `configs/rubric.v1.md` as a draft marked
+`status: draft`. Hansel approves it (main session flips it to `approved`) before any
+labeling. `atlas label` refuses to start while the rubric is a draft.
+
+**A2. Calibration queue comes from the pilot sample, stratified by Jev score.**
+`build_queue` becomes:
+
+```python
+def build_queue(frame, n, seed, exclude=frozenset(), bands=None, band_sizes=None,
+                repeat_share=0.10) -> dict:
+    """Returns {"ids": [...], "repeats": [...], "bands": {...}, "rates": {...}, "seed": seed}.
+    frame has comment_id and, when bands are used, a `score` column (Jev firsthand
+    probability). bands maps name -> (lo, hi) half-open score ranges; band_sizes maps name
+    -> n. rates[name] = band_sizes[name] / count of frame rows in that band. Repeats are
+    a seeded 10% of ids, re-shown later in the queue for intra-rater agreement."""
+```
+
+Default calibration bands: `high` [0.5, 1.01) n=60, `mid` [0.15, 0.5) n=50, `low`
+[0, 0.15) n=40. The queue file stores bands, rates, and repeats. The labeler never shows
+band or score. Stop rule, enforced by `atlas evaluate`: fewer than 40 `yes` labels in the
+calibration set prints the top-up command (`atlas label --set calibration --top-up 50`,
+drawing more from `high` and `mid` at recorded rates).
+
+Tests:
+
+```python
+def test_band_queue_records_rates_and_repeats():
+    import pyarrow as pa
+    scores = [i / 1000 for i in range(1000)]
+    frame = pa.table({"comment_id": list(range(1000)), "score": scores})
+    q = build_queue(frame, n=None, seed=2, bands={"high": (0.5, 1.01), "low": (0, 0.5)},
+                    band_sizes={"high": 10, "low": 10})
+    assert len(q["ids"]) == 20 and q["rates"] == {"high": 10 / 500, "low": 10 / 500}
+    assert len(q["repeats"]) == 2 and set(q["repeats"]) <= set(q["ids"])
+```
+
+**A3. `atlas label` requires `--from-sample <sample_id>` for calibration and held-out
+sets** and reads scores from the given run (`--run <run_id>`). It draws only from
+comments in that sample that have answers in that run. It uses `sources.items.load_items`
+(L1) for text, never its own joins.
+
+**A4. `atlas evaluate`.**
+- Join coverage between latest labels and run answers must be at least 95%, else exit 1
+  with the counts.
+- Weights: each labeled row's weight is `1 / rate[band]` for banded sets (times the
+  breadth design weight when evaluating against a probability sample).
+- Report `unsure` count and intra-rater agreement on repeats.
+- Threshold: pick the largest threshold whose one-sided 95% lower bound of recall
+  (stratified bootstrap) is at least `--target-recall` (default 0.90). Report the point
+  recall too, labeled "calibration only; not a reported quality number".
+
+**A5. Metrics fixes.**
+- `binary_metrics` gains `strata` (band per row): the bootstrap resamples within each
+  stratum, keeping per-stratum counts fixed.
+- Use `numpy.nanpercentile`; return `n_undefined` (replicates where precision or recall is
+  undefined). The unweighted test in Task 4.3 must pass with this.
+- `reliability_bins` gains `weights`.
+
+**A6. Domain labels.** The labeler shows a `domain` radio (options from
+`configs/questions/screen.v0.json`) on a seeded 50-item subset of the calibration queue,
+so domain accuracy is measured before any domain-share claim.
+
+**A7. Scope for M1 to M2.** `baseline.py` and `choice_confusion` are still built (small),
+but only calibration is evaluated in M1 to M2.
+
+**A8.** Do not run `uv add`; streamlit is in the `label` dependency group from Wave 0.
+`tests/evaluation/__init__.py` exists. Import streamlit only inside `labeler_app.py`.
+Tests use `Path(__file__).resolve().parents[2]` for repo paths.

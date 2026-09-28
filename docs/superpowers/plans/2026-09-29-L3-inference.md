@@ -472,3 +472,99 @@ def test_budget_stop_is_clean_and_resumable(tmp_path):
   - `jev ledger-summary --run <run_id>`: prints `summarize` as JSON.
 - [ ] **Step 2:** Test `ledger-summary` on a ledger written in `tmp_path`.
 - [ ] **Step 3: Commit, push, ruff, pytest, open the PR, print PR URL and pytest line.**
+
+---
+
+## Amendments from the plan review (2026-09-29). These override anything above.
+
+**A1. Real response shape.** Wave 0 commits `tests/inference/fixtures/response_shape.json`,
+a redacted copy of a real `jev-1.13.0` response (key names and value types only, from the
+2026-09-28 smoke call). Real noul, choice, and score answers carry a `type` field;
+choice answers carry `choice`, `confidence`, `probabilities`. `mock_jev.answer_for` must
+produce exactly that shape, and `test_real_response_shape_fixture_parses` must validate
+the fixture with the client's validator. The mock must also raise if any question's
+`criteria` is the string `"SENTENCE_IDS"` (unexpanded marker).
+
+**A2. Validation.** A 200 response fails validation (`validation="schema"`) when: a
+question id is missing, `type` differs, a choice is not one of the offered options, a
+probability map is missing an option, or `model_returned != model_requested` for a pinned
+version (then the whole run aborts with `ModelMismatch`, no retry). Schema failures retry
+at most once. Tests: `test_choice_outside_options_is_schema_error`,
+`test_schema_error_retried_once`, `test_model_mismatch_aborts`.
+
+**A3. Charge classes (explicit table, tested in `test_client.py`).**
+
+| Outcome | charge_known | tokens |
+|---|---|---|
+| 200 with integer usage | True | reported |
+| 200 with null usage | False | None |
+| 429 | True | 0 |
+| 401, 403, 404, 422 | True | 0 |
+| 5xx, 529 | False | None |
+| timeout or connection error after the request was sent | False | None |
+| connection error before sending (connect failure) | True | 0 |
+
+**A4. Per-attempt budget accounting.** `JevClient.evaluate` takes an
+`on_attempt(event)` async callback with `event.phase` of `"before_send"` or
+`"after_response"`. The runner reserves estimated cost before each send and settles
+after each response, so retries are reserved and settled live. Worst case for an unknown
+charge is `max(worst_case_tokens_per_unknown_attempt, 2 * estimated_tokens)`.
+Test: `test_guard_counts_retry_attempts_live` (script `["500", "timeout", "ok"]` gives
+`unknown_attempts == 2` and the guard's committed cost includes both before the run
+ends).
+
+**A5. Cumulative budgets.** A budget has a name (`pilot`, `spike`, `smoke`, `main`).
+`BudgetGuard.for_budget(name, cap, ...)` rebuilds committed spend from every
+`runs/*/ledger.jsonl` whose `run_manifest.json` names that budget, and takes an exclusive
+file lock (`fcntl.flock` on `runs/.budget-<name>.lock`) for the life of the run so two
+processes cannot spend the same cap. Test: `test_guard_cumulative_across_runs` (run A
+spends; run B under the same budget name sees A's spend) and
+`test_second_process_cannot_take_lock`.
+
+**A6. Crash-safe runner.**
+- Answers are written per batch of at most 200 items to `answers/part-<seq>.parquet.tmp`,
+  fsynced, renamed to `.parquet`; `seq` = 1 + max existing seq. Parts are never
+  overwritten.
+- Only after the rename does the runner append those items to `done.jsonl` as
+  `{"comment_id": ..., "question_set": "screen@0", "part": seq}`.
+- On start, the done set is rebuilt from `done.jsonl` and checked against existing parts;
+  a done row whose part is missing is dropped (the item is redone).
+- Before each send, the ledger gets a `pending` row (`cost_class="pending"`) and is
+  fsynced; the final attempt row supersedes it. On restart, a `pending` row with no final
+  row becomes an `unknown` charge row (never silently dropped).
+- Add `"pending"` handling in `ledger.summarize`: pending rows without a final row count as
+  unknown attempts. `COST_CLASSES` in contracts already includes `pending` (Wave 0).
+Tests: `test_runner_crash_after_send_before_flush` (inject an exception after the 3rd
+send; resume; total answers equal items x questions; the unresolved attempt appears as
+unknown), `test_answer_parts_never_overwritten`.
+
+**A7. Several question sets per run.** `run_manifest.json` holds `question_sets`: a list
+of `{label, file_sha256}`, append-only. Adding a new set is allowed; changing the hash of
+an existing label raises. Done rows and ledger rows carry `question_set`.
+`summarize(path, by="question_set")` returns per-set `calls`, `input_tokens`,
+`mean_tokens`, `p50_ms`, `p95_ms`, `calculated_usd`, `unknown_attempts`. Test:
+`test_screen_then_deep_same_run_dir`.
+
+**A8. Replay rows are not attempts.** A cache hit writes a ledger row with
+`cost_class="replay"` and `attempt=0`; `summarize` reports `attempts` over network
+attempts only (update the ledger test: `attempts == 3`, `replays == 1`).
+
+**A9. Client lifecycle.** `JevClient` is an async context manager; the runner opens it
+once inside one event loop. `run_pilot` (L7) runs both sets in one `asyncio.run`.
+
+**A10. Items as an iterable.** `run_batch(ctx, items: Iterable[dict], qs)` consumes items
+lazily in batches; it never materializes the full list.
+
+**A11. `jev smoke --set screen|deep`.** Deep smoke checks the null-criteria choice
+(`user_role`), the list-criteria score (`specificity`), and the sentence marker against
+the real API, under budget `smoke`.
+
+**A12. Security.** `error_type` is always one of the enum values, never `str(exc)`. The
+real key is only used when `TYPESAFE_BASE_URL` is unset or starts with
+`https://api.typesafe.ai`; any other base URL requires the canary-shaped test key
+(`apikey_000...`), else raise `UnsafeEndpoint`. Test: `test_real_shaped_key_refuses_other_host`
+(build a non-canary key at runtime from random hex; expect `UnsafeEndpoint` for
+`http://127.0.0.1:9`).
+
+**A13.** Do not run `uv add`. `tests/inference/__init__.py` and
+`tests/inference/fixtures/` exist from Wave 0. Ledger path is `paths.ledger_path(run_id)`.

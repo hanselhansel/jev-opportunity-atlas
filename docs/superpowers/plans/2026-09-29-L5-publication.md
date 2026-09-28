@@ -203,3 +203,39 @@ def test_required_fields_enforced(tmp_path):
   - Uploading assets stays a manual, reviewed step in plan 2 (`gh release create`), so this lane never publishes anything.
 - [ ] **Step 2:** Test `claims check` exit codes on a temp YAML file.
 - [ ] **Step 3: Commit, push, ruff, pytest, open the PR, print PR URL and pytest line.**
+
+---
+
+## Amendments from the plan review (2026-09-29). These override anything above.
+
+**A1. Scope trimmed for M1 to M2 (Hansel's decision).** Build only Task 5.1 (allowlist and
+stage), Task 5.4 (claims check), and the new safety checks below. Tasks 5.2 (restore) and
+5.3 (rehydrate) move to plan 2; do not build them now. `publish check` runs stage
+verification and scans only; nothing uploads.
+
+**A2. Parquet- and zstd-aware scanning.** `scan_release(dir)` decodes every Parquet file
+(every string and list<string> column) and every `.zst` stream, and runs
+`secret_scan.scan_text` over the decoded text, in addition to plain files. Test:
+`test_scan_detects_secret_in_parquet_column` (canary built at runtime in a string column
+of a zstd-compressed Parquet file, staged, expect `ExportError`).
+
+**A3. No HN text or usernames can pass.** `text_gate(dir)` fails when any Parquet or JSON
+string field is named `text`, `text_norm`, `text_html`, `title`, `author`, `by`,
+`sentences`, `comment`, or `parent`, or when any string column (other than hashes, URLs,
+and enum-like columns listed in the allowlist) has a median length above 80 characters.
+`taxonomy/**` is removed from `EXTRA`; taxonomy provenance is exported only through a
+schema-checked writer that keeps `comment_id` and `text_sha256`. Tests:
+`test_stage_rejects_text_like_json` and `test_stage_rejects_title_column`.
+
+**A4. Public reproducibility inputs.** The allowlist adds: `data/samples/*.parquet` and
+their JSON sidecars (text-free), latest human labels with `reviewer` dropped, question
+set files, rubric, prices, budgets, `manifests/**`, and the snapshot `manifest.json`.
+
+**A5. Claims.** Required fields add `question_set`, `weighted` (bool), `ci_low`,
+`ci_high` (null allowed only for counts), and `qualifier` (for example "as classified by
+Jev jev-1.13.0; held-out precision 0.xx, recall 0.xx"). `check_claims` replaces `{root}`
+with `str.replace`, not `str.format`. A breadth-lane proportion claim with
+`weighted: false` fails unless its denominator says "unweighted count".
+
+**A6.** Do not run `uv add`; pyyaml is in Wave 0. `tests/publication/__init__.py` exists.
+Uploading assets and GitHub Pages deploys are plan 2 and never use GitHub Actions.
