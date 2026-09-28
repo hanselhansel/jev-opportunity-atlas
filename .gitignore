@@ -1,0 +1,33 @@
+# Secrets: never commit. Only the placeholder .env.example is allowed.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*credentials*
+*secret*
+!**/secret_scan*.py
+!**/test_secret_scan*.py
+
+# Python / tooling
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Local working data (published only through allowlisted release bundles)
+data/
+runs/
+exports/
+*.duckdb
+*.duckdb.wal
+
+# Site build output
+site/dist/
+site/.observablehq/cache/
+node_modules/
+
+.DS_Store

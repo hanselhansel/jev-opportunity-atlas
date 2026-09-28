@@ -1,0 +1,28 @@
+[project]
+name = "atlas"
+version = "0.1.0"
+description = "Jev Opportunity Atlas: recurring problems in Hacker News, classified with TypeSafe Jev"
+readme = "README.md"
+authors = [{ name = "Hansel" }]
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.28.1",
+    "zstandard>=0.25.0",
+]
+
+[project.scripts]
+atlas = "atlas.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["uv_build>=0.9.2,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.9",
+]
