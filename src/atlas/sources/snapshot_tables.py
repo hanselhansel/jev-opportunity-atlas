@@ -73,7 +73,7 @@ def write_tables(
 ) -> dict:
     """Write the four contract tables; return counts for manifest/coverage."""
     parts = _rel(part_paths)
-    con.execute(f"CREATE TEMPORARY TABLE scan_parts AS SELECT * FROM {parts}")
+    con.execute(f"CREATE TEMPORARY VIEW scan_parts AS SELECT * FROM {parts}")
     if ctx_path is not None:
         con.execute(
             "CREATE TEMPORARY TABLE ctx AS "
@@ -86,7 +86,7 @@ def write_tables(
             "SELECT * FROM scan_parts WHERE false"
         )
     con.execute(
-        "CREATE TEMPORARY TABLE all_items AS "
+        "CREATE TEMPORARY VIEW all_items AS "
         "SELECT * FROM scan_parts UNION ALL SELECT * FROM ctx"
     )
 
@@ -107,7 +107,7 @@ def write_tables(
 
     con.execute(
         f"""
-        CREATE TEMPORARY TABLE comments_final AS
+        CREATE TEMPORARY VIEW comments_final AS
         SELECT c.id, c.time, c.time AS created_at,
                strftime(make_timestamp(c.time * 1000000), '%Y-%m') AS month,
                CASE WHEN c.time >= {ws} AND c.time < {we} THEN printf(

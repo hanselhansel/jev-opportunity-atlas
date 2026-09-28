@@ -17,3 +17,8 @@ def test_code_heavy_english_is_kept():
 
 def test_empty_and_none_input():
     assert detect_many(["", None, "   "]) == ["und", "und", "und"]
+
+
+def test_no_letters_is_undetermined():
+    # lingua returns all languages at 0.0 confidence for letterless text
+    assert detect_many(["1 2 3 4 5 6", "++ -- == ** // ::"]) == ["und", "und"]

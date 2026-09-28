@@ -19,13 +19,21 @@ from pathlib import Path
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
 from atlas.sources import shards as sh
 from atlas.sources.context import load_context
 from atlas.sources.htmltext import html_to_text, split_sentences
 from atlas.sources.lang import detect_many
-from atlas.sources.threads import KIND_COMMENT, kind_code, resolve_roots_np
+from atlas.sources.threads import (
+    KIND_COMMENT,
+    KIND_OTHER,
+    KIND_ROOT,
+    ROOT_KINDS,
+    kind_code,
+    resolve_roots_np,
+)
 
 PART_FIELDS = (
     ("id", pa.int64()),
@@ -187,26 +195,54 @@ def context_rows(context_dir: Path, ws: int, we: int) -> list[dict]:
 
 def _id_frames(part_paths: list[Path], ctx_rows: list[dict]):
     """(ids, parent, kind) sorted-unique arrays; scan ids win over context."""
-    ids: list[int] = []
-    parents: list[int] = []
-    kinds: list[int] = []
+    ids_c: list[np.ndarray] = []
+    parent_c: list[np.ndarray] = []
+    kind_c: list[np.ndarray] = []
     for p in part_paths:
         t = pq.read_table(p, columns=["id", "parent", "type"])
-        ids.extend(t.column("id").to_pylist())
-        parents.extend(t.column("parent").to_pylist())
-        kinds.extend(kind_code(x) for x in t.column("type").to_pylist())
-    scan = set(ids)
-    for r in ctx_rows:
-        if r["id"] in scan:
-            continue
-        ids.append(r["id"])
-        parents.append(r["parent"])
-        kinds.append(kind_code(r["type"]))
-    arr_ids = np.array(ids, dtype=np.int64)
-    arr_parent = np.array(
-        [-1 if p is None else p for p in parents], dtype=np.int64
-    )
-    arr_kind = np.array(kinds, dtype=np.int8)
+        ids_c.append(np.asarray(t.column("id").to_numpy(), dtype=np.int64))
+        parent_c.append(
+            np.asarray(
+                pc.fill_null(t.column("parent"), -1).to_numpy(), dtype=np.int64
+            )
+        )
+        types = np.asarray(t.column("type").to_numpy(), dtype=object)
+        kind_c.append(
+            np.select(
+                [types == "comment", np.isin(types, list(ROOT_KINDS))],
+                [KIND_COMMENT, KIND_ROOT],
+                KIND_OTHER,
+            ).astype(np.int8)
+        )
+    scan_ids = np.concatenate(ids_c) if ids_c else np.empty(0, dtype=np.int64)
+    if ctx_rows:
+        ci = np.fromiter(
+            (r["id"] for r in ctx_rows), dtype=np.int64, count=len(ctx_rows)
+        )
+        keep = ~np.isin(ci, scan_ids)
+        if keep.any():
+            kept = [r for r, k in zip(ctx_rows, keep.tolist()) if k]
+            ids_c.append(ci[keep])
+            parent_c.append(
+                np.fromiter(
+                    (-1 if r["parent"] is None else r["parent"] for r in kept),
+                    dtype=np.int64,
+                    count=len(kept),
+                )
+            )
+            kind_c.append(
+                np.fromiter(
+                    (kind_code(r["type"]) for r in kept),
+                    dtype=np.int8,
+                    count=len(kept),
+                )
+            )
+    if not ids_c:
+        empty = np.empty(0, dtype=np.int64)
+        return empty, empty, np.empty(0, dtype=np.int8)
+    arr_ids = np.concatenate(ids_c)
+    arr_parent = np.concatenate(parent_c)
+    arr_kind = np.concatenate(kind_c)
     uniq, first = np.unique(arr_ids, return_index=True)
     return uniq, arr_parent[first], arr_kind[first]
 

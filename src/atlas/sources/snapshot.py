@@ -152,6 +152,11 @@ def build(
     # Pass 3: joins, eligibility, contract tables.
     con = duckdb.connect()
     con.execute("SET TimeZone='UTC'")
+    duck_tmp = parts_dir / "duckdb_tmp"
+    duck_tmp.mkdir(parents=True, exist_ok=True)
+    con.execute(
+        "SET temp_directory='" + str(duck_tmp).replace("'", "''") + "'"
+    )
     try:
         stats = write_tables(
             con, part_paths, ctx_part, roots_path, sdir, ws, we,

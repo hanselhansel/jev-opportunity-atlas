@@ -61,7 +61,9 @@ def detect_many(texts: list[str]) -> list[str]:
         [cleaned[i] for i in idx]
     )
     for i, values in zip(idx, results):
-        if not values:
+        # All-zero confidences mean the text had no signal (e.g. punctuation or
+        # digits); lingua still emits every language in that case.
+        if not values or values[0].value == 0.0:
             continue
         top = values[0].language
         en = next((v.value for v in values if v.language == Language.ENGLISH), 0.0)
