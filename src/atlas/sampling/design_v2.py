@@ -18,6 +18,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from atlas import contracts
+from atlas.sampling import select, yield_alloc
 
 PAIN_PATTERNS_VERSION = 1
 
@@ -151,3 +152,70 @@ def build_frame_v2(comments: pa.Table, stories: pa.Table) -> pa.Table:
             "word_count": pa.array(wc[order], type=pa.int32()),
         }
     )
+
+
+def draw_allocated(
+    frame: pa.Table, alloc: dict[str, int], seed: int, sample_id: str
+) -> pa.Table:
+    """Draw alloc[h] comments per v2 stratum; contract SAMPLE rows, batch 1.
+
+    Every stratum present in `frame` must receive 1 <= alloc[h] <= N_h; extra
+    alloc keys are allowed only with value 0.
+    """
+    sizes = select._sizes(frame)
+    if any(a < 0 for a in alloc.values()):
+        raise ValueError("negative allocation")
+    if {h for h, a in alloc.items() if a > 0} != set(sizes):
+        raise ValueError("positive alloc keys must equal the frame strata")
+    for h, n_h in sizes.items():
+        if alloc[h] > n_h:
+            raise ValueError(f"alloc[{h}]={alloc[h]} exceeds stratum size {n_h}")
+    rng = np.random.Generator(np.random.PCG64(seed))
+    got = select._draw_rows(frame, alloc, rng)
+    n = len(got["comment_id"])
+    table = select._finish(
+        frame,
+        got["comment_id"],
+        got["stratum"],
+        sample_id,
+        np.ones(n, dtype=np.int32),
+        np.arange(n, dtype=np.int64),
+    )
+    select._check(table, frame.num_rows)
+    return table
+
+
+def write_design_manifest(
+    table: pa.Table, meta: dict, design: dict, out_dir
+) -> dict:
+    """Write the sample parquet plus a JSON sidecar carrying the design block."""
+    return select.write_manifest(table, {**meta, "design": design}, out_dir)
+
+
+def design_block(
+    *,
+    floor_rate: float,
+    min_n: int,
+    budget_tokens: int,
+    p: dict[str, float],
+    c: dict[str, float],
+    source: str,
+    alloc: dict[str, int],
+    N: dict[str, int],
+    input_levels: dict | None = None,
+) -> dict:
+    """Everything downstream needs to reproduce or audit this draw."""
+    return {
+        "pain_patterns_version": PAIN_PATTERNS_VERSION,
+        "floor_rate": floor_rate,
+        "min_n": min_n,
+        "budget_tokens": budget_tokens,
+        "p_h": p,
+        "c_h": c,
+        "inputs_source": source,
+        "input_levels": input_levels,
+        "allocation": alloc,
+        "expected_positives": yield_alloc.expected_positives(alloc, p),
+        "expected_tokens": yield_alloc.expected_tokens(alloc, c),
+        "largest_weight": yield_alloc.largest_weight(alloc, N),
+    }

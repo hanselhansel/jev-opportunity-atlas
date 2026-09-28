@@ -1,5 +1,8 @@
+import json
+
 import pyarrow as pa
 import pyarrow.compute as pc
+import pytest
 
 from atlas import contracts
 from atlas.sampling.design_v2 import (
@@ -143,3 +146,113 @@ def test_frame_v2_from_snapshot_tables():
     # Null word_count counts as 0 -> L0 for comment 9_000_000_002.
     assert rows[1]["word_count"] == 0
     assert rows[1]["stratum"].startswith("pain|L0|H2|ask")
+
+
+def _v2_frame(n_a=300, n_b=700):
+    ids = list(range(9_000_000_001, 9_000_000_001 + n_a + n_b))
+    return pa.table(
+        {
+            "comment_id": ids,
+            "story_id": [9_000_000_000 + i // 10 for i in range(n_a + n_b)],
+            "stratum": ["pain|L1|H1|ask"] * n_a + ["nopain|L0|H2|story"] * n_b,
+        }
+    )
+
+
+_ALLOC = {"pain|L1|H1|ask": 60, "nopain|L0|H2|story": 35}
+_N = {"pain|L1|H1|ask": 300, "nopain|L0|H2|story": 700}
+
+
+def test_draw_allocated_weights_and_manifest(tmp_path):
+    from atlas.sampling.design_v2 import (
+        design_block,
+        draw_allocated,
+        write_design_manifest,
+    )
+
+    frame = _v2_frame()
+    table = draw_allocated(frame, _ALLOC, seed=7, sample_id="s2")
+    assert table.schema == contracts.SAMPLE
+    assert table.num_rows == 95
+    rows = table.to_pylist()
+    for r in rows:
+        assert r["inclusion_prob"] == pytest.approx(
+            _ALLOC[r["stratum"]] / _N[r["stratum"]]
+        )
+    assert sum(r["weight"] for r in rows) == pytest.approx(1000)
+    assert all(r["batch"] == 1 for r in rows)
+    assert [r["draw_order"] for r in rows] == list(range(95))
+
+    same = draw_allocated(frame, _ALLOC, seed=7, sample_id="s2")
+    assert same.column("comment_id").to_pylist() == (
+        table.column("comment_id").to_pylist()
+    )
+    other = draw_allocated(frame, _ALLOC, seed=8, sample_id="s2")
+    assert other.column("comment_id").to_pylist() != (
+        table.column("comment_id").to_pylist()
+    )
+
+    design = design_block(
+        floor_rate=0.02,
+        min_n=30,
+        budget_tokens=10_000,
+        p={"pain|L1|H1|ask": 0.3, "nopain|L0|H2|story": 0.03},
+        c={"pain|L1|H1|ask": 500.0, "nopain|L0|H2|story": 400.0},
+        source="pilot:run-x",
+        alloc=_ALLOC,
+        N=_N,
+    )
+    write_design_manifest(table, {"seed": 7}, design, tmp_path)
+    stored = json.loads((tmp_path / "s2.json").read_text())
+    block = stored["design"]
+    assert block["pain_patterns_version"] == 1
+    assert block["floor_rate"] == 0.02
+    assert block["budget_tokens"] == 10_000
+    assert block["p_h"]["pain|L1|H1|ask"] == 0.3
+    assert block["c_h"]["nopain|L0|H2|story"] == 400.0
+    assert block["inputs_source"] == "pilot:run-x"
+    assert block["allocation"] == _ALLOC
+    assert block["expected_positives"] == pytest.approx(60 * 0.3 + 35 * 0.03)
+    assert stored["seed"] == 7
+    assert (tmp_path / "s2.parquet").exists()
+
+
+def test_draw_allocated_rejects_bad_alloc():
+    from atlas.sampling.design_v2 import draw_allocated
+
+    frame = _v2_frame(5, 5)
+    with pytest.raises(ValueError):
+        # Missing a frame stratum entirely.
+        draw_allocated(frame, {"pain|L1|H1|ask": 5}, 1, "x")
+    with pytest.raises(ValueError):
+        # A frame stratum with zero allocation.
+        draw_allocated(
+            frame,
+            {"pain|L1|H1|ask": 0, "nopain|L0|H2|story": 3},
+            1,
+            "x",
+        )
+    with pytest.raises(ValueError):
+        # Allocation larger than the stratum.
+        draw_allocated(
+            frame,
+            {"pain|L1|H1|ask": 6, "nopain|L0|H2|story": 3},
+            1,
+            "x",
+        )
+    with pytest.raises(ValueError):
+        # Positive allocation for a stratum that is not in the frame.
+        draw_allocated(
+            frame,
+            {"pain|L1|H1|ask": 2, "nopain|L0|H2|story": 3, "ghost": 1},
+            1,
+            "x",
+        )
+    # Extra zero-valued keys are allowed.
+    ok = draw_allocated(
+        frame,
+        {"pain|L1|H1|ask": 2, "nopain|L0|H2|story": 3, "ghost": 0},
+        1,
+        "x",
+    )
+    assert ok.num_rows == 5
