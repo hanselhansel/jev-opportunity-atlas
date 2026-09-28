@@ -10,6 +10,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def _run_worker(job) -> dict:
+    from atlas.sources.acquire import run
+
+    cfg, root, limit, worker = job
+    return asyncio.run(run(cfg, root, limit, worker))
+
+
 def main() -> None:
     p = argparse.ArgumentParser(prog="atlas")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -28,7 +35,18 @@ def main() -> None:
 
     cfg = load_config(ROOT / args.config)
     if args.cmd == "acquire":
-        print(json.dumps(asyncio.run(run(cfg, ROOT, args.limit_shards)), indent=1))
+        from atlas.sources.acquire import locate, snapshot_dir
+
+        asyncio.run(locate(cfg, snapshot_dir(ROOT, cfg)))  # freeze once, before workers
+        if args.workers == 1:
+            print(json.dumps(asyncio.run(run(cfg, ROOT, args.limit_shards)), indent=1))
+        else:
+            from concurrent.futures import ProcessPoolExecutor
+
+            jobs = [(cfg, ROOT, args.limit_shards, (i, args.workers)) for i in range(args.workers)]
+            with ProcessPoolExecutor(args.workers) as pool:
+                for summary in pool.map(_run_worker, jobs):
+                    print(json.dumps(summary), flush=True)
     elif args.cmd == "coverage":
         from atlas.sources.coverage import report
 

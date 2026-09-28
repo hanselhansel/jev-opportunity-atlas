@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [{ name = "Hansel" }]
 requires-python = ">=3.11"
 dependencies = [
-    "httpx>=0.28.1",
+    "httpx[http2]>=0.28.1",
     "zstandard>=0.25.0",
 ]
 

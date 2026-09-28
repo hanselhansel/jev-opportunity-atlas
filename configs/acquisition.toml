@@ -16,7 +16,7 @@ api_base = "https://hacker-news.firebaseio.com/v0"
 boundary_margin_ids = 5000
 
 shard_size = 10000
-concurrency = 96  # operational only; does not change what is collected
+concurrency = 48  # per worker process; operational only, does not change what is collected
 concurrent_shards = 4
 max_attempts = 6
 request_timeout_s = 20.0

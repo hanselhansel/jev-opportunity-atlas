@@ -113,12 +113,21 @@ async def fetch_shard(client, sem, cfg, sdir, spec) -> dict | None:
     return meta
 
 
-async def run(cfg: dict, root: Path, limit_shards: int | None = None) -> dict:
+async def run(
+    cfg: dict,
+    root: Path,
+    limit_shards: int | None = None,
+    worker: tuple[int, int] = (0, 1),
+) -> dict:
+    """Fetch this worker's shards. Workers split shards by index mod n_workers,
+    so parallel processes never write the same shard file."""
+    idx, n_workers = worker
     sdir = snapshot_dir(root, cfg)
     b = await locate(cfg, sdir)
     specs = sh.plan_shards(b["scan_first_id"], b["scan_last_id"], cfg["shard_size"])
     if limit_shards:
         specs = specs[:limit_shards]
+    specs = [s for k, s in enumerate(specs) if k % n_workers == idx]
     todo = [s for s in specs if sh.shard_status(sdir / "shards", s) != "complete"]
     done_bytes = (
         [
@@ -133,7 +142,10 @@ async def run(cfg: dict, root: Path, limit_shards: int | None = None) -> dict:
     disk_guard(
         sdir, len(todo) * cfg["shard_size"], per_id * 1.2, cfg["disk_headroom_gib"]
     )
-    log_event(sdir, "run_start", shards_total=len(specs), shards_todo=len(todo))
+    log_event(
+        sdir, "run_start", worker=idx, n_workers=n_workers,
+        shards_total=len(specs), shards_todo=len(todo),
+    )
     t0 = time.monotonic()
     sem = asyncio.Semaphore(cfg["concurrency"])
     shard_sem = asyncio.Semaphore(cfg["concurrent_shards"])
@@ -148,6 +160,7 @@ async def run(cfg: dict, root: Path, limit_shards: int | None = None) -> dict:
 
         metas = await asyncio.gather(*(guarded(s) for s in todo))
     summary = {
+        "worker": idx,
         "shards_total": len(specs),
         "shards_fetched": len(todo),
         "wall_s": round(time.monotonic() - t0, 1),
