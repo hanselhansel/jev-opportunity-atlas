@@ -106,6 +106,51 @@ def estimate(items, qs, budget) -> dict:
     }
 
 
+def budget_headroom(budget="pilot") -> dict:
+    """Committed and remaining USD for `budget` and for the whole account.
+
+    Committed per name = calculated_usd + unknown_attempts *
+    worst_case_tokens_per_unknown_attempt * usd_per_input_token, matching the
+    guard's rebuild-from-disk rule; account = sum over every budget name
+    found in runs/*/run_manifest.json.
+    """
+    from atlas.inference.ledger import summarize
+
+    budgets, _price_row, usd_per_token = load_configs()
+    cap, worst = budget_cap(budgets, budget)
+    committed: dict[str, float] = {}
+    for manifest in sorted(paths.RUNS.glob("*/run_manifest.json")):
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(
+                f"unreadable run manifest {manifest}: {exc}"
+            ) from exc
+        ledger_path = manifest.parent / "ledger.jsonl"
+        if not ledger_path.exists():
+            continue
+        s = summarize(ledger_path)
+        name = data.get("budget") or "<none>"
+        committed[name] = committed.get(name, 0.0) + (
+            s["calculated_usd"]
+            + s["unknown_attempts"] * worst * usd_per_token
+        )
+    mine = committed.get(budget, 0.0)
+    account = sum(committed.values())
+    total = budgets.get("account_total")
+    return {
+        "budget": budget,
+        "cap_usd": cap,
+        "committed_usd": mine,
+        "remaining_usd": cap - mine,
+        "account_total": total,
+        "account_committed_usd": account,
+        "account_remaining_usd": (
+            total - account if total is not None else None
+        ),
+    }
+
+
 def print_estimate(est) -> None:
     print(json.dumps(est, indent=1))
 
