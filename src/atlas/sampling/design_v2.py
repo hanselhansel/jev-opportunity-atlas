@@ -13,6 +13,12 @@ from __future__ import annotations
 
 import re
 
+import numpy as np
+import pyarrow as pa
+import pyarrow.compute as pc
+
+from atlas import contracts
+
 PAIN_PATTERNS_VERSION = 1
 
 # First-person markers; "i.e." is stripped before matching so it never counts.
@@ -91,3 +97,57 @@ def half_year(period: str) -> str:
 def design_stratum(pain: bool, lbin: str, period: str, tgroup: str) -> str:
     """Stratum label like "pain|L2|H1|ask" (at most 2*4*2*4 = 64 strata)."""
     return f"{'pain' if pain else 'nopain'}|{lbin}|{half_year(period)}|{tgroup}"
+
+
+def build_frame_v2(comments: pa.Table, stories: pa.Table) -> pa.Table:
+    """Eligible comments labelled with v2 strata, sorted by comment_id.
+
+    Comments carry id, story_id, period, thread_type, text_norm, word_count,
+    eligible; stories carry id, thread_type. thread_type falls back to the
+    root story's when the comment's is null, then to "unknown". `half` is the
+    explore/confirm split from contracts.half_of(story_id), null when story_id
+    is null. Null word_count counts as 0 words.
+    """
+    frame = comments.filter(pc.equal(comments.column("eligible"), True))
+    idx = pc.index_in(frame.column("story_id"), value_set=stories.column("id"))
+    story_tt = pc.take(stories.column("thread_type"), idx)
+    ttype = pc.fill_null(
+        pc.coalesce(frame.column("thread_type"), story_tt), "unknown"
+    ).to_numpy(zero_copy_only=False)
+    wc = (
+        pc.fill_null(frame.column("word_count"), 0)
+        .to_numpy(zero_copy_only=False)
+        .astype(np.int32)
+    )
+    lbins = np.full(frame.num_rows, "L3", dtype="U2")
+    lbins[wc < 200] = "L2"
+    lbins[wc < 60] = "L1"
+    lbins[wc < 15] = "L0"
+    tg = np.array([thread_group(t) for t in ttype], dtype="U5")
+    periods = frame.column("period").to_pylist()
+    texts = frame.column("text_norm").to_pylist()
+    story_ids = frame.column("story_id").to_pylist()
+    halves = [
+        contracts.half_of(sid) if sid is not None else None for sid in story_ids
+    ]
+    strata = [
+        design_stratum(pain_flag(text), lbins[i], period, str(tg[i]))
+        for i, (text, period) in enumerate(zip(texts, periods))
+    ]
+    order = np.argsort(
+        frame.column("id").to_numpy(zero_copy_only=False), kind="stable"
+    )
+    take_idx = pa.array(order)
+    return pa.table(
+        {
+            "comment_id": pa.array(
+                frame.column("id").to_numpy(zero_copy_only=False)[order],
+                type=pa.int64(),
+            ),
+            "story_id": pc.take(frame.column("story_id"), take_idx),
+            "stratum": pa.array(np.asarray(strata, dtype=object)[order]),
+            "half": pa.array(np.asarray(halves, dtype=object)[order]),
+            "period": pc.take(frame.column("period"), take_idx),
+            "word_count": pa.array(wc[order], type=pa.int32()),
+        }
+    )
