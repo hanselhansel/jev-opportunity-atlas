@@ -4,7 +4,7 @@
 floor_rate = 0.02
 min_n = 30
 seed = 20260930
-screen_question_set = "screen@0"
+screen_question_set = "screen@1"   # screen v1 is frozen for the pilot (docs/measurements)
 firsthand_question = "firsthand_problem"
 firsthand_threshold = 0.5   # pilot comment counts as firsthand when noul >= this
 min_pilot_n = 20            # below this many pilot comments, a stratum borrows from a coarser level
