@@ -1,8 +1,20 @@
 import subprocess
 
+import pytest
+
 from atlas.publication import scan_cli
 
 CANARY = "apikey_" + "0" * 36 + "_" + "f" * 64
+
+GIT_HOOK_VARS = ("GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE", "GIT_PREFIX", "GIT_OBJECT_DIRECTORY")
+
+
+@pytest.fixture(autouse=True)
+def isolated_git(monkeypatch):
+    """Hooks export GIT_DIR and GIT_INDEX_FILE; without this the temp repo would read
+    the real repository's index when tests run inside the pre-push hook."""
+    for var in GIT_HOOK_VARS:
+        monkeypatch.delenv(var, raising=False)
 
 
 def git(repo, *args):
