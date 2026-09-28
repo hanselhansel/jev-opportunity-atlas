@@ -1,7 +1,12 @@
 import numpy as np
 import pytest
 
-from atlas.sources.threads import kind_code, resolve_roots, resolve_roots_np, thread_type_of
+from atlas.sources.threads import (
+    kind_code,
+    resolve_roots,
+    resolve_roots_np,
+    thread_type_of,
+)
 
 B = 9_000_000_000
 
@@ -90,8 +95,7 @@ def test_numpy_matches_reference_on_random_forest():
     ref_roots, ref_missing = resolve_roots(parent_d, kind_d)
 
     root_id, depth, missing = resolve_roots_np(ids, parent_arr, kind_arr)
-    pos = {int(i): k for k, i in enumerate(ids)}
-    assert set(int(x) for x in missing) == ref_missing
+    assert {int(x) for x in missing} == ref_missing
     for i, iid in enumerate(ids):
         iid = int(iid)
         if types[i] != "comment":
@@ -101,7 +105,6 @@ def test_numpy_matches_reference_on_random_forest():
             assert root_id[i] == ref_roots[iid][0] and depth[i] == ref_roots[iid][1]
         else:
             assert root_id[i] == -1 and depth[i] == -1
-        _ = pos
 
 
 def test_kind_code_mapping():

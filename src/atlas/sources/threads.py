@@ -13,9 +13,9 @@ import numpy as np
 
 ROOT_KINDS = ("story", "poll", "job")
 
-KIND_OTHER = np.int8(0)
-KIND_COMMENT = np.int8(1)
-KIND_ROOT = np.int8(2)
+KIND_OTHER = 0
+KIND_COMMENT = 1
+KIND_ROOT = 2
 
 _TITLE_PREFIXES = (
     ("Ask HN:", "ask_hn"),
@@ -27,10 +27,10 @@ _TITLE_PREFIXES = (
 
 def kind_code(type_str: str | None) -> int:
     if type_str == "comment":
-        return int(KIND_COMMENT)
+        return KIND_COMMENT
     if type_str in ROOT_KINDS:
-        return int(KIND_ROOT)
-    return int(KIND_OTHER)
+        return KIND_ROOT
+    return KIND_OTHER
 
 
 def thread_type_of(item_type: str | None, title: str | None) -> str:
@@ -126,7 +126,7 @@ def resolve_roots_np(
 
     nxt = np.where(link, pos_clip, arange)
     dist = np.where(link, np.int64(1), np.int64(0))
-    rounds = int(math.ceil(math.log2(max(n, 2)))) + 2
+    rounds = math.ceil(math.log2(max(n, 2))) + 2
     for _ in range(rounds):
         prev = nxt
         dist = dist + dist[nxt]
