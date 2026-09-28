@@ -12,16 +12,22 @@ import uuid
 from pathlib import Path
 
 from atlas import contracts, paths
+from atlas.evaluation.modes import get as _mode
 
 _FIXED_VALUES = {"firsthand_problem": ("yes", "no", "unsure")}
 
 
-def allowed_values() -> dict[str, tuple[str, ...]]:
+def allowed_values(label_set: str | None = None) -> dict[str, tuple[str, ...]]:
     """Allowed label values per question.
 
-    ``firsthand_problem`` is fixed; choice questions take the option keys (in
-    file order) of ``questions.<id>.criteria`` in ``screen.v0.json``.
+    For a mode label set (see ``atlas.evaluation.modes``) the mode's radio
+    questions apply. Otherwise ``firsthand_problem`` is fixed and choice
+    questions take the option keys (in file order) of
+    ``questions.<id>.criteria`` in ``screen.v0.json``.
     """
+    mode = _mode(label_set)
+    if mode is not None:
+        return dict(mode.QUESTIONS)
     screen = paths.CONFIGS / "questions" / "screen.v0.json"
     criteria = json.loads(screen.read_text(encoding="utf-8"))["questions"]
     out = dict(_FIXED_VALUES)
@@ -56,11 +62,28 @@ class LabelStore:
         ended_at: str,
         seconds: float,
     ) -> dict:
-        allowed = allowed_values()
-        if question_id not in allowed:
+        mode = _mode(label_set)
+        if mode is None:
+            allowed = allowed_values()
+            if question_id not in allowed:
+                raise ValueError(f"unknown question_id: {question_id}")
+            if value not in allowed[question_id]:
+                raise ValueError(
+                    f"value {value!r} not allowed for {question_id}"
+                )
+        elif question_id in mode.QUESTIONS:
+            if value not in mode.QUESTIONS[question_id]:
+                raise ValueError(
+                    f"value {value!r} not allowed for {question_id}"
+                )
+        elif question_id in mode.FREE_TEXT:
+            limit = mode.FREE_TEXT[question_id]
+            if not isinstance(value, str) or len(value) > limit:
+                raise ValueError(
+                    f"free-text value for {question_id} exceeds {limit} chars"
+                )
+        else:
             raise ValueError(f"unknown question_id: {question_id}")
-        if value not in allowed[question_id]:
-            raise ValueError(f"value {value!r} not allowed for {question_id}")
         values = {
             "label_id": uuid.uuid4().hex,
             "comment_id": int(comment_id),
