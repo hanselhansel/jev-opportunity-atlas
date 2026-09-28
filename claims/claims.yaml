@@ -1,0 +1,25 @@
+# Claims ledger: every number that appears in public-facing material must be
+# listed here. `atlas claims check` recomputes each value from the saved answer
+# parquet files and fails if the claim drifts beyond its tolerance. `{root}` in
+# sql is replaced with the repository root (str.replace, never str.format).
+#
+# Example entry (all fields required):
+#
+# - id: firsthand_share_v1
+#   text: "Share of eligible comments describing a firsthand problem"
+#   value: 0.42
+#   tolerance: 0.01
+#   sql: >-
+#     SELECT avg(noul >= 0.5)
+#     FROM read_parquet('{root}/runs/<run_id>/answers/*.parquet')
+#     WHERE question_id = 'firsthand_problem'
+#   run_id: <run_id>
+#   lane: breadth
+#   denominator: "screened comments, unweighted count"
+#   question_set: screen@0
+#   weighted: false
+#   ci_low: 0.39
+#   ci_high: 0.45
+#   qualifier: "as classified by Jev jev-1.13.0; held-out precision 0.xx, recall 0.xx"
+
+[]
