@@ -213,15 +213,21 @@ def expand(
     batch = int(prev_batch.max()) + 1 if prev_batch.size else 1
     start = int(prev_order.max()) + 1 if prev_order.size else 0
     n_new = len(got["comment_id"])
+    sid = sample_id or previous.column("sample_id")[0].as_py()
     new_table = _finish(
         frame,
         got["comment_id"],
         got["stratum"],
-        sample_id or previous.column("sample_id")[0].as_py(),
+        sid,
         np.full(n_new, batch, dtype=np.int32),
         np.arange(start, start + n_new, dtype=np.int64),
     )
     combined = pa.concat_tables([previous, new_table])
+    combined = combined.set_column(
+        combined.schema.get_field_index("sample_id"),
+        "sample_id",
+        pa.repeat(sid, combined.num_rows),
+    )
     labels = combined.column("stratum").to_numpy(zero_copy_only=False)
     sizes = _sizes(frame)
     n_map = {str(u): int(c) for u, c in zip(*np.unique(labels, return_counts=True))}
