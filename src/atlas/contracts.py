@@ -6,7 +6,7 @@ from __future__ import annotations
 import pyarrow as pa
 
 SCHEMA_VERSION = 1
-UTC_TS = pa.timestamp("s", tz="UTC")
+UTC_TS = pa.timestamp("ms", tz="UTC")  # Parquet has no seconds unit; ms round-trips exactly
 N_PERIODS = 12
 
 THREAD_TYPES = (
