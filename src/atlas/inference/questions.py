@@ -22,6 +22,7 @@ class QuestionSet:
     state_fields: list
     questions: dict
     sha256: str  # hex SHA-256 of the raw question file bytes (run manifest)
+    parent_limit: int = PARENT_LIMIT
 
 
 def load_question_set(name: str, version: int) -> QuestionSet:
@@ -35,6 +36,7 @@ def load_question_set(name: str, version: int) -> QuestionSet:
         state_fields=list(data.get("state_fields") or []),
         questions=data["questions"],
         sha256=hashlib.sha256(raw).hexdigest(),
+        parent_limit=int(data.get("parent_limit", PARENT_LIMIT)),
     )
 
 
@@ -56,11 +58,12 @@ def build_state(
     thread_type: str,
     sentences: list | None,
     fields: list,
+    parent_limit: int = PARENT_LIMIT,
 ) -> dict:
     """State dict for the request body, restricted to `fields`."""
     values = {
         "comment": comment,
-        "parent": (parent or "")[:PARENT_LIMIT],
+        "parent": (parent or "")[:parent_limit],
         "story_title": story_title,
         "thread_type": thread_type,
         "sentences": {
