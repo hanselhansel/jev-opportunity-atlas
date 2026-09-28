@@ -1,9 +1,12 @@
+import argparse
 import json
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
+from atlas import paths
+from atlas.publication import cli as pubcli
 from atlas.publication.allowlist import scan_release
 from atlas.publication.export import (
     ExportError,
@@ -260,3 +263,32 @@ def test_verify_release_detects_tamper_and_missing(tmp_path):
     (final / "stray.txt").write_text("stray")
     result = verify_release(final)
     assert "stray.txt" in result["extra"]
+
+
+def test_release_stage_and_check_cli(tmp_path, monkeypatch):
+    make_workspace(tmp_path)
+    monkeypatch.setattr(paths, "ROOT", tmp_path)
+    monkeypatch.setattr(paths, "EXPORTS", tmp_path / "exports")
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    pubcli.register(sub)
+    args = parser.parse_args(
+        [
+            "release",
+            "stage",
+            "--release",
+            "v0-cli",
+            "--snapshot",
+            "s1",
+            "--run",
+            "r1",
+        ]
+    )
+    args.func(args)
+    args = parser.parse_args(["release", "check", "--release", "v0-cli"])
+    args.func(args)
+    ledger = tmp_path / "exports" / "v0-cli" / "runs" / "r1" / "ledger.jsonl"
+    ledger.write_text('{"run_id": "r1", "cost_usd": 9.9}\n')
+    with pytest.raises(SystemExit) as exc:
+        args.func(args)
+    assert exc.value.code == 1

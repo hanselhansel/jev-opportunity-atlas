@@ -1,9 +1,13 @@
+import argparse
+import json
 from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
+from atlas import paths
+from atlas.publication import cli as pubcli
 from atlas.publication.claims import check_claims, load_claims
 
 
@@ -110,3 +114,20 @@ def test_non_scalar_result_fails(answers_parquet):
 def test_repo_claims_file_loads():
     repo = Path(__file__).resolve().parents[2]
     assert load_claims(repo / "claims" / "claims.yaml") == []
+
+
+def test_claims_check_cli_exit_codes(tmp_path, monkeypatch, answers_parquet):
+    monkeypatch.setattr(paths, "ROOT", answers_parquet)
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    pubcli.register(sub)
+    good = tmp_path / "claims_ok.yaml"
+    good.write_text(json.dumps([claim()]))
+    args = parser.parse_args(["claims", "check", "--file", str(good)])
+    args.func(args)
+    bad = tmp_path / "claims_bad.yaml"
+    bad.write_text(json.dumps([claim(value=0.9)]))
+    args = parser.parse_args(["claims", "check", "--file", str(bad)])
+    with pytest.raises(SystemExit) as exc:
+        args.func(args)
+    assert exc.value.code == 1
