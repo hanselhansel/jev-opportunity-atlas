@@ -188,3 +188,54 @@ LEDGER_FIELDS = (
     "cost_class",
 )
 COST_CLASSES = ("calculated", "unknown", "replay", "pending", "none")
+
+# ---- Analysis layer (plan 2). Additive; existing schemas are unchanged. ----
+
+SPLIT_SALT = "jev-atlas-2026-09-29"
+
+
+def half_of(story_id: int) -> str:
+    """Explore/confirm split by thread, fixed before any analysis. Deterministic."""
+    import hashlib
+
+    digest = hashlib.sha256(f"{SPLIT_SALT}:{story_id}".encode()).digest()
+    return "explore" if digest[0] % 2 == 0 else "confirm"
+
+
+# Need cards: solution-independent problem statements, versioned. Text is written by
+# Claude and approved by Hansel; Jev never writes these.
+CARDS = pa.schema([
+    ("card_id", pa.string()),          # stable, e.g. "c0042"
+    ("group_id", pa.string()),         # level-1 group, e.g. "g07"
+    ("group_label", pa.string()),
+    ("statement", pa.string()),        # one sentence, solution-independent
+    ("taxonomy_version", pa.string()), # e.g. "t1"
+    ("status", pa.string()),           # draft | approved | merged_into:<card_id> | retired
+    ("author", pa.string()),           # "claude+hansel" or "hansel"
+    ("created_at", pa.string()),
+])
+
+# One row per (comment, taxonomy version): where Jev placed the comment.
+ASSIGNMENTS = pa.schema([
+    ("run_id", pa.string()),
+    ("comment_id", pa.int64()),
+    ("taxonomy_version", pa.string()),
+    ("group_id", pa.string()),         # "none" when Jev picked none of the groups
+    ("group_p", pa.float64()),
+    ("group_confidence", pa.float64()),
+    ("card_id", pa.string()),          # "none" when no card fits; null when group is none
+    ("card_p", pa.float64()),
+    ("card_confidence", pa.float64()),
+    ("verified_p", pa.float64()),      # membership noul, null until verified
+])
+
+# Every human-labeled item and how it was drawn. PPI needs known selection
+# probabilities; hand-picked items are never used for estimates.
+GOLD_DRAWS = pa.schema([
+    ("label_set", pa.string()),
+    ("comment_id", pa.int64()),
+    ("draw_stratum", pa.string()),
+    ("selection_prob", pa.float64()),  # probability this item entered the gold set
+    ("seed", pa.int64()),
+    ("purpose", pa.string()),          # estimate | calibration | audit
+])
