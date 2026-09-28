@@ -17,6 +17,7 @@ from atlas.cards.replies import (
     reply_items,
     reply_pairs,
     reply_question_set,
+    unsolved_by_problem,
     write_mapping,
 )
 from atlas.inference.questions import canonical_json
@@ -396,3 +397,225 @@ def test_write_mapping_round_trip(tmp_path):
     assert back.to_pylist() == [
         {"reply_id": 21, "problem_id": 11, "kind": "reply", "time": 100}
     ]
+
+
+# ---- Task 14.3: unsolved share per problem ----
+
+
+def answer_row(**over):
+    """An ANSWERS row; every field defaults to null, set what matters."""
+    base = {f.name: None for f in contracts.ANSWERS}
+    base.update(run_id="r1", question_set="replies@1", cache_hit=False)
+    base.update(over)
+    return base
+
+
+def answers_table(rows):
+    return pa.Table.from_pylist(rows, schema=contracts.ANSWERS)
+
+
+def mapping_of(*rows):
+    """(reply_id, problem_id, kind, time) tuples -> MAPPING table."""
+    return pa.Table.from_pylist(
+        [
+            {"reply_id": rid, "problem_id": pid, "kind": kind, "time": t}
+            for rid, pid, kind, t in rows
+        ],
+        schema=MAPPING,
+    )
+
+
+def solution_answers(reply_id, noul, kind="open_source_tool"):
+    return [
+        answer_row(
+            comment_id=reply_id,
+            question_id="names_solution",
+            qtype="noul",
+            noul=noul,
+        ),
+        answer_row(
+            comment_id=reply_id,
+            question_id="solution_kind",
+            qtype="choice",
+            choice=kind,
+        ),
+    ]
+
+
+def followup_answer(reply_id, choice):
+    return answer_row(
+        comment_id=reply_id,
+        question_id="author_says_solved",
+        qtype="choice",
+        choice=choice,
+    )
+
+
+UNSOLVED_COLUMNS = [
+    "comment_id",
+    "n_replies",
+    "any_solution_named",
+    "solution_kinds",
+    "author_says_solved",
+    "unsolved",
+    "solved_p",
+]
+
+
+def test_no_solution_named_is_unsolved():
+    mapping = mapping_of((21, 11, "reply", 100))
+    answers = answers_table(solution_answers(21, 0.1, kind="none"))
+    out = unsolved_by_problem(answers, mapping)
+    assert out.column_names == UNSOLVED_COLUMNS
+    assert out.schema.field("comment_id").type == pa.int64()
+    assert out.schema.field("solution_kinds").type == pa.list_(pa.string())
+    assert out.schema.field("solved_p").type == pa.float64()
+    assert out.to_pylist() == [
+        {
+            "comment_id": 11,
+            "n_replies": 1,
+            "any_solution_named": False,
+            "solution_kinds": [],
+            "author_says_solved": None,
+            "unsolved": True,
+            "solved_p": 0.0,
+        }
+    ]
+
+
+def test_named_solution_is_solved_and_none_kind_excluded():
+    mapping = mapping_of(
+        (21, 11, "reply", 100),
+        (22, 11, "reply", 200),
+        (23, 11, "reply", 300),
+    )
+    answers = answers_table(
+        solution_answers(21, 0.8, kind="open_source_tool")
+        + solution_answers(22, 0.9, kind="none")
+        + solution_answers(23, 0.6, kind="commercial_product")
+    )
+    (row,) = unsolved_by_problem(answers, mapping).to_pylist()
+    assert row["n_replies"] == 3
+    assert row["any_solution_named"] is True
+    assert row["solution_kinds"] == ["commercial_product", "open_source_tool"]
+    assert row["unsolved"] is False and row["solved_p"] == 1.0
+
+
+def test_below_threshold_ignored_and_threshold_parameter_respected():
+    mapping = mapping_of((21, 11, "reply", 100))
+    answers = answers_table(solution_answers(21, 0.8))
+    (row,) = unsolved_by_problem(answers, mapping, threshold=0.9).to_pylist()
+    assert row["any_solution_named"] is False and row["solution_kinds"] == []
+    assert row["unsolved"] is True and row["solved_p"] == 0.0
+
+
+def test_author_still_unsolved_overrides_named_solution():
+    mapping = mapping_of((21, 11, "reply", 100), (31, 11, "followup", 200))
+    answers = answers_table(
+        solution_answers(21, 0.9) + [followup_answer(31, "still_unsolved")]
+    )
+    (row,) = unsolved_by_problem(answers, mapping).to_pylist()
+    assert row["any_solution_named"] is True and row["n_replies"] == 1
+    assert row["author_says_solved"] == "still_unsolved"
+    assert row["unsolved"] is True and row["solved_p"] == 0.0
+
+
+def test_latest_non_unclear_followup_wins():
+    mapping = mapping_of(
+        (21, 11, "reply", 100),
+        (31, 11, "followup", 200),
+        (32, 11, "followup", 300),
+        (33, 11, "followup", 400),
+    )
+    answers = answers_table(
+        solution_answers(21, 0.9)
+        + [
+            followup_answer(31, "solved"),
+            followup_answer(32, "still_unsolved"),
+            followup_answer(33, "unclear"),
+        ]
+    )
+    (row,) = unsolved_by_problem(answers, mapping).to_pylist()
+    assert row["author_says_solved"] == "still_unsolved"
+    assert row["unsolved"] is True
+
+
+def test_followup_tie_breaks_by_reply_id():
+    mapping = mapping_of((31, 11, "followup", 200), (39, 11, "followup", 200))
+    answers = answers_table(
+        [followup_answer(31, "solved"), followup_answer(39, "still_unsolved")]
+    )
+    (row,) = unsolved_by_problem(answers, mapping).to_pylist()
+    assert row["author_says_solved"] == "still_unsolved"
+
+
+def test_all_unclear_followups_report_unclear():
+    mapping = mapping_of((31, 11, "followup", 200), (32, 11, "followup", 300))
+    answers = answers_table(
+        [followup_answer(31, "unclear"), followup_answer(32, "unclear")]
+    )
+    (row,) = unsolved_by_problem(answers, mapping).to_pylist()
+    assert row["author_says_solved"] == "unclear"
+
+
+def test_problem_with_only_followups_is_unsolved():
+    mapping = mapping_of((31, 11, "followup", 200))
+    answers = answers_table([followup_answer(31, "solved")])
+    (row,) = unsolved_by_problem(answers, mapping).to_pylist()
+    assert row["n_replies"] == 0 and row["any_solution_named"] is False
+    assert row["author_says_solved"] == "solved"
+    assert row["unsolved"] is True and row["solved_p"] == 0.0
+
+
+def test_problems_without_answers_are_omitted_and_sorted():
+    mapping = mapping_of(
+        (21, 12, "reply", 100),
+        (22, 11, "reply", 100),
+        (23, 13, "reply", 100),
+    )
+    answers = answers_table(
+        solution_answers(21, 0.8) + solution_answers(22, 0.2)
+    )
+    out = unsolved_by_problem(answers, mapping)
+    assert [r["comment_id"] for r in out.to_pylist()] == [11, 12]
+
+
+def test_unrelated_question_ids_and_comment_ids_ignored():
+    mapping = mapping_of((21, 11, "reply", 100))
+    answers = answers_table(
+        [
+            answer_row(
+                comment_id=21,
+                question_id="domain",
+                qtype="choice",
+                choice="software_development",
+            ),
+            answer_row(
+                comment_id=21,
+                question_id="domain",
+                qtype="choice",
+                choice="other",
+            ),
+            answer_row(comment_id=999, question_id="names_solution", noul=0.9),
+        ]
+    )
+    assert unsolved_by_problem(answers, mapping).num_rows == 0
+
+
+def test_duplicate_answer_rows_raise():
+    mapping = mapping_of((21, 11, "reply", 100))
+    answers = answers_table(
+        [
+            answer_row(comment_id=21, question_id="names_solution", noul=0.1),
+            answer_row(comment_id=21, question_id="names_solution", noul=0.9),
+        ]
+    )
+    with pytest.raises(ValueError, match="duplicate"):
+        unsolved_by_problem(answers, mapping)
+
+
+def test_empty_answers_returns_empty_table():
+    out = unsolved_by_problem(
+        answers_table([]), mapping_of((21, 11, "reply", 100))
+    )
+    assert out.column_names == UNSOLVED_COLUMNS and out.num_rows == 0

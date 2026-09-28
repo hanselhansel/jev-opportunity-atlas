@@ -69,6 +69,24 @@ FOLLOWUP_QUESTIONS = {
     },
 }
 
+# One row per problem comment that had at least one answered reply or
+# follow-up; joins to L13 card_metrics through the optional `replies` argument.
+UNSOLVED = pa.schema(
+    [
+        ("comment_id", pa.int64()),  # the problem id
+        ("n_replies", pa.int64()),
+        ("any_solution_named", pa.bool_()),
+        ("solution_kinds", pa.list_(pa.string())),
+        ("author_says_solved", pa.string()),
+        ("unsolved", pa.bool_()),
+        ("solved_p", pa.float64()),
+    ]
+)
+
+ANSWER_QUESTION_IDS = frozenset(
+    {"names_solution", "solution_kind", "author_says_solved"}
+)
+
 # reply -> problem join table, written next to the answers so each answer row
 # can be traced back to the problem comment it informs.
 MAPPING = pa.schema(
@@ -225,3 +243,86 @@ def write_mapping(items, path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     pq.write_table(mapping_table(items), path)
     return path
+
+
+def unsolved_by_problem(answers, mapping, threshold=0.5) -> pa.Table:
+    """One UNSOLVED row per problem with at least one answered item.
+
+    `answers` is a contract ANSWERS table; only rows whose comment_id is in
+    `mapping` and whose question_id is one of the reply/follow-up questions
+    count, and duplicates on (comment_id, question_id) raise ValueError. A
+    problem is `unsolved` when no reply reaches `names_solution >= threshold`
+    or the author's latest non-unclear follow-up says "still_unsolved".
+    `solved_p` is that same decision as a probability (0.0/1.0) so the table
+    plugs into L13 `card_metrics(..., replies=)`, where solved_p >= 0.5 means
+    solved.
+    """
+    meta = {row["reply_id"]: row for row in mapping.to_pylist()}
+    per_item: dict[int, dict] = {}
+    for row in answers.to_pylist():
+        if (
+            row["comment_id"] not in meta
+            or row["question_id"] not in ANSWER_QUESTION_IDS
+        ):
+            continue
+        bucket = per_item.setdefault(row["comment_id"], {})
+        if row["question_id"] in bucket:
+            raise ValueError(
+                "duplicate answer row for comment_id="
+                f"{row['comment_id']} question_id={row['question_id']}"
+            )
+        bucket[row["question_id"]] = row
+
+    problems: dict[int, list] = {}
+    for reply_id, by_question in per_item.items():
+        m = meta[reply_id]
+        problems.setdefault(m["problem_id"], []).append((m, by_question))
+
+    out = []
+    for problem_id in sorted(problems):
+        entries = problems[problem_id]
+        replies = [e for e in entries if e[0]["kind"] == "reply"]
+        followups = [e for e in entries if e[0]["kind"] == "followup"]
+
+        kinds = set()
+        any_named = False
+        for _m, by_question in replies:
+            ns = by_question.get("names_solution")
+            if (
+                ns is not None
+                and ns["noul"] is not None
+                and ns["noul"] >= threshold
+            ):
+                any_named = True
+                sk = by_question.get("solution_kind")
+                if sk is not None and sk["choice"] not in (None, "none"):
+                    kinds.add(sk["choice"])
+
+        author_says = None
+        if followups:
+            verdicts = [
+                (m["time"], m["reply_id"], by_question["author_says_solved"]["choice"])
+                for m, by_question in followups
+                if by_question.get("author_says_solved") is not None
+                and by_question["author_says_solved"]["choice"] is not None
+            ]
+            non_unclear = [v for v in verdicts if v[2] != "unclear"]
+            author_says = (
+                max(non_unclear, key=lambda v: (v[0], v[1]))[2]
+                if non_unclear
+                else "unclear"
+            )
+
+        unsolved = not any_named or author_says == "still_unsolved"
+        out.append(
+            {
+                "comment_id": problem_id,
+                "n_replies": len(replies),
+                "any_solution_named": any_named,
+                "solution_kinds": sorted(kinds),
+                "author_says_solved": author_says,
+                "unsolved": unsolved,
+                "solved_p": 0.0 if unsolved else 1.0,
+            }
+        )
+    return pa.Table.from_pylist(out, schema=UNSOLVED)
