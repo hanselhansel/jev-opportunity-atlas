@@ -1,0 +1,47 @@
+{
+  "_note": "Redacted shape of a real jev-1.13.0 response (2026-09-28 smoke call). Keys and value types only; choice keys are the question's option names. Score answers were not in the smoke call; see docs.typesafe.ai/api.",
+  "headers": {
+    "x-typesafe-request-id": "req_<32 hex>"
+  },
+  "body": {
+    "model": "jev-1.13.0",
+    "answers": {
+      "firsthand": {
+        "type": "noul",
+        "noul": 0.5
+      },
+      "domain": {
+        "type": "choice",
+        "choice": "finance_ops",
+        "confidence": 1.0,
+        "probabilities": {
+          "other": 0.0,
+          "devtools": 0.0,
+          "finance_ops": 1.0
+        }
+      }
+    },
+    "usage": {
+      "input_tokens": 366,
+      "output_tokens": 59
+    }
+  },
+  "request": {
+    "model": "jev-1.13.0",
+    "questions": {
+      "firsthand": {
+        "type": "noul",
+        "instructions": "Does the author describe a problem they personally experienced?"
+      },
+      "domain": {
+        "type": "choice",
+        "instructions": "Which area is the problem in?",
+        "criteria": {
+          "finance_ops": "Payments, accounting, invoicing",
+          "devtools": "Software development tools",
+          "other": "Anything else"
+        }
+      }
+    }
+  }
+}
