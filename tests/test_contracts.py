@@ -68,3 +68,12 @@ def test_period_labels():
     assert c.period_of(1199, start, end) == "P12"
     assert c.period_of(1200, start, end) is None
     assert c.period_of(-1, start, end) is None
+
+
+def test_analysis_layer_contracts():
+    for schema in [c.CARDS, c.ASSIGNMENTS, c.GOLD_DRAWS]:
+        assert schema.empty_table().schema.equals(schema)
+    assert "selection_prob" in c.GOLD_DRAWS.names
+    halves = [c.half_of(i) for i in range(10_000)]
+    assert c.half_of(12345) == c.half_of(12345)
+    assert 0.47 < halves.count("explore") / len(halves) < 0.53
