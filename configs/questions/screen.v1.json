@@ -1,0 +1,30 @@
+{
+  "name": "screen",
+  "version": 1,
+  "state_fields": [
+    "comment"
+  ],
+  "questions": {
+    "firsthand_problem": {
+      "type": "noul",
+      "instructions": "Does `comment` describe a problem the author personally experienced?",
+      "criteria": {
+        "true": "The author (I, we, my team, our company) hit a real problem: something failed, blocked, cost time or money, or frustrated them.",
+        "false": "No problem, someone else's problem, a hypothetical, a general opinion, or a sales pitch."
+      }
+    },
+    "account_type": {
+      "type": "choice",
+      "instructions": "What kind of text is `comment`?",
+      "criteria": {
+        "firsthand_account": "own experience",
+        "secondhand_report": "someone else's experience",
+        "general_opinion": "view without personal account",
+        "product_pitch": "promotes own product",
+        "joke_or_sarcasm": "not literal",
+        "question_or_request": "asks for help or advice",
+        "other": null
+      }
+    }
+  }
+}
