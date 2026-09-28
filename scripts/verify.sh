@@ -4,7 +4,7 @@
 set -e
 cd "$(git rev-parse --show-toplevel)"
 command -v gitleaks >/dev/null || { echo "gitleaks is required: brew install gitleaks"; exit 1; }
-gitleaks git --config .gitleaks.toml --redact --no-banner --log-level warn .
+gitleaks git --log-opts=HEAD --config .gitleaks.toml --redact --no-banner --log-level warn .
 uv run --quiet ruff check src tests
 uv run --quiet pytest -q
 echo "verify: ok"
