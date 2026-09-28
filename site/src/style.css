@@ -77,8 +77,8 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
+  box-sizing: border-box;
+  width: 100%;
   padding: var(--space-2) var(--space-4);
   font-size: var(--fs-small);
   font-weight: 600;
