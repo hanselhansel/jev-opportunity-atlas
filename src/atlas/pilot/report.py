@@ -278,10 +278,13 @@ def _sec_packed(run_id) -> list[str]:
     pmap_path = paths.run_dir(packed_id) / "packed_map.parquet"
     if not pmap_path.exists():
         return ["- not run"]
+    single, packed_answers = _answers_table(run_id), _answers_table(packed_id)
+    if single is None or packed_answers is None:
+        return ["- packed map present but answers missing; dispatch incomplete"]
     pmap = pq.read_table(pmap_path)
     res = packed.compare_packed(
-        _answers_table(run_id),
-        packed.unpack_answers(_answers_table(packed_id), pmap),
+        single,
+        packed.unpack_answers(packed_answers, pmap),
         single_ledger=paths.ledger_path(run_id),
         packed_ledger=paths.ledger_path(packed_id),
         packed_map=pmap,
