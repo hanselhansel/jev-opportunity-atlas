@@ -134,3 +134,158 @@ def register(sub) -> None:
     s = cmds.add_parser("show", help="Print per-stratum N_h and n_h")
     s.add_argument("--sample-id", required=True)
     s.set_defaults(func=_show)
+
+    _register_v2(cmds)
+
+
+def _v2_design_inputs(args) -> dict:
+    """Frame, config, pilot inputs, and the yield allocation for v2 commands."""
+    import numpy as np
+    import pyarrow.parquet as pq
+
+    from atlas import paths
+    from atlas.sampling import design_v2, yield_alloc
+
+    snapshot = args.snapshot or _default_snapshot()
+    sdir = paths.snapshot_dir(snapshot)
+    comments = pq.read_table(
+        sdir / "comments.parquet",
+        columns=[
+            "id",
+            "story_id",
+            "period",
+            "thread_type",
+            "text_norm",
+            "word_count",
+            "eligible",
+        ],
+    )
+    stories = pq.read_table(
+        sdir / "stories.parquet", columns=["id", "thread_type"]
+    )
+    frame = design_v2.build_frame_v2(comments, stories)
+    labels = frame.column("stratum").to_numpy(zero_copy_only=False)
+    uniq, counts = np.unique(labels, return_counts=True)
+    sizes = {str(u): int(n) for u, n in zip(uniq, counts)}
+    cfg = tomllib.loads((paths.CONFIGS / "sampling_v2.toml").read_text())
+    p, c, levels = yield_alloc.pilot_inputs(frame, args.pilot_run, cfg)
+    usd_per_token, price_version = yield_alloc.price_per_token()
+    budget_tokens = yield_alloc.usd_to_tokens(args.budget_usd)
+    alloc = yield_alloc.allocate_by_yield(
+        sizes, p, c, budget_tokens, cfg["floor_rate"], cfg["min_n"]
+    )
+    return {
+        "snapshot": snapshot,
+        "frame": frame,
+        "sizes": sizes,
+        "cfg": cfg,
+        "p": p,
+        "c": c,
+        "levels": levels,
+        "usd_per_token": usd_per_token,
+        "price_version": price_version,
+        "budget_tokens": budget_tokens,
+        "alloc": alloc,
+    }
+
+
+def _allocate_v2(args) -> None:
+    from atlas.sampling import yield_alloc
+
+    d = _v2_design_inputs(args)
+    exp_tokens = yield_alloc.expected_tokens(d["alloc"], d["c"])
+    print(
+        json.dumps(
+            {
+                "snapshot": d["snapshot"],
+                "pilot_run": args.pilot_run,
+                "budget_usd": args.budget_usd,
+                "budget_tokens": d["budget_tokens"],
+                "price_version": d["price_version"],
+                "floor_rate": d["cfg"]["floor_rate"],
+                "min_n": d["cfg"]["min_n"],
+                "allocation": d["alloc"],
+                "N_h": d["sizes"],
+                "p_h": d["p"],
+                "c_h": d["c"],
+                "input_levels": d["levels"],
+                "expected_positives": yield_alloc.expected_positives(
+                    d["alloc"], d["p"]
+                ),
+                "expected_tokens": exp_tokens,
+                "expected_usd": exp_tokens * d["usd_per_token"],
+                "largest_weight": yield_alloc.largest_weight(
+                    d["alloc"], d["sizes"]
+                ),
+            },
+            sort_keys=True,
+        )
+    )
+
+
+def _design_v2(args) -> None:
+    from atlas import paths
+    from atlas.sampling import design_v2
+
+    if paths.sample_path(args.sample_id).exists():
+        raise SystemExit(
+            f"{args.sample_id} already exists; refusing to overwrite"
+        )
+    d = _v2_design_inputs(args)
+    seed = d["cfg"]["seed"]
+    table = design_v2.draw_allocated(d["frame"], d["alloc"], seed, args.sample_id)
+    meta = {
+        "seed": seed,
+        "seeds_by_batch": {"1": seed},
+        "frame_snapshot_id": d["snapshot"],
+        "design_version": "v2",
+        "pilot_run": args.pilot_run,
+        "budget_usd": args.budget_usd,
+    }
+    design = design_v2.design_block(
+        floor_rate=d["cfg"]["floor_rate"],
+        min_n=d["cfg"]["min_n"],
+        budget_tokens=d["budget_tokens"],
+        p=d["p"],
+        c=d["c"],
+        source=f"pilot:{args.pilot_run}",
+        alloc=d["alloc"],
+        N=d["sizes"],
+        input_levels=d["levels"],
+    )
+    manifest = design_v2.write_design_manifest(table, meta, design, paths.SAMPLES)
+    _copy_sidecar(args.sample_id)
+    print(
+        json.dumps(
+            {
+                "sample_id": args.sample_id,
+                "n": table.num_rows,
+                "path": str(paths.sample_path(args.sample_id)),
+                "sha256": manifest["sha256"],
+            },
+            sort_keys=True,
+        )
+    )
+
+
+def _register_v2(cmds) -> None:
+    a = cmds.add_parser(
+        "allocate-v2", help="Yield-aware allocation from pilot inputs (no draw)"
+    )
+    a.add_argument(
+        "--snapshot", default=None, help="Default: configs/acquisition.toml"
+    )
+    a.add_argument("--pilot-run", required=True, help="Pilot run id")
+    a.add_argument("--budget-usd", type=float, required=True)
+    a.set_defaults(func=_allocate_v2)
+
+    d = cmds.add_parser(
+        "design-v2", help="Draw the v2 sample; never overwrites"
+    )
+    d.add_argument(
+        "--snapshot", default=None, help="Default: configs/acquisition.toml"
+    )
+    d.add_argument("--pilot-run", required=True, help="Pilot run id")
+    d.add_argument("--budget-usd", type=float, required=True)
+    d.add_argument("--sample-id", required=True)
+    d.set_defaults(func=_design_v2)

@@ -2,9 +2,10 @@ import json
 
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.parquet as pq
 import pytest
 
-from atlas import contracts
+from atlas import contracts, paths
 from atlas.sampling.design_v2 import (
     PAIN_PATTERNS_VERSION,
     design_stratum,
@@ -12,6 +13,7 @@ from atlas.sampling.design_v2 import (
     pain_flag,
     thread_group,
 )
+from tests.sampling.test_yield_alloc import repo_v2, run_cli  # noqa: F401
 
 
 def test_pain_flag_first_person_pain():
@@ -256,3 +258,49 @@ def test_draw_allocated_rejects_bad_alloc():
         "x",
     )
     assert ok.num_rows == 5
+
+
+def test_design_v2_cli(repo_v2, capsys):  # noqa: F811
+    run_cli(
+        "sample",
+        "design-v2",
+        "--pilot-run",
+        "pilot-x",
+        "--budget-usd",
+        "0.00051",
+        "--sample-id",
+        "v2a",
+    )
+    out = json.loads(capsys.readouterr().out)
+    assert out["sample_id"] == "v2a"
+    parquet = paths.SAMPLES / "v2a.parquet"
+    sidecar = paths.SAMPLES / "v2a.json"
+    assert parquet.exists() and sidecar.exists()
+    assert (paths.MANIFESTS / "samples" / "v2a.json").exists()
+
+    table = pq.read_table(parquet)
+    assert table.schema == contracts.SAMPLE
+    assert table.num_rows == out["n"]
+
+    meta = json.loads(sidecar.read_text())
+    assert meta["design_version"] == "v2"
+    assert meta["frame_snapshot_id"] == "snapv2"
+    assert meta["pilot_run"] == "pilot-x"
+    design = meta["design"]
+    assert design["pain_patterns_version"] == 1
+    assert design["inputs_source"] == "pilot:pilot-x"
+    assert design["floor_rate"] == 0.1
+    assert design["allocation"]["pain|L1|H1|ask"] >= 1
+
+    # A second draw with the same id refuses to overwrite.
+    with pytest.raises(SystemExit):
+        run_cli(
+            "sample",
+            "design-v2",
+            "--pilot-run",
+            "pilot-x",
+            "--budget-usd",
+            "0.00051",
+            "--sample-id",
+            "v2a",
+        )
