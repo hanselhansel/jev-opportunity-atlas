@@ -19,15 +19,16 @@ __pycache__/
 *.egg-info/
 
 # Local working data (published only through allowlisted release bundles)
-data/
-runs/
-exports/
+/data/
+/runs/
+/exports/
 *.duckdb
 *.duckdb.wal
 
 # Site build output
 site/dist/
-site/.observablehq/cache/
+**/.observablehq/cache/
+site/fixtures/
 node_modules/
 
 .DS_Store

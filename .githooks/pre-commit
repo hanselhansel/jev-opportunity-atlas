@@ -1,0 +1,5 @@
+#!/bin/sh
+# Blocks a commit when any staged file contains a secret-shaped string.
+set -e
+uv run --quiet python -m atlas.publication.scan_cli --staged
+gitleaks git --staged --config .gitleaks.toml --redact --no-banner --log-level warn .
