@@ -133,19 +133,26 @@ class BudgetGuard:
             ) from None
         calculated = 0.0
         unknown = 0
-        for manifest in sorted(paths.RUNS.glob("*/run_manifest.json")):
-            try:
-                data = json.loads(manifest.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                continue
-            if data.get("budget") != name:
-                continue
-            ledger = manifest.parent / "ledger.jsonl"
-            if not ledger.exists():
-                continue
-            s = summarize(ledger)
-            calculated += s["calculated_usd"]
-            unknown += s["unknown_attempts"]
+        try:
+            for manifest in sorted(paths.RUNS.glob("*/run_manifest.json")):
+                try:
+                    data = json.loads(manifest.read_text(encoding="utf-8"))
+                except (OSError, ValueError) as exc:
+                    # Skipping would silently undercount spend for this budget.
+                    raise RuntimeError(
+                        f"unreadable run manifest {manifest}: {exc}"
+                    ) from exc
+                if data.get("budget") != name:
+                    continue
+                ledger = manifest.parent / "ledger.jsonl"
+                if not ledger.exists():
+                    continue
+                s = summarize(ledger)
+                calculated += s["calculated_usd"]
+                unknown += s["unknown_attempts"]
+        except BaseException:
+            os.close(lock_fd)
+            raise
         guard = cls.from_summary(
             {"calculated_usd": calculated, "unknown_attempts": unknown},
             cap_usd,

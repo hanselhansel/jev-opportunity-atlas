@@ -110,3 +110,20 @@ def test_second_process_cannot_take_lock(tmp_path, monkeypatch):
     finally:
         g.close()
     assert subprocess.run([sys.executable, "-c", script], check=False).returncode == 0
+
+
+def test_unreadable_manifest_raises_instead_of_skipping(tmp_path, monkeypatch):
+    runs = tmp_path / "runs"
+    monkeypatch.setattr(paths, "RUNS", runs)
+    bad = runs / "bad-run"
+    bad.mkdir(parents=True)
+    (bad / "run_manifest.json").write_text("{not json")
+    with pytest.raises(RuntimeError, match="run_manifest"):
+        BudgetGuard.for_budget("pilot", cap_usd=1.0, usd_per_input_token=PRICE,
+                               worst_case_tokens_unknown=8000)
+    # the failed scan must not leave the lock held
+    (bad / "run_manifest.json").write_text(json.dumps({"budget": "other"}))
+    g = BudgetGuard.for_budget(
+        "pilot", cap_usd=1.0, usd_per_input_token=PRICE, worst_case_tokens_unknown=8000
+    )
+    g.close()

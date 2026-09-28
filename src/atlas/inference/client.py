@@ -124,6 +124,10 @@ class JevClient:
     def __repr__(self) -> str:
         return f"JevClient(base={self.base!r})"
 
+    @property
+    def is_open(self) -> bool:
+        return self._client is not None
+
     async def __aenter__(self) -> Self:
         await self._ensure_client()
         return self
