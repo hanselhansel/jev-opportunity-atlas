@@ -1,11 +1,25 @@
 """L14 replies: pair builder, runner items, unsolved-per-problem table."""
 
+import hashlib
+
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
 from atlas import contracts
-from atlas.cards.replies import reply_pairs
+from atlas.cards.replies import (
+    FOLLOWUP_QUESTIONS,
+    MAPPING,
+    REPLY_QUESTIONS,
+    followup_items,
+    followup_question_set,
+    mapping_table,
+    reply_items,
+    reply_pairs,
+    reply_question_set,
+    write_mapping,
+)
+from atlas.inference.questions import canonical_json
 
 BASE = 9_300_000_000
 
@@ -238,3 +252,147 @@ def test_empty_problem_ids_returns_empty_without_parquet(tmp_path):
 def test_missing_comments_parquet_raises(tmp_path):
     with pytest.raises(FileNotFoundError):
         reply_pairs(tmp_path, [BASE + 1])
+
+
+# ---- Task 14.2: items, questions, mapping ----
+
+
+def pair_row(problem_id, reply_id, time, text="synthetic reply text"):
+    return {
+        "problem_id": problem_id,
+        "reply_id": reply_id,
+        "time": time,
+        "text": text,
+    }
+
+
+def test_reply_items_build_runner_items_with_truncated_state():
+    items = reply_items([pair_row(11, 21, 100, "x" * 1500)], {11: "synthetic pain"})
+    assert items == [
+        {
+            "comment_id": 21,
+            "problem_id": 11,
+            "kind": "reply",
+            "time": 100,
+            "state": {"problem": "synthetic pain", "reply": "x" * 1200},
+            "questions": REPLY_QUESTIONS,
+        }
+    ]
+    assert items[0]["questions"] is not REPLY_QUESTIONS
+
+
+def test_reply_items_missing_pain_sentence_raises_keyerror():
+    with pytest.raises(KeyError):
+        reply_items([pair_row(99, 21, 100)], {})
+
+
+def test_item_questions_are_independent_deep_copies():
+    items = reply_items(
+        [pair_row(11, 21, 100), pair_row(11, 22, 101)], {11: "p"}
+    )
+    items[0]["questions"]["names_solution"]["criteria"]["true"] = "mutated"
+    assert items[1]["questions"]["names_solution"]["criteria"]["true"] != "mutated"
+    assert (
+        REPLY_QUESTIONS["names_solution"]["criteria"]["true"]
+        == "The reply names a specific existing tool, product, feature, "
+        "or approach that addresses the problem."
+    )
+
+
+def test_followup_items_build_runner_items():
+    items = followup_items(
+        [pair_row(11, 22, 105, "synthetic follow-up")], {11: "synthetic pain"}
+    )
+    assert items == [
+        {
+            "comment_id": 22,
+            "problem_id": 11,
+            "kind": "followup",
+            "time": 105,
+            "state": {
+                "problem": "synthetic pain",
+                "followup": "synthetic follow-up",
+            },
+            "questions": FOLLOWUP_QUESTIONS,
+        }
+    ]
+    assert items[0]["questions"] is not FOLLOWUP_QUESTIONS
+
+
+def test_followup_items_missing_pain_sentence_raises_keyerror():
+    with pytest.raises(KeyError):
+        followup_items([pair_row(99, 21, 100)], {11: "p"})
+
+
+def test_question_constants_shape():
+    assert set(REPLY_QUESTIONS) == {"names_solution", "solution_kind"}
+    assert REPLY_QUESTIONS["names_solution"]["type"] == "noul"
+    assert set(REPLY_QUESTIONS["names_solution"]["criteria"]) == {
+        "true",
+        "false",
+    }
+    assert REPLY_QUESTIONS["solution_kind"]["type"] == "choice"
+    assert set(REPLY_QUESTIONS["solution_kind"]["criteria"]) == {
+        "commercial_product",
+        "open_source_tool",
+        "built_in_feature",
+        "process_or_workaround",
+        "none",
+    }
+    assert set(FOLLOWUP_QUESTIONS) == {"author_says_solved"}
+    fq = FOLLOWUP_QUESTIONS["author_says_solved"]
+    assert fq["type"] == "choice"
+    assert set(fq["criteria"]) == {"solved", "still_unsolved", "unclear"}
+
+
+def test_question_sets_labels_and_deterministic_sha():
+    qs = reply_question_set()
+    assert qs.name == "replies" and qs.version == 1 and qs.label == "replies@1"
+    assert qs.state_fields == ["problem", "reply"]
+    assert qs.questions == REPLY_QUESTIONS
+    expected = hashlib.sha256(
+        canonical_json(REPLY_QUESTIONS).encode("utf-8")
+    ).hexdigest()
+    assert qs.sha256 == expected == reply_question_set().sha256
+
+    fqs = followup_question_set()
+    assert (
+        fqs.name == "reply-followups"
+        and fqs.version == 1
+        and fqs.label == "reply-followups@1"
+    )
+    assert fqs.state_fields == ["problem", "followup"]
+    assert fqs.questions == FOLLOWUP_QUESTIONS
+    expected_f = hashlib.sha256(
+        canonical_json(FOLLOWUP_QUESTIONS).encode("utf-8")
+    ).hexdigest()
+    assert fqs.sha256 == expected_f == followup_question_set().sha256
+    assert qs.sha256 != fqs.sha256
+
+
+def test_mapping_table_schema_and_rows():
+    items = reply_items([pair_row(11, 21, 100)], {11: "p"}) + followup_items(
+        [pair_row(11, 22, 105)], {11: "p"}
+    )
+    table = mapping_table(items)
+    assert table.schema == MAPPING
+    assert table.to_pylist() == [
+        {"reply_id": 21, "problem_id": 11, "kind": "reply", "time": 100},
+        {"reply_id": 22, "problem_id": 11, "kind": "followup", "time": 105},
+    ]
+
+
+def test_mapping_table_empty_has_schema():
+    table = mapping_table([])
+    assert table.schema == MAPPING and table.num_rows == 0
+
+
+def test_write_mapping_round_trip(tmp_path):
+    items = reply_items([pair_row(11, 21, 100)], {11: "p"})
+    path = write_mapping(items, tmp_path / "nested" / "mapping.parquet")
+    assert path == tmp_path / "nested" / "mapping.parquet"
+    back = pq.read_table(path)
+    assert back.schema == MAPPING
+    assert back.to_pylist() == [
+        {"reply_id": 21, "problem_id": 11, "kind": "reply", "time": 100}
+    ]
