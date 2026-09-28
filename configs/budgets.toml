@@ -1,6 +1,20 @@
-# Caps in USD, enforced before dispatch and cumulative across runs per budget name.
-# Only Hansel raises these.
+# Jev spend caps in USD of TypeSafe credit (Hansel, 2026-09-29: $25 total for everything).
+# Each named cap is cumulative across all runs that use that budget name.
+# account_total is enforced across every budget name together and is never raised.
+# Only Hansel changes these. See docs/superpowers/specs/2026-09-29-analysis-design.md §6.
+
+account_total = 25.00
+
 smoke = 0.01
-pilot = 1.00
-spike = 0.50   # approved 2026-09-29 for the one-finding spike
+pilot = 0.50
+screen = 6.50
+facets = 2.50
+assign = 2.50
+merge_verify = 0.60
+replies = 0.30
+robustness = 1.30
+autoresearch = 0.80
+discovery = 1.00   # includes the one-finding spike
+# Unallocated reserve: 25.00 - 16.01 = 8.99 (retries, unknown charges, reruns).
+
 worst_case_tokens_per_unknown_attempt = 8000
