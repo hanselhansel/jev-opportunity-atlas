@@ -278,8 +278,9 @@ def scan_release(release_dir: Path) -> list[Finding]:
         if p.suffix == ".parquet":
             hits.extend(_scan_parquet(p, rel))
         elif p.suffix == ".zst":
-            reader = zstandard.ZstdDecompressor().stream_reader(p.open("rb"))
-            text = reader.read().decode("utf-8", errors="ignore")
+            with p.open("rb") as fh:
+                reader = zstandard.ZstdDecompressor().stream_reader(fh)
+                text = reader.read().decode("utf-8", errors="ignore")
             hits.extend(scan_text(text, rel))
         else:
             text = p.read_bytes().decode("utf-8", errors="ignore")
