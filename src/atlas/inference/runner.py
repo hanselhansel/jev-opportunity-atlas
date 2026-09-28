@@ -220,15 +220,21 @@ async def _process(ctx, item, qs, ledger, cache, sem, out, rows, done_ids) -> No
         if out["stopped"]:
             return
         sentences = item.get("sentences") or []
-        state = build_state(
-            comment=item["comment"],
-            parent=item.get("parent"),
-            story_title=item.get("story_title"),
-            thread_type=item.get("thread_type"),
-            sentences=sentences,
-            fields=qs.state_fields,
+        if "state" in item:
+            state = item["state"]
+        else:
+            state = build_state(
+                comment=item["comment"],
+                parent=item.get("parent"),
+                story_title=item.get("story_title"),
+                thread_type=item.get("thread_type"),
+                sentences=sentences,
+                fields=qs.state_fields,
+                parent_limit=qs.parent_limit,
+            )
+        questions = (
+            item["questions"] if "questions" in item else questions_for(qs, sentences)
         )
-        questions = questions_for(qs, sentences)
         key = cache_key(state, questions, qs.label, ctx.model)
         logical_call_id = f"{qs.label}:{cid}:{uuid4().hex[:12]}"
         hit = cache.get(key)

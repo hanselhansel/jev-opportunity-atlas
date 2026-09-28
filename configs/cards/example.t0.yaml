@@ -1,0 +1,10 @@
+taxonomy_version: t0
+groups:
+  g01: {label: "Build and release plumbing"}
+  g02: {label: "Back-office admin and money"}
+cards:
+  - {card_id: c0001, group_id: g01, statement: "CI jobs fail intermittently and need manual reruns", status: approved, author: claude+hansel}
+  - {card_id: c0002, group_id: g01, statement: "Shipping a release involves slow manual checklist steps", status: approved, author: claude+hansel}
+  - {card_id: c0003, group_id: g02, statement: "Invoices are reconciled by hand at the end of each month", status: approved, author: claude+hansel}
+  - {card_id: c0004, group_id: g02, statement: "Contractor paperwork is chased through long email threads", status: draft, author: claude+hansel}
+  - {card_id: c0005, group_id: g02, statement: "Expense receipts are copied into spreadsheets manually", status: merged_into:c0003, author: claude+hansel}
