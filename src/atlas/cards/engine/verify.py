@@ -21,31 +21,35 @@ def _rows_of(assignments) -> list[dict]:
     return list(assignments)
 
 
+def verify_item(row: dict, pain: str, cs) -> dict:
+    card = cs.all_cards[cs.resolve(row["card_id"])]
+    return {
+        "comment_id": row["comment_id"],
+        "state": {"problem": pain, "card": card.statement},
+        "questions": {
+            "member": {
+                "type": "noul",
+                "instructions": VERIFY_INSTRUCTIONS,
+                "criteria": dict(VERIFY_CRITERIA),
+            }
+        },
+    }
+
+
+def verifiable(row: dict, pain_sentences: dict) -> bool:
+    return row.get("card_id") not in (None, "none") and pain_sentences.get(
+        row["comment_id"]
+    ) is not None
+
+
 async def verify(ctx, assignments, pain_sentences: dict, cs) -> list[dict]:
     rows = _rows_of(assignments)
     qs = engine_qs("verify", cs, VERIFY_TEMPLATE)
-    items = []
-    for row in rows:
-        card_id = row.get("card_id")
-        if card_id in (None, "none"):
-            continue
-        pain = pain_sentences.get(row["comment_id"])
-        if pain is None:
-            continue
-        card = cs.all_cards[cs.resolve(card_id)]
-        items.append(
-            {
-                "comment_id": row["comment_id"],
-                "state": {"problem": pain, "card": card.statement},
-                "questions": {
-                    "member": {
-                        "type": "noul",
-                        "instructions": VERIFY_INSTRUCTIONS,
-                        "criteria": dict(VERIFY_CRITERIA),
-                    }
-                },
-            }
-        )
+    items = [
+        verify_item(row, pain_sentences[row["comment_id"]], cs)
+        for row in rows
+        if verifiable(row, pain_sentences)
+    ]
     if items:
         await run_batch(ctx, items, qs)
     answers = read_answers(ctx.run_dir, qs.label)

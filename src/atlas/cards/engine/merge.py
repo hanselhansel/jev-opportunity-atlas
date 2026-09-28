@@ -52,25 +52,26 @@ def merge_pairs(cs, assignments, cross_group_min_overlap=3) -> list[tuple[str, s
     return sorted(pairs)
 
 
+def merge_item(version: str, a: str, b: str, cs) -> dict:
+    return {
+        "comment_id": pair_id(version, a, b),
+        "state": {
+            "card_a": cs.all_cards[a].statement,
+            "card_b": cs.all_cards[b].statement,
+        },
+        "questions": {
+            "same": {
+                "type": "score",
+                "instructions": MERGE_INSTRUCTIONS,
+                "criteria": list(MERGE_LEVELS),
+            }
+        },
+    }
+
+
 async def score_merges(ctx, pairs, cs) -> list[dict]:
     qs = engine_qs("merge", cs, MERGE_TEMPLATE)
-    items = [
-        {
-            "comment_id": pair_id(cs.version, a, b),
-            "state": {
-                "card_a": cs.all_cards[a].statement,
-                "card_b": cs.all_cards[b].statement,
-            },
-            "questions": {
-                "same": {
-                    "type": "score",
-                    "instructions": MERGE_INSTRUCTIONS,
-                    "criteria": list(MERGE_LEVELS),
-                }
-            },
-        }
-        for a, b in pairs
-    ]
+    items = [merge_item(cs.version, a, b, cs) for a, b in pairs]
     if items:
         await run_batch(ctx, items, qs)
     answers = read_answers(ctx.run_dir, qs.label)
