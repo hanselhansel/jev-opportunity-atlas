@@ -7,11 +7,11 @@ from collections import Counter
 from pathlib import Path
 
 from atlas.sources import shards as sh
-from atlas.sources.acquire import snapshot_dir
+from atlas.sources.acquire import raw_dir
 
 
 def report(cfg: dict, root: Path) -> dict:
-    sdir = snapshot_dir(root, cfg)
+    sdir = raw_dir(root, cfg)
     b = json.loads((sdir / "boundaries.json").read_text())
     specs = sh.plan_shards(b["scan_first_id"], b["scan_last_id"], cfg["shard_size"])
     status = Counter()

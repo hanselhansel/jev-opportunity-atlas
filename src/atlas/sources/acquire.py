@@ -29,7 +29,7 @@ def ts(iso: str) -> int:
     return int(datetime.fromisoformat(iso).timestamp())
 
 
-def snapshot_dir(root: Path, cfg: dict) -> Path:
+def raw_dir(root: Path, cfg: dict) -> Path:
     return root / "data" / "raw" / cfg["snapshot_id"]
 
 
@@ -122,7 +122,7 @@ async def run(
     """Fetch this worker's shards. Workers split shards by index mod n_workers,
     so parallel processes never write the same shard file."""
     idx, n_workers = worker
-    sdir = snapshot_dir(root, cfg)
+    sdir = raw_dir(root, cfg)
     b = await locate(cfg, sdir)
     specs = sh.plan_shards(b["scan_first_id"], b["scan_last_id"], cfg["shard_size"])
     if limit_shards:
