@@ -9,7 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def ignored(path: str) -> bool:
     return (
         subprocess.run(
-            ["git", "-C", str(ROOT), "check-ignore", "-q", "--no-index", path]
+            ["git", "-C", str(ROOT), "check-ignore", "-q", "--no-index", path],
+            check=False,
         ).returncode
         == 0
     )
