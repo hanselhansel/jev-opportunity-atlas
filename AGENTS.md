@@ -50,7 +50,7 @@ the same plan.
 | `label run`, `eval run` | L4 |
 | `release stage`, `release check`, `claims check` | L5 |
 | `site build`, `site preview` | L6 |
-| `pilot run`, `pilot report` | L7 |
+| `pilot draw`, `pilot screen`, `pilot facets`, `pilot packed`, `pilot injected`, `pilot gold`, `pilot report` | L7 |
 | `discover search` | L8 |
 | `timeline mark` | existing |
 

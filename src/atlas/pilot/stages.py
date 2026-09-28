@@ -93,9 +93,28 @@ def item_tokens(item: dict, qs) -> int:
 
 
 def estimate(items, qs, budget) -> dict:
+    """Cost estimate for dispatching `items` under `qs`.
+
+    Normal items go through the L9 estimator (input_tokens calibrated on past
+    ledger rows by request-body bytes). Packed items carry their own ``state``
+    dict, which `estimate.body_bytes` cannot rebuild, so they keep the
+    bytes/3.2 item_tokens path.
+    """
+    from atlas.inference.estimate import estimate_cost, fit_calibration
+
     budgets, _price_row, usd_per_token = load_configs()
     cap, _worst = budget_cap(budgets, budget)
-    tokens = sum(item_tokens(item, qs) for item in items)
+    items = list(items)
+    if any("state" in item for item in items):
+        tokens = sum(item_tokens(item, qs) for item in items)
+        method = "bytes/3.2"
+    else:
+        calibration = fit_calibration(
+            sorted(paths.RUNS.glob("*/ledger.jsonl")), items, MODEL
+        )
+        est = estimate_cost(items, qs, MODEL, calibration, usd_per_token)
+        tokens, method = est["est_input_tokens"], est["method"]
+    head = budget_headroom(budget)
     return {
         "question_set": qs.label,
         "calls": len(items),
@@ -103,6 +122,9 @@ def estimate(items, qs, budget) -> dict:
         "usd": tokens * usd_per_token,
         "budget": budget,
         "cap_usd": cap,
+        "method": method,
+        "remaining_usd": head["remaining_usd"],
+        "account_remaining_usd": head["account_remaining_usd"],
     }
 
 
@@ -112,29 +134,18 @@ def budget_headroom(budget="pilot") -> dict:
     Committed per name = calculated_usd + unknown_attempts *
     worst_case_tokens_per_unknown_attempt * usd_per_input_token, matching the
     guard's rebuild-from-disk rule; account = sum over every budget name
-    found in runs/*/run_manifest.json.
+    found in the runs scan.
     """
-    from atlas.inference.ledger import summarize
+    from atlas.inference.budget import load_budgets, scan_runs
 
-    budgets, _price_row, usd_per_token = load_configs()
+    budgets = load_budgets()
+    _b, _p, usd_per_token = load_configs()
     cap, worst = budget_cap(budgets, budget)
-    committed: dict[str, float] = {}
-    for manifest in sorted(paths.RUNS.glob("*/run_manifest.json")):
-        try:
-            data = json.loads(manifest.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            raise RuntimeError(
-                f"unreadable run manifest {manifest}: {exc}"
-            ) from exc
-        ledger_path = manifest.parent / "ledger.jsonl"
-        if not ledger_path.exists():
-            continue
-        s = summarize(ledger_path)
-        name = data.get("budget") or "<none>"
-        committed[name] = committed.get(name, 0.0) + (
-            s["calculated_usd"]
-            + s["unknown_attempts"] * worst * usd_per_token
-        )
+    committed = {
+        name: s["calculated_usd"]
+        + s["unknown_attempts"] * worst * usd_per_token
+        for name, s in scan_runs().items()
+    }
     mine = committed.get(budget, 0.0)
     account = sum(committed.values())
     total = budgets.get("account_total")
