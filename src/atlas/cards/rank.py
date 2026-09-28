@@ -13,8 +13,9 @@ import tomllib
 from pathlib import Path
 
 import pyarrow as pa
+import pyarrow.compute as pc
 
-from atlas import paths
+from atlas import contracts, paths
 
 
 def load_weights(path=None) -> dict[str, float]:
@@ -118,3 +119,98 @@ def rank_cards(metrics, weights) -> pa.Table:
     )
     return pa.Table.from_pydict(out, schema=schema)
 
+
+def split_by_half(table, story_col="story_id") -> dict[str, pa.Table]:
+    """Split rows into {"explore", "confirm"} via ``contracts.half_of``.
+
+    Rows with a null ``story_col`` are dropped.
+    """
+    stories = table[story_col].to_pylist()
+    halves = pa.array(
+        [None if s is None else contracts.half_of(int(s)) for s in stories],
+        type=pa.string(),
+    )
+    return {
+        "explore": table.filter(pc.equal(halves, "explore")),
+        "confirm": table.filter(pc.equal(halves, "confirm")),
+    }
+
+
+def load_criteria(path=None) -> dict:
+    """Read ``[criteria]`` from ``path`` or ``paths.CONFIGS /
+    'finding_criteria.toml'``."""
+    p = (
+        Path(path)
+        if path is not None
+        else paths.CONFIGS / "finding_criteria.toml"
+    )
+    with p.open("rb") as f:
+        return dict(tomllib.load(f)["criteria"])
+
+
+_CRITERIA_CHECKS = (
+    ("n_authors", "min_authors", ">="),
+    ("n_periods", "min_periods", ">="),
+    ("n_domains", "min_domains", ">="),
+    ("max_thread_share", "max_thread_share", "<="),
+)
+
+
+def _half_reasons(row, half, criteria):
+    """Failure reasons for one card in one half; empty list when it passes."""
+    if row is None:
+        return [f"{half}: missing"]
+    reasons = []
+    for col, key, op in _CRITERIA_CHECKS:
+        val = row.get(col)
+        limit = criteria[key]
+        if val is None:
+            reasons.append(f"{half}: {col} is null")
+        elif op == ">=" and val < limit:
+            reasons.append(f"{half}: {col} {val} < {limit}")
+        elif op == "<=" and val > limit:
+            reasons.append(f"{half}: {col} {val} > {limit}")
+    return reasons
+
+
+def evaluate_criteria(metrics_explore, metrics_confirm, criteria) -> pa.Table:
+    """Pre-registered finding gate over the explore and confirm halves.
+
+    A card is a candidate only when it meets every criterion in both halves.
+    ``criteria`` keys: min_authors, min_periods, min_domains (lower bounds on
+    n_authors, n_periods, n_domains) and max_thread_share (upper bound). A null
+    metric value fails; a card absent from a half fails with reason
+    ``"<half>: missing"``. Output is sorted by card_id with columns card_id,
+    passes_explore, passes_confirm, candidate, reasons (list<string>).
+    """
+    explore = {r["card_id"]: r for r in metrics_explore.to_pylist()}
+    confirm = {r["card_id"]: r for r in metrics_confirm.to_pylist()}
+    schema = pa.schema(
+        [
+            ("card_id", pa.string()),
+            ("passes_explore", pa.bool_()),
+            ("passes_confirm", pa.bool_()),
+            ("candidate", pa.bool_()),
+            ("reasons", pa.list_(pa.string())),
+        ]
+    )
+    rows = []
+    for card_id in sorted(set(explore) | set(confirm)):
+        reasons = _half_reasons(explore.get(card_id), "explore", criteria)
+        reasons += _half_reasons(confirm.get(card_id), "confirm", criteria)
+        passes_e = explore.get(card_id) is not None and not any(
+            r.startswith("explore:") for r in reasons
+        )
+        passes_c = confirm.get(card_id) is not None and not any(
+            r.startswith("confirm:") for r in reasons
+        )
+        rows.append(
+            {
+                "card_id": card_id,
+                "passes_explore": passes_e,
+                "passes_confirm": passes_c,
+                "candidate": passes_e and passes_c,
+                "reasons": reasons,
+            }
+        )
+    return pa.Table.from_pylist(rows, schema=schema)

@@ -7,7 +7,14 @@ import pyarrow as pa
 import pytest
 
 from atlas import paths
-from atlas.cards.rank import load_weights, rank_cards, ranking_inputs
+from atlas.cards.rank import (
+    evaluate_criteria,
+    load_criteria,
+    load_weights,
+    rank_cards,
+    ranking_inputs,
+    split_by_half,
+)
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -130,3 +137,104 @@ def test_shipped_ranking_toml_end_to_end():
     for key in weights:
         assert f"{key}_norm" in r.column_names
         assert all(0.0 <= v <= 1.0 for v in r[f"{key}_norm"].to_pylist())
+
+
+# ---- Task 13.4: explore/confirm split and pre-registered criteria ----
+
+STORY_EXPLORE = 9_000_000_000  # contracts.half_of -> "explore"
+STORY_CONFIRM = 9_000_000_001  # contracts.half_of -> "confirm"
+CRITERIA = {
+    "min_authors": 10,
+    "min_periods": 3,
+    "min_domains": 2,
+    "max_thread_share": 0.30,
+}
+
+
+def half_metrics_table(rows):
+    defaults = {
+        "n_authors": 12,
+        "n_periods": 4,
+        "n_domains": 3,
+        "max_thread_share": 0.2,
+    }
+    return pa.Table.from_pylist(
+        [{**defaults, **r} for r in rows],
+        schema=pa.schema(
+            [
+                ("card_id", pa.string()),
+                ("n_authors", pa.int64()),
+                ("n_periods", pa.int64()),
+                ("n_domains", pa.int64()),
+                ("max_thread_share", pa.float64()),
+            ]
+        ),
+    )
+
+
+def test_split_by_half():
+    t = pa.table(
+        {
+            "comment_id": pa.array([1, 2, 3], type=pa.int64()),
+            "story_id": pa.array(
+                [STORY_EXPLORE, STORY_CONFIRM, None], type=pa.int64()
+            ),
+        }
+    )
+    halves = split_by_half(t)
+    assert set(halves) == {"explore", "confirm"}
+    assert halves["explore"]["comment_id"].to_pylist() == [1]
+    assert halves["confirm"]["comment_id"].to_pylist() == [2]
+
+
+def test_criteria_candidate_and_failures():
+    explore = half_metrics_table(
+        [{"card_id": "c0001"}, {"card_id": "c0002"}, {"card_id": "c0003"}]
+    )
+    confirm = half_metrics_table(
+        [
+            {"card_id": "c0001"},
+            {"card_id": "c0002", "n_authors": 7},
+            {"card_id": "c0004"},
+        ]
+    )
+    out = evaluate_criteria(explore, confirm, CRITERIA)
+    rows = {r["card_id"]: r for r in out.to_pylist()}
+    assert rows["c0001"] == {
+        "card_id": "c0001",
+        "passes_explore": True,
+        "passes_confirm": True,
+        "candidate": True,
+        "reasons": [],
+    }
+    assert rows["c0002"]["passes_explore"] is True
+    assert rows["c0002"]["passes_confirm"] is False
+    assert rows["c0002"]["candidate"] is False
+    assert rows["c0002"]["reasons"] == ["confirm: n_authors 7 < 10"]
+    # c0003 absent from confirm; c0004 absent from explore
+    assert rows["c0003"]["reasons"] == ["confirm: missing"]
+    assert rows["c0004"]["reasons"] == ["explore: missing"]
+    assert out["card_id"].to_pylist() == ["c0001", "c0002", "c0003", "c0004"]
+
+
+def test_criteria_boundary_and_null():
+    ok = half_metrics_table([{"card_id": "c0001", "max_thread_share": 0.30}])
+    out = evaluate_criteria(ok, ok, CRITERIA)
+    assert out["candidate"].to_pylist() == [True]
+    null_domains = half_metrics_table(
+        [{"card_id": "c0001", "n_domains": None}]
+    )
+    out2 = evaluate_criteria(null_domains, ok, CRITERIA)
+    row = out2.to_pylist()[0]
+    assert row["candidate"] is False
+    assert "explore: n_domains is null" in row["reasons"]
+
+
+def test_load_criteria_shipped_file():
+    criteria = load_criteria(REPO / "configs" / "finding_criteria.toml")
+    assert criteria == {
+        "min_authors": 10,
+        "min_periods": 3,
+        "min_domains": 2,
+        "max_thread_share": 0.30,
+    }
