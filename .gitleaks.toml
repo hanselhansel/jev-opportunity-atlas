@@ -1,0 +1,10 @@
+title = "jev-opportunity-atlas"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "typesafe-api-key"
+description = "TypeSafe API key"
+regex = '''(?i)apikey(?:_|%5f)[0-9a-f]{36}(?:_|%5f)[0-9a-f]{64}'''
+keywords = ["apikey"]

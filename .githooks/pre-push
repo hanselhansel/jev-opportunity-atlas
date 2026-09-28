@@ -1,0 +1,4 @@
+#!/bin/sh
+# This project has no GitHub Actions. Everything that would run in CI runs here.
+set -e
+scripts/verify.sh

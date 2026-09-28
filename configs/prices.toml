@@ -1,0 +1,7 @@
+[[price]]
+version = "typesafe-2026-09-28"
+model = "jev-1.13.0"
+input_usd_per_million = 0.042
+output_usd_per_million = 0.0
+checked_at = "2026-09-28"
+source = "https://docs.typesafe.ai/models"

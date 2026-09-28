@@ -1,0 +1,110 @@
+{
+  "name": "deep",
+  "version": 0,
+  "state_fields": [
+    "comment",
+    "parent",
+    "story_title",
+    "thread_type",
+    "sentences"
+  ],
+  "questions": {
+    "concrete_task": {
+      "type": "noul",
+      "instructions": "Does `comment` name a specific task or workflow the author was trying to do when the problem happened?"
+    },
+    "timing": {
+      "type": "choice",
+      "instructions": "When does `comment` place the problem?",
+      "criteria": {
+        "current": "Happening now or within the recent past, still relevant.",
+        "historical": "Happened in the past and is described as over.",
+        "hypothetical": "Could happen, or would happen, but has not.",
+        "unclear": "Timing cannot be told from the text."
+      }
+    },
+    "workaround": {
+      "type": "noul",
+      "instructions": "Does `comment` explicitly describe a workaround, hack, or manual process the author uses to cope with the problem?"
+    },
+    "cost_time": {
+      "type": "noul",
+      "instructions": "Does `comment` explicitly say the problem costs the author time?"
+    },
+    "cost_money": {
+      "type": "noul",
+      "instructions": "Does `comment` explicitly say the problem costs the author money?"
+    },
+    "cost_reliability": {
+      "type": "noul",
+      "instructions": "Does `comment` explicitly say the problem causes failures, outages, bugs, or unreliable results?"
+    },
+    "cost_customer": {
+      "type": "noul",
+      "instructions": "Does `comment` explicitly say the problem affects the author's customers or users?"
+    },
+    "cost_operational": {
+      "type": "noul",
+      "instructions": "Does `comment` explicitly say the problem disrupts how the author's team or company operates?"
+    },
+    "paid": {
+      "type": "noul",
+      "instructions": "Does `comment` explicitly say the author paid, or pays, for something to deal with this problem?"
+    },
+    "switched": {
+      "type": "noul",
+      "instructions": "Does `comment` explicitly say the author switched from one tool or vendor to another because of this problem?"
+    },
+    "tried_alternatives": {
+      "type": "noul",
+      "instructions": "Does `comment` explicitly say the author tried other tools or approaches for this problem?"
+    },
+    "abandoned": {
+      "type": "noul",
+      "instructions": "Does `comment` explicitly say the author gave up on or stopped using a tool because of this problem?"
+    },
+    "resolution": {
+      "type": "choice",
+      "instructions": "Based only on `comment` and `parent`, is the author's problem resolved?",
+      "criteria": {
+        "resolved": "The text says the problem was solved.",
+        "unresolved": "The text says the problem remains.",
+        "unclear": "The text does not say."
+      }
+    },
+    "user_role": {
+      "type": "choice",
+      "instructions": "Which role best describes the author of `comment` in the situation described?",
+      "criteria": {
+        "software_engineer": null,
+        "data_ml_practitioner": null,
+        "ops_sre_it": null,
+        "founder_executive": null,
+        "product_or_designer": null,
+        "manager": null,
+        "researcher_academic": null,
+        "student": null,
+        "freelancer_consultant": null,
+        "end_user_consumer": null,
+        "other": null,
+        "mixed": null,
+        "unclear": null
+      }
+    },
+    "specificity": {
+      "type": "score",
+      "instructions": "How specific is the problem described in `comment`?",
+      "criteria": [
+        "Vague: no clear problem is named.",
+        "Named: a problem is named but without context.",
+        "Contextual: a named problem with the tool, task, or setting.",
+        "Measurable: a named problem with context and a concrete detail such as a number, duration, error, or example."
+      ]
+    },
+    "support_sentence": {
+      "type": "choice",
+      "instructions": "Which sentence in `sentences` best states the author's problem?",
+      "criteria": "SENTENCE_IDS"
+    }
+  }
+}

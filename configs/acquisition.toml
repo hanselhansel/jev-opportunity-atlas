@@ -1,0 +1,25 @@
+# Frozen acquisition config for the first snapshot. Do not edit after the
+# snapshot starts; a refresh gets a new snapshot_id and a new config file.
+snapshot_id = "hn-2025-09-28_2026-09-28-v1"
+
+# Half-open UTC window [start, end). Shifted one day earlier than the handoff's
+# proposed window because 2026-09-29T00:00Z was still in the future at start.
+window_start = "2025-09-28T00:00:00Z"
+window_end = "2026-09-28T00:00:00Z"
+
+# Official HN API (Firebase). Items outside the window are still stored and
+# flagged by their `time` field; the window filter is applied at snapshot build.
+api_base = "https://hacker-news.firebaseio.com/v0"
+
+# Extra IDs scanned beyond the boundary IDs, because IDs are only roughly
+# ordered by time. The coverage report warns if in-window items sit near the edge.
+boundary_margin_ids = 5000
+
+shard_size = 10000
+concurrency = 48  # per worker process; operational only, does not change what is collected
+concurrent_shards = 4
+max_attempts = 6
+request_timeout_s = 20.0
+
+# Refuse to start when projected size + headroom exceeds free disk.
+disk_headroom_gib = 5.0

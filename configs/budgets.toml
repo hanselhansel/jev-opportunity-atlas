@@ -1,0 +1,6 @@
+# Caps in USD, enforced before dispatch and cumulative across runs per budget name.
+# Only Hansel raises these.
+smoke = 0.01
+pilot = 1.00
+spike = 0.50   # approved 2026-09-29 for the one-finding spike
+worst_case_tokens_per_unknown_attempt = 8000

@@ -1,0 +1,59 @@
+{
+  "name": "screen",
+  "version": 0,
+  "state_fields": [
+    "comment",
+    "parent",
+    "story_title",
+    "thread_type"
+  ],
+  "questions": {
+    "firsthand_problem": {
+      "type": "noul",
+      "instructions": "Does `comment` describe a problem, difficulty, or frustration that the author personally experienced?",
+      "criteria": {
+        "true": "The author says they themselves ran into the problem (for example 'I', 'we', 'my team', 'our company').",
+        "false": "No problem is described, or it is about other people, hypothetical, a general opinion, or a sales pitch."
+      }
+    },
+    "account_type": {
+      "type": "choice",
+      "instructions": "What kind of text is `comment`?",
+      "criteria": {
+        "firsthand_account": "The author describes their own experience.",
+        "secondhand_report": "The author reports what happened to someone else.",
+        "general_opinion": "A view or argument without a personal account.",
+        "product_pitch": "Promotes a product, service, or project the author is connected to.",
+        "joke_or_sarcasm": "Humor or sarcasm; not meant literally.",
+        "question_or_request": "Mainly asks a question or asks for help or recommendations.",
+        "other": "None of the above."
+      }
+    },
+    "domain": {
+      "type": "choice",
+      "instructions": "Which area is the main subject of `comment` about?",
+      "criteria": {
+        "software_development": "Writing, testing, reviewing, or shipping code; languages, frameworks, IDEs.",
+        "infrastructure_ops": "Cloud, servers, deployment, networking, monitoring, IT administration.",
+        "data_ml_ai": "Data engineering, analytics, machine learning, AI models and tools.",
+        "security_privacy": "Security, authentication, privacy, surveillance, fraud.",
+        "product_design": "Product decisions, UX, UI, design tools.",
+        "business_operations": "Running a company: operations, internal tools, vendors, processes.",
+        "finance_payments": "Payments, accounting, invoicing, banking, taxes, personal finance.",
+        "sales_marketing": "Sales, marketing, growth, advertising, SEO, customer acquisition.",
+        "work_careers": "Hiring, jobs, careers, management, remote work, productivity at work.",
+        "legal_government": "Law, regulation, compliance, government services, policy.",
+        "hardware_electronics": "Hardware, electronics, embedded systems, manufacturing.",
+        "consumer_tech": "Consumer apps, devices, platforms, and services as an end user.",
+        "health_medical": "Health, medicine, fitness, health care systems.",
+        "education_learning": "Schools, universities, learning, teaching.",
+        "science_research": "Scientific research and academia.",
+        "media_publishing": "News, writing, publishing, video, music, creators.",
+        "home_life": "Housing, family, transport, daily life outside work.",
+        "other": "A clear subject that fits none of the above.",
+        "mixed": "Two or more of the above equally.",
+        "unclear": "The subject cannot be determined from the text."
+      }
+    }
+  }
+}
