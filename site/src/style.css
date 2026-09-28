@@ -1,3 +1,6 @@
+@import url("observablehq:default.css");
+@import url("observablehq:theme-air.css");
+
 /* Design tokens for the atlas site. Light theme by default, dark under
    prefers-color-scheme. All text colors aim for >= 4.5:1 contrast on their
    background. At most 6 categorical colors are used in charts. */
