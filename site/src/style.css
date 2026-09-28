@@ -86,6 +86,8 @@
   z-index: 40;
   box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   padding: var(--space-2) var(--space-4);
   font-size: var(--fs-small);
   font-weight: 600;
@@ -166,6 +168,9 @@
 
 /* Finding cards; candidates are outlined, never filled. */
 .finding-card {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   border: 1px solid var(--atlas-border);
   border-radius: 8px;
   background: var(--atlas-card-bg);
@@ -211,6 +216,9 @@
 
 /* Comment card and sentence highlight on the evidence page. */
 .comment-card {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   border: 1px solid var(--atlas-border);
   border-radius: 8px;
   padding: var(--space-3) var(--space-4);
@@ -278,6 +286,10 @@
   border-bottom: 1px solid var(--atlas-border);
 }
 
+.responsive-table td {
+  overflow-wrap: anywhere;
+}
+
 .responsive-table tr.selectable {
   cursor: pointer;
 }
@@ -305,6 +317,7 @@
     display: flex;
     justify-content: space-between;
     gap: var(--space-4);
+    min-width: 0;
     border-bottom: none;
   }
 
@@ -312,5 +325,9 @@
     content: attr(data-label);
     font-weight: 600;
     color: var(--atlas-muted);
+  }
+
+  .weights-panel form {
+    max-width: 100%;
   }
 }
