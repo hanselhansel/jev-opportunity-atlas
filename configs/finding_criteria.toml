@@ -1,0 +1,8 @@
+# Pre-registered 2026-09-29 from docs/superpowers/specs/2026-09-29-analysis-design.md
+# section 8, written before any main-run result is seen. Do not edit after
+# results are seen.
+[criteria]
+min_authors = 10        # n_authors >= this in each half
+min_periods = 3         # n_periods >= this in each half
+min_domains = 2         # n_domains >= this in each half
+max_thread_share = 0.30 # max_thread_share <= this in each half

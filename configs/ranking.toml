@@ -1,0 +1,15 @@
+# Need-card ranking weights. All discovery metrics are weighted equally by
+# default; anyone can change these to explore a different ranking.
+# score = sum(weight * min-max normalized component), computed within each
+# explore/confirm half. Scores are relative within a run, not prevalence.
+[weights]
+n_authors_capped = 1.0    # distinct voices (comment count, each author capped)
+n_threads = 1.0           # spread across threads
+n_periods = 1.0           # persistence across the window
+effective_domains = 1.0   # convergence across domains
+effective_roles = 1.0     # convergence across roles
+workaround_rate = 1.0     # share already coping via a workaround
+commercial_rate = 1.0     # max of paid / switched / abandoned rates
+unresolved_rate = 1.0     # share whose problem is still unresolved
+mean_specificity = 1.0    # concreteness of the problem descriptions
+max_thread_share = -1.0   # negative: penalizes concentration in one thread
