@@ -1,0 +1,145 @@
+"""`atlas release stage`, `atlas release check`, and `atlas claims check`.
+
+Staging builds exports/<release> locally through the allowlist, the text gate,
+and the secret scan; check re-verifies a staged release in place. Nothing is
+ever uploaded.
+"""
+
+from __future__ import annotations
+
+import json
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+
+def _default_snapshot_id() -> str:
+    import tomllib
+
+    from atlas import paths
+
+    cfg = tomllib.loads((paths.CONFIGS / "acquisition.toml").read_text())
+    return cfg["snapshot_id"]
+
+
+def _release_stage(args) -> None:
+    from atlas import paths
+    from atlas.publication.export import ExportError, stage_release
+
+    snapshot = args.snapshot if args.snapshot else _default_snapshot_id()
+    try:
+        release_dir = stage_release(paths.ROOT, args.release, snapshot, args.run)
+    except ExportError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(1) from exc
+    manifest = json.loads((release_dir / "release_manifest.json").read_text())
+    print(
+        json.dumps(
+            {
+                "release_dir": str(release_dir),
+                "file_count": manifest["file_count"],
+            }
+        )
+    )
+
+
+def _release_check(args) -> None:
+    from atlas import paths
+    from atlas.publication.allowlist import scan_release, text_gate
+    from atlas.publication.export import verify_release
+
+    d = paths.EXPORTS / args.release
+    if not d.is_dir():
+        print(
+            f"release {args.release} not found under {paths.EXPORTS}",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+    verify = verify_release(d)
+    gate = text_gate(d)
+    secrets = [str(f) for f in scan_release(d)]
+    gitleaks = "not installed"
+    if shutil.which("gitleaks"):
+        cmd = [
+            "gitleaks",
+            "dir",
+            str(d),
+            "--redact",
+            "--no-banner",
+            "--log-level",
+            "warn",
+        ]
+        cfg = paths.ROOT / ".gitleaks.toml"
+        if cfg.exists():
+            cmd += ["--config", str(cfg)]
+        proc = subprocess.run(cmd, capture_output=True, check=False)
+        gitleaks = "ok" if proc.returncode == 0 else "failed"
+    report = {
+        "verify": verify,
+        "text_gate": gate,
+        "secrets": secrets,
+        "gitleaks": gitleaks,
+    }
+    print(json.dumps(report, indent=2))
+    if not verify["ok"] or gate or secrets or gitleaks == "failed":
+        raise SystemExit(1)
+
+
+def _claims_check(args) -> None:
+    from atlas import paths
+    from atlas.publication.claims import check_claims, load_claims
+
+    path = (
+        Path(args.file)
+        if args.file
+        else paths.ROOT / "claims" / "claims.yaml"
+    )
+    results = check_claims(load_claims(path), paths.ROOT)
+    failed = False
+    for cid, result in results.items():
+        if result["ok"]:
+            print(f"ok {cid}")
+        else:
+            failed = True
+            detail = result["error"] or (
+                f"actual {result['actual']} vs expected {result['expected']}"
+            )
+            print(f"FAIL {cid}: {detail}")
+    if failed:
+        raise SystemExit(1)
+
+
+def register(sub) -> None:
+    release = sub.add_parser(
+        "release", help="Stage and verify a public release export"
+    )
+    rsub = release.add_subparsers(dest="release_cmd", required=True)
+    stage = rsub.add_parser(
+        "stage", help="Build exports/<release> through the gates"
+    )
+    stage.add_argument("--release", required=True, help="Release tag")
+    stage.add_argument(
+        "--snapshot",
+        default=None,
+        help="Snapshot id (default: snapshot_id in configs/acquisition.toml)",
+    )
+    stage.add_argument(
+        "--run", action="append", default=[], help="Run id (repeatable)"
+    )
+    stage.set_defaults(func=_release_stage)
+    check = rsub.add_parser(
+        "check", help="Re-verify a staged release in place"
+    )
+    check.add_argument("--release", required=True, help="Release tag")
+    check.set_defaults(func=_release_check)
+
+    claims = sub.add_parser("claims", help="Claims ledger")
+    csub = claims.add_subparsers(dest="claims_cmd", required=True)
+    ccheck = csub.add_parser(
+        "check", help="Recompute every claim with DuckDB"
+    )
+    ccheck.add_argument(
+        "--file", default=None, help="Claims file (default: claims/claims.yaml)"
+    )
+    ccheck.set_defaults(func=_claims_check)
