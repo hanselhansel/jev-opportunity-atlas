@@ -21,6 +21,7 @@ COMMAND_MODULES = (
     "atlas.sitedata.cli",
     "atlas.pilot.cli",
     "atlas.discovery.cli",
+    "atlas.cards.engine.cli",
     "atlas.timeline",
 )
 
