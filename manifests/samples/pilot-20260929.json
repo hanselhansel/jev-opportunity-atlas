@@ -1,0 +1,391 @@
+{
+  "algorithm": "stratified SRSWOR, Hamilton proportional allocation, PCG64",
+  "design": {
+    "N_h": {
+      "nopain|L0|H1|ask": 12438,
+      "nopain|L0|H1|other": 72,
+      "nopain|L0|H1|show": 18364,
+      "nopain|L0|H1|story": 311482,
+      "nopain|L0|H2|ask": 10263,
+      "nopain|L0|H2|other": 45,
+      "nopain|L0|H2|show": 19531,
+      "nopain|L0|H2|story": 343027,
+      "nopain|L1|H1|ask": 24446,
+      "nopain|L1|H1|other": 88,
+      "nopain|L1|H1|show": 33765,
+      "nopain|L1|H1|story": 792584,
+      "nopain|L1|H2|ask": 21389,
+      "nopain|L1|H2|other": 70,
+      "nopain|L1|H2|show": 34072,
+      "nopain|L1|H2|story": 840082,
+      "nopain|L2|H1|ask": 17130,
+      "nopain|L2|H1|other": 39,
+      "nopain|L2|H1|show": 15647,
+      "nopain|L2|H1|story": 408376,
+      "nopain|L2|H2|ask": 13798,
+      "nopain|L2|H2|other": 31,
+      "nopain|L2|H2|show": 12496,
+      "nopain|L2|H2|story": 403874,
+      "nopain|L3|H1|ask": 2280,
+      "nopain|L3|H1|other": 2,
+      "nopain|L3|H1|show": 1632,
+      "nopain|L3|H1|story": 42873,
+      "nopain|L3|H2|ask": 1875,
+      "nopain|L3|H2|other": 2,
+      "nopain|L3|H2|show": 1171,
+      "nopain|L3|H2|story": 39809,
+      "pain|L0|H1|ask": 93,
+      "pain|L0|H1|show": 163,
+      "pain|L0|H1|story": 2577,
+      "pain|L0|H2|ask": 113,
+      "pain|L0|H2|show": 156,
+      "pain|L0|H2|story": 2917,
+      "pain|L1|H1|ask": 1318,
+      "pain|L1|H1|other": 7,
+      "pain|L1|H1|show": 1696,
+      "pain|L1|H1|story": 38511,
+      "pain|L1|H2|ask": 1161,
+      "pain|L1|H2|other": 5,
+      "pain|L1|H2|show": 1792,
+      "pain|L1|H2|story": 40728,
+      "pain|L2|H1|ask": 2629,
+      "pain|L2|H1|other": 10,
+      "pain|L2|H1|show": 2535,
+      "pain|L2|H1|story": 60111,
+      "pain|L2|H2|ask": 2023,
+      "pain|L2|H2|other": 2,
+      "pain|L2|H2|show": 1937,
+      "pain|L2|H2|story": 59603,
+      "pain|L3|H1|ask": 988,
+      "pain|L3|H1|show": 778,
+      "pain|L3|H1|story": 17513,
+      "pain|L3|H2|ask": 780,
+      "pain|L3|H2|other": 2,
+      "pain|L3|H2|show": 527,
+      "pain|L3|H2|story": 16574
+    },
+    "allocation": {
+      "nopain|L0|H1|ask": 20,
+      "nopain|L0|H1|other": 20,
+      "nopain|L0|H1|show": 20,
+      "nopain|L0|H1|story": 169,
+      "nopain|L0|H2|ask": 20,
+      "nopain|L0|H2|other": 20,
+      "nopain|L0|H2|show": 20,
+      "nopain|L0|H2|story": 186,
+      "nopain|L1|H1|ask": 20,
+      "nopain|L1|H1|other": 20,
+      "nopain|L1|H1|show": 20,
+      "nopain|L1|H1|story": 431,
+      "nopain|L1|H2|ask": 20,
+      "nopain|L1|H2|other": 20,
+      "nopain|L1|H2|show": 20,
+      "nopain|L1|H2|story": 457,
+      "nopain|L2|H1|ask": 20,
+      "nopain|L2|H1|other": 20,
+      "nopain|L2|H1|show": 20,
+      "nopain|L2|H1|story": 222,
+      "nopain|L2|H2|ask": 20,
+      "nopain|L2|H2|other": 20,
+      "nopain|L2|H2|show": 20,
+      "nopain|L2|H2|story": 219,
+      "nopain|L3|H1|ask": 20,
+      "nopain|L3|H1|other": 2,
+      "nopain|L3|H1|show": 20,
+      "nopain|L3|H1|story": 23,
+      "nopain|L3|H2|ask": 20,
+      "nopain|L3|H2|other": 2,
+      "nopain|L3|H2|show": 20,
+      "nopain|L3|H2|story": 22,
+      "pain|L0|H1|ask": 20,
+      "pain|L0|H1|show": 20,
+      "pain|L0|H1|story": 20,
+      "pain|L0|H2|ask": 20,
+      "pain|L0|H2|show": 20,
+      "pain|L0|H2|story": 20,
+      "pain|L1|H1|ask": 20,
+      "pain|L1|H1|other": 7,
+      "pain|L1|H1|show": 20,
+      "pain|L1|H1|story": 21,
+      "pain|L1|H2|ask": 20,
+      "pain|L1|H2|other": 5,
+      "pain|L1|H2|show": 20,
+      "pain|L1|H2|story": 22,
+      "pain|L2|H1|ask": 20,
+      "pain|L2|H1|other": 10,
+      "pain|L2|H1|show": 20,
+      "pain|L2|H1|story": 33,
+      "pain|L2|H2|ask": 20,
+      "pain|L2|H2|other": 2,
+      "pain|L2|H2|show": 20,
+      "pain|L2|H2|story": 32,
+      "pain|L3|H1|ask": 20,
+      "pain|L3|H1|show": 20,
+      "pain|L3|H1|story": 20,
+      "pain|L3|H2|ask": 20,
+      "pain|L3|H2|other": 2,
+      "pain|L3|H2|show": 20,
+      "pain|L3|H2|story": 20
+    },
+    "pain_patterns_version": 1,
+    "rule": "min(N_h, max(min_per_stratum, round(n_target*N_h/N)))"
+  },
+  "design_version": "v2",
+  "frame_snapshot_id": "hn-2025-09-28_2026-09-28-v1",
+  "min_per_stratum": 20,
+  "n": 2707,
+  "n_target": 2000,
+  "purpose": "pilot",
+  "sample_id": "pilot-20260929",
+  "seed": 20260929,
+  "seeds_by_batch": {
+    "1": 20260929
+  },
+  "sha256": "0a5a1ff0607fb0f7f20edafd673efe13a902833deb6d58b50daa6f0f4257b98a",
+  "strata": {
+    "nopain|L0|H1|ask": {
+      "N_h": 12438,
+      "n_h": 20
+    },
+    "nopain|L0|H1|other": {
+      "N_h": 72,
+      "n_h": 20
+    },
+    "nopain|L0|H1|show": {
+      "N_h": 18364,
+      "n_h": 20
+    },
+    "nopain|L0|H1|story": {
+      "N_h": 311482,
+      "n_h": 169
+    },
+    "nopain|L0|H2|ask": {
+      "N_h": 10263,
+      "n_h": 20
+    },
+    "nopain|L0|H2|other": {
+      "N_h": 45,
+      "n_h": 20
+    },
+    "nopain|L0|H2|show": {
+      "N_h": 19531,
+      "n_h": 20
+    },
+    "nopain|L0|H2|story": {
+      "N_h": 343027,
+      "n_h": 186
+    },
+    "nopain|L1|H1|ask": {
+      "N_h": 24446,
+      "n_h": 20
+    },
+    "nopain|L1|H1|other": {
+      "N_h": 88,
+      "n_h": 20
+    },
+    "nopain|L1|H1|show": {
+      "N_h": 33765,
+      "n_h": 20
+    },
+    "nopain|L1|H1|story": {
+      "N_h": 792584,
+      "n_h": 431
+    },
+    "nopain|L1|H2|ask": {
+      "N_h": 21389,
+      "n_h": 20
+    },
+    "nopain|L1|H2|other": {
+      "N_h": 70,
+      "n_h": 20
+    },
+    "nopain|L1|H2|show": {
+      "N_h": 34072,
+      "n_h": 20
+    },
+    "nopain|L1|H2|story": {
+      "N_h": 840082,
+      "n_h": 457
+    },
+    "nopain|L2|H1|ask": {
+      "N_h": 17130,
+      "n_h": 20
+    },
+    "nopain|L2|H1|other": {
+      "N_h": 39,
+      "n_h": 20
+    },
+    "nopain|L2|H1|show": {
+      "N_h": 15647,
+      "n_h": 20
+    },
+    "nopain|L2|H1|story": {
+      "N_h": 408376,
+      "n_h": 222
+    },
+    "nopain|L2|H2|ask": {
+      "N_h": 13798,
+      "n_h": 20
+    },
+    "nopain|L2|H2|other": {
+      "N_h": 31,
+      "n_h": 20
+    },
+    "nopain|L2|H2|show": {
+      "N_h": 12496,
+      "n_h": 20
+    },
+    "nopain|L2|H2|story": {
+      "N_h": 403874,
+      "n_h": 219
+    },
+    "nopain|L3|H1|ask": {
+      "N_h": 2280,
+      "n_h": 20
+    },
+    "nopain|L3|H1|other": {
+      "N_h": 2,
+      "n_h": 2
+    },
+    "nopain|L3|H1|show": {
+      "N_h": 1632,
+      "n_h": 20
+    },
+    "nopain|L3|H1|story": {
+      "N_h": 42873,
+      "n_h": 23
+    },
+    "nopain|L3|H2|ask": {
+      "N_h": 1875,
+      "n_h": 20
+    },
+    "nopain|L3|H2|other": {
+      "N_h": 2,
+      "n_h": 2
+    },
+    "nopain|L3|H2|show": {
+      "N_h": 1171,
+      "n_h": 20
+    },
+    "nopain|L3|H2|story": {
+      "N_h": 39809,
+      "n_h": 22
+    },
+    "pain|L0|H1|ask": {
+      "N_h": 93,
+      "n_h": 20
+    },
+    "pain|L0|H1|show": {
+      "N_h": 163,
+      "n_h": 20
+    },
+    "pain|L0|H1|story": {
+      "N_h": 2577,
+      "n_h": 20
+    },
+    "pain|L0|H2|ask": {
+      "N_h": 113,
+      "n_h": 20
+    },
+    "pain|L0|H2|show": {
+      "N_h": 156,
+      "n_h": 20
+    },
+    "pain|L0|H2|story": {
+      "N_h": 2917,
+      "n_h": 20
+    },
+    "pain|L1|H1|ask": {
+      "N_h": 1318,
+      "n_h": 20
+    },
+    "pain|L1|H1|other": {
+      "N_h": 7,
+      "n_h": 7
+    },
+    "pain|L1|H1|show": {
+      "N_h": 1696,
+      "n_h": 20
+    },
+    "pain|L1|H1|story": {
+      "N_h": 38511,
+      "n_h": 21
+    },
+    "pain|L1|H2|ask": {
+      "N_h": 1161,
+      "n_h": 20
+    },
+    "pain|L1|H2|other": {
+      "N_h": 5,
+      "n_h": 5
+    },
+    "pain|L1|H2|show": {
+      "N_h": 1792,
+      "n_h": 20
+    },
+    "pain|L1|H2|story": {
+      "N_h": 40728,
+      "n_h": 22
+    },
+    "pain|L2|H1|ask": {
+      "N_h": 2629,
+      "n_h": 20
+    },
+    "pain|L2|H1|other": {
+      "N_h": 10,
+      "n_h": 10
+    },
+    "pain|L2|H1|show": {
+      "N_h": 2535,
+      "n_h": 20
+    },
+    "pain|L2|H1|story": {
+      "N_h": 60111,
+      "n_h": 33
+    },
+    "pain|L2|H2|ask": {
+      "N_h": 2023,
+      "n_h": 20
+    },
+    "pain|L2|H2|other": {
+      "N_h": 2,
+      "n_h": 2
+    },
+    "pain|L2|H2|show": {
+      "N_h": 1937,
+      "n_h": 20
+    },
+    "pain|L2|H2|story": {
+      "N_h": 59603,
+      "n_h": 32
+    },
+    "pain|L3|H1|ask": {
+      "N_h": 988,
+      "n_h": 20
+    },
+    "pain|L3|H1|show": {
+      "N_h": 778,
+      "n_h": 20
+    },
+    "pain|L3|H1|story": {
+      "N_h": 17513,
+      "n_h": 20
+    },
+    "pain|L3|H2|ask": {
+      "N_h": 780,
+      "n_h": 20
+    },
+    "pain|L3|H2|other": {
+      "N_h": 2,
+      "n_h": 2
+    },
+    "pain|L3|H2|show": {
+      "N_h": 527,
+      "n_h": 20
+    },
+    "pain|L3|H2|story": {
+      "N_h": 16574,
+      "n_h": 20
+    }
+  }
+}

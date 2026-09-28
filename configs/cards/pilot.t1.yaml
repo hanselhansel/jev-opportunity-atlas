@@ -1,0 +1,51 @@
+# Pilot need cards, taxonomy t1 (t0 plus one induction round on explore-half residue). Drafted by Claude (Opus 5.5) from 231 explore-half
+# pain sentences of pilot run pilot-20260929 (inputs recorded by comment ID and text hash
+# in taxonomy/t0/provenance.json). For the go/no-go assignment test only; Hansel reviews
+# and edits before any main-run taxonomy. Jev never writes card text.
+taxonomy_version: t1
+groups:
+  g01: {label: "AI assistants and coding agents"}
+  g02: {label: "Developer tools and software ecosystems"}
+  g03: {label: "Infrastructure, hosting, and connectivity costs"}
+  g04: {label: "Security, privacy, and data control"}
+  g05: {label: "Consumer devices, apps, and feeds"}
+  g06: {label: "Jobs, careers, and workplace decisions"}
+  g07: {label: "Everyday services, health, and personal organization"}
+  g08: {label: "Online communities and content quality"}
+  g09: {label: "Teaching, learning, and assessment"}
+cards:
+  - {card_id: c01, group_id: g01, statement: "AI assistants give inconsistent or made-up answers the user cannot trust", status: approved, author: claude}
+  - {card_id: c02, group_id: g01, statement: "AI coding agents need constant supervision and fail on long or UI-heavy tasks", status: approved, author: claude}
+  - {card_id: c03, group_id: g01, statement: "Chat AI products degrade through system prompts, usage limits, or unstable quality", status: approved, author: claude}
+  - {card_id: c04, group_id: g01, statement: "Running capable AI models locally needs costly or fiddly hardware and setup", status: approved, author: claude}
+  - {card_id: c05, group_id: g01, statement: "Moving between several AI coding tools breaks habits, context, and workflows", status: approved, author: claude}
+  - {card_id: c06, group_id: g02, statement: "Dependency and ecosystem churn breaks builds and makes long-term maintenance hard", status: approved, author: claude}
+  - {card_id: c07, group_id: g02, statement: "Developers rebuild the same logging, usage, and debugging tooling for every project", status: approved, author: claude}
+  - {card_id: c08, group_id: g02, statement: "Hosted developer platforms such as code hosting or CI are unreliable or too costly for small teams", status: approved, author: claude}
+  - {card_id: c09, group_id: g02, statement: "Simple tasks force people into bloated, ad-filled, or privacy-invasive tools", status: approved, author: claude}
+  - {card_id: c10, group_id: g02, statement: "Managing terminals, sessions, and workspaces across projects is hacky and fragile", status: approved, author: claude}
+  - {card_id: c11, group_id: g03, statement: "Monitoring and cloud bills rise sharply with scale or small architecture changes", status: approved, author: claude}
+  - {card_id: c12, group_id: g03, statement: "Home or office internet connectivity is poor and individuals cannot get it fixed", status: approved, author: claude}
+  - {card_id: c13, group_id: g03, statement: "Self-hosted and homelab setups break on updates or when new devices join", status: approved, author: claude}
+  - {card_id: c14, group_id: g04, statement: "Secrets or personal data leak into systems where they should never be stored", status: approved, author: claude}
+  - {card_id: c15, group_id: g04, statement: "People cannot see, control, or delete the data services collect about them", status: approved, author: claude}
+  - {card_id: c16, group_id: g04, statement: "Security and login flows slow down automated or agent workflows", status: approved, author: claude}
+  - {card_id: c17, group_id: g05, statement: "Device and app updates break or remove features people rely on", status: approved, author: claude}
+  - {card_id: c18, group_id: g05, statement: "Recommendation feeds keep showing unwanted, repeated, or stale content", status: approved, author: claude}
+  - {card_id: c19, group_id: g05, statement: "Websites and apps are slow, broken, or unusable on mobile or some browsers", status: approved, author: claude}
+  - {card_id: c20, group_id: g05, statement: "Social platforms make it hard to find and follow niche communities", status: approved, author: claude}
+  - {card_id: c21, group_id: g05, statement: "Family and parental control software is too coarse to be useful", status: approved, author: claude}
+  - {card_id: c22, group_id: g06, statement: "Experienced engineers struggle to find roles in a crowded job market", status: approved, author: claude}
+  - {card_id: c23, group_id: g06, statement: "AI raises client expectations and devalues skilled creative or engineering work", status: approved, author: claude}
+  - {card_id: c24, group_id: g06, statement: "Job applicants get no response or feedback from employers", status: approved, author: claude}
+  - {card_id: c25, group_id: g06, statement: "Leaders impose tools or frameworks over engineers' objections", status: approved, author: claude}
+  - {card_id: c26, group_id: g07, statement: "Pharmacies, banks, or public services fail at the point of need because systems go down", status: approved, author: claude}
+  - {card_id: c27, group_id: g07, statement: "Health conditions limit everyday choices and available products do not fit", status: approved, author: claude}
+  - {card_id: c28, group_id: g07, statement: "Personal information like recipes, notes, or shipments is scattered across too many apps", status: approved, author: claude}
+  - {card_id: c29, group_id: g08, statement: "Community sites change defaults or ranking in ways regular users dislike", status: approved, author: claude}
+  - {card_id: c30, group_id: g08, statement: "Low-quality, AI-generated, or SEO content crowds out useful information", status: approved, author: claude}
+  - {card_id: c31, group_id: g02, statement: "Tools change interfaces and shortcuts without warning or an opt-out", status: approved, author: claude}
+  - {card_id: c32, group_id: g01, statement: "AI provider terms restrict how tokens, agents, and SDKs may be used", status: approved, author: claude}
+  - {card_id: c33, group_id: g03, statement: "Scaling a small app to heavy traffic is technically hard and costly", status: approved, author: claude}
+  - {card_id: c34, group_id: g03, statement: "Private networking and remote access tools break across operating systems", status: approved, author: claude}
+  - {card_id: c35, group_id: g09, statement: "Teachers cannot assess students fairly when AI use is hard to detect", status: approved, author: claude}

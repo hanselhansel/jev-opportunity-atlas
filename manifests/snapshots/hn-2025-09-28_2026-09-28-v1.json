@@ -1,0 +1,65 @@
+{
+ "boundaries": {
+  "first_id_in_window": 45400433,
+  "last_id_in_window": 49872056,
+  "located_at": "2026-09-28T18:29:25.787+00:00",
+  "maxitem_at_locate": 49882324,
+  "scan_first_id": 45395433,
+  "scan_last_id": 49877056,
+  "window_end": "2026-09-28T00:00:00Z",
+  "window_start": "2025-09-28T00:00:00Z"
+ },
+ "built_at": "2026-09-28T23:27:11+00:00",
+ "code_commit": "5b4e7d83c61e8fa6ba265ec474ab8dc4f34f5b96",
+ "counts": {
+  "comments": 3991507,
+  "context": 4872,
+  "eligible": 3680002,
+  "exclusion_reasons": {
+   "dead": 170165,
+   "deleted": 121002,
+   "empty_text": 18,
+   "non_english": 3893,
+   "out_of_window": 16427
+  },
+  "items": 4490000,
+  "stories": 498534
+ },
+ "files": {
+  "comments.parquet": {
+   "bytes": 1350132790,
+   "rows": 3991507,
+   "sha256": "ae63fc67ab9cf3ecb2a2a7788188bb78e98084ac17d6f33279391f493885edb5"
+  },
+  "context.parquet": {
+   "bytes": 889180,
+   "rows": 4872,
+   "sha256": "a03ee5c3c861923ff4e304848f839c823785c36690efbf1d8e50b86fba319167"
+  },
+  "coverage.parquet": {
+   "bytes": 1666,
+   "rows": 47,
+   "sha256": "cd2f7fa2b0712ab3ec1ae74b2865fb23247824aefcc382f95b1f9f288128f742"
+  },
+  "stories.parquet": {
+   "bytes": 44789189,
+   "rows": 498534,
+   "sha256": "4f248f70c86c6113088ce84ca2904b0526d1626d2b801465f060fa7cdfa30e2e"
+  }
+ },
+ "reconciliation": {
+  "comments": 3991507,
+  "deleted_without_type": 0,
+  "failed": 0,
+  "ids_scanned": 4490000,
+  "null": 0,
+  "other_types": 554,
+  "stories": 497939
+ },
+ "schema_version": 1,
+ "snapshot_id": "hn-2025-09-28_2026-09-28-v1",
+ "window": {
+  "end": "2026-09-28T00:00:00Z",
+  "start": "2025-09-28T00:00:00Z"
+ }
+}
