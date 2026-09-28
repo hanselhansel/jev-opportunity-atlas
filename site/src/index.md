@@ -74,8 +74,7 @@ function domainChart(meta, domainShare) {
         Plot.barX(ok, {
           x: "weighted_share",
           y: "domain",
-          fill: "currentColor",
-          style: "color: var(--cat-1)",
+          fill: "var(--cat-1)",
           href: (r) => hrefFor(r.domain),
         }),
         Plot.barX(few, {
@@ -88,8 +87,7 @@ function domainChart(meta, domainShare) {
           x1: "ci_low",
           x2: "ci_high",
           y: "domain",
-          stroke: "currentColor",
-          style: "color: var(--atlas-fg)",
+          stroke: "var(--atlas-fg)",
         }),
         Plot.text(ok, {
           x: "weighted_share",
@@ -97,16 +95,14 @@ function domainChart(meta, domainShare) {
           text: (r) => `${(r.weighted_share * 100).toFixed(1)}%`,
           dx: 8,
           textAnchor: "start",
-          fill: "currentColor",
-          style: "color: var(--atlas-fg)",
+          fill: "var(--atlas-fg)",
         }),
         Plot.text(few, {
           x: () => maxX * 0.09,
           y: "domain",
           text: () => "too few to estimate",
           textAnchor: "start",
-          fill: "currentColor",
-          style: "color: var(--atlas-muted)",
+          fill: "var(--atlas-muted)",
         }),
       ],
     },
@@ -117,7 +113,10 @@ function domainChart(meta, domainShare) {
       {
         key: "weighted_share",
         label: "share",
-        format: (v) => (v == null ? "" : `${(v * 100).toFixed(1)}%`),
+        format: (v, row) =>
+          row.too_few || v == null
+            ? "too few to estimate"
+            : `${(v * 100).toFixed(1)}%`,
       },
       {key: "badge"},
       {key: "denominator"},
