@@ -195,7 +195,7 @@ def card_metrics(
                 from enr group by card_id
             ),
             capped as (
-                select card_id, sum(n) as n_comments_capped from (
+                select card_id, sum(n)::bigint as n_comments_capped from (
                     select card_id, least(count(*), {int(author_cap)}) as n
                     from enr where author is not null
                     group by card_id, author
