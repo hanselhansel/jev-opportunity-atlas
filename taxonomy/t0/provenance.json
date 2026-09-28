@@ -1,0 +1,935 @@
+{
+ "taxonomy_version": "t0",
+ "cardset": "configs/cards/pilot.t0.yaml",
+ "author": "Claude (claude-opus-5-5, Claude Code main session), unreviewed draft for the pilot go/no-go test",
+ "method": "read pain sentences selected by Jev (facets@1 pain_sentence) for pilot comments with firsthand_problem >= 0.5, explore half only; grouped by hand into 8 groups and 30 solution-independent need statements",
+ "source_run": "pilot-20260929",
+ "inputs": [
+  {
+   "comment_id": 45401967,
+   "text_sha256": "c337ee52021bc8047cdea4243c9c774c20be358e64dee1204cce8e088844624b"
+  },
+  {
+   "comment_id": 45410264,
+   "text_sha256": "746c0c5f96df91672bff67f4f3bf1ec87abb5ac58e5ebf3eae21bc1753bf9f9a"
+  },
+  {
+   "comment_id": 45418966,
+   "text_sha256": "30ee1d6dd57739e0f0e8dfe9b01c2867b9beda3fbbd21050586b6558bf2ef0c1"
+  },
+  {
+   "comment_id": 45421505,
+   "text_sha256": "e1e9a54d9dfc2dab1ca5762f56e2d42639db31a643245858760ba078bf3639ef"
+  },
+  {
+   "comment_id": 45426957,
+   "text_sha256": "9f608c9ab65f8a4fe1610f4a0663872f94e2ea83ea814304295f9f84787e1baa"
+  },
+  {
+   "comment_id": 45427422,
+   "text_sha256": "4c2e0fbd69255a9dde314bf9cf92d2dab7cdb5f7ea3fcb3e952394b0abdcefdc"
+  },
+  {
+   "comment_id": 45438030,
+   "text_sha256": "f542d5adf821595ed1f6f952d1211d9b26b53c82ceb8b82866d45019363c40ba"
+  },
+  {
+   "comment_id": 45446024,
+   "text_sha256": "a026a04564afcb9782df32932b28ba76d1fbc824822bcdd01a0f4014d1cd4db6"
+  },
+  {
+   "comment_id": 45496702,
+   "text_sha256": "7bc58e7418fd7106dcceacd789559824c8c313496ca04986f2535cf630514848"
+  },
+  {
+   "comment_id": 45498816,
+   "text_sha256": "9223f89255c58115a11b37b1fa02dd9abe0085ac2576fcec6675da7dbcd335d3"
+  },
+  {
+   "comment_id": 45507770,
+   "text_sha256": "24b5e17f468854bb8d68cc8823b6e008dc3c41259a9be945badaa992df9f102f"
+  },
+  {
+   "comment_id": 45517127,
+   "text_sha256": "2eb6569ba7c895ff0ed22b343f5440b65979159f66a01da6d6da3c00a7f8b908"
+  },
+  {
+   "comment_id": 45526612,
+   "text_sha256": "357388bf59b2193a8167004597b38e0a43c7258c5cce5fbe5adf6c16c6e1329b"
+  },
+  {
+   "comment_id": 45548892,
+   "text_sha256": "dded3d746a51012c2bd34c22c7dc60abcdcb5779c36c478f68ee48a0108947f6"
+  },
+  {
+   "comment_id": 45589483,
+   "text_sha256": "30820d5b4d0a47e594cbcb78d7a175a8bb3f01db085e6a22e67d6a8e53a39347"
+  },
+  {
+   "comment_id": 45616089,
+   "text_sha256": "4c4f356ca09c64b2b042f7e8946b28a28704230251a8418ec6070edc80a71717"
+  },
+  {
+   "comment_id": 45647770,
+   "text_sha256": "228dd3b2ce93aff38dce3955e107666c9a87b0b1c6ec8c19bc6d103344f9e916"
+  },
+  {
+   "comment_id": 45653714,
+   "text_sha256": "605c53f29abc751b9e642efb33707840d1dbd4abc26a89fb9209b4fab4d05d83"
+  },
+  {
+   "comment_id": 45665457,
+   "text_sha256": "6bce8a3fcf9f766246b51a0438e94b9cb1a32bc4a5772c23580d7a0ae2efd4ab"
+  },
+  {
+   "comment_id": 45730784,
+   "text_sha256": "27a97a189121ed781211a9bc8345eca9fa8de461e1b644b2a8ececcebc3939a5"
+  },
+  {
+   "comment_id": 45746731,
+   "text_sha256": "bb142ac3ac4f68f1534612c027e0031bd0dd550856632a013f76af9d80a824e2"
+  },
+  {
+   "comment_id": 45793625,
+   "text_sha256": "70cdb8e892949b826cf97acf1c327113708d13f6b4af2f1d241f53a0feba77ac"
+  },
+  {
+   "comment_id": 45794226,
+   "text_sha256": "69e6e3401f8dd709c95d8906687c8a453405ad0f088a8b261d199a989b233c67"
+  },
+  {
+   "comment_id": 45833823,
+   "text_sha256": "e3ad43e2b26aab5abe755a36f2c283418a350904e33f10ee9d151c70ef884109"
+  },
+  {
+   "comment_id": 45834621,
+   "text_sha256": "c356a0fdcc5c41fa79381b5be016ad95a7cec538c1e1e6acadb2eee4c54acffa"
+  },
+  {
+   "comment_id": 45871220,
+   "text_sha256": "e8fe2a84f274d8a9d9eb31f60d376bc88035b6c7cd6d6e59377ae3c15746f707"
+  },
+  {
+   "comment_id": 45885953,
+   "text_sha256": "c228a251eeac4fd2cd7136c4ab6d5eaa7d9ecd577857721409bd7031b67a8c84"
+  },
+  {
+   "comment_id": 45904336,
+   "text_sha256": "7a4a8608777d0dd44a06e4f5e30696f84e9781f502c85344829b756ca6dfbd4b"
+  },
+  {
+   "comment_id": 45905355,
+   "text_sha256": "63891cb3c8d107384e37ca3d055dc471b34c3b965c0df5c62782b187fb675f8d"
+  },
+  {
+   "comment_id": 45909964,
+   "text_sha256": "abb9bbad55d98b5641ba40c53a60e6df15d0dbdec6b75bd6f777a7cf4890fa1c"
+  },
+  {
+   "comment_id": 45954957,
+   "text_sha256": "8387b730325c632d3001508a830a92af873359b05d01a1d430d98eb00a192187"
+  },
+  {
+   "comment_id": 45968763,
+   "text_sha256": "18c5b038f20010843b110747003cbedd52aa67ade1730953e5f5821d097a5c69"
+  },
+  {
+   "comment_id": 45973572,
+   "text_sha256": "13cf28459c51c2133c2a57d4d07c3adac41198fa5e78050a5766635ce575197a"
+  },
+  {
+   "comment_id": 46027898,
+   "text_sha256": "718dca502905cee7b90c99cabcb039326b7942eb3375b19374f3f5efe804a810"
+  },
+  {
+   "comment_id": 46050421,
+   "text_sha256": "ae47727d172cbb281a25c5baac7608ef68c4e6cc6c1f11256b035e46c74c11cf"
+  },
+  {
+   "comment_id": 46096962,
+   "text_sha256": "67c34f7f5e4142b8bd2ffee16f8cb25c4b8facfb17fdd47b4f6d71f6177b97ea"
+  },
+  {
+   "comment_id": 46192154,
+   "text_sha256": "2f88f04655873e22e1516e9421cc45609c3d6a1799f07702539d462b01f596bf"
+  },
+  {
+   "comment_id": 46237374,
+   "text_sha256": "9ee01799f095f713a2614a1d0bd1651bd9795f5e5b0f0abf43e4a9e72c1e8d0b"
+  },
+  {
+   "comment_id": 46246888,
+   "text_sha256": "f4175f7af759152837aff5b3be79f6a974a007ba7b7bbea999e99c6cbf737a0c"
+  },
+  {
+   "comment_id": 46271376,
+   "text_sha256": "1f12774cb4f2211b714f4cd053c35e14ae67944dead65321a1c40a39fb12261f"
+  },
+  {
+   "comment_id": 46274874,
+   "text_sha256": "6cec7303dc1f59323b6bd417cdb29c616f85082244be4f5fd66a557cf138ba5f"
+  },
+  {
+   "comment_id": 46281114,
+   "text_sha256": "5eeac9fdc4d7d5d373bf2b6f407864212f5188a7d4bcc4bb52d7e0f0cae6d25d"
+  },
+  {
+   "comment_id": 46302147,
+   "text_sha256": "54f5c6ac7ac78b2bab7e69ad9934ebdbb57241587af8ffd454fdab88f2a2a517"
+  },
+  {
+   "comment_id": 46311214,
+   "text_sha256": "a69ce6594f01653ea509149d1ad1c6481d7655b034a6ecdab1bedad66eebb38e"
+  },
+  {
+   "comment_id": 46347728,
+   "text_sha256": "f5e32b26d9ee5b0ac02efde9e46e2366c3877ad1c949ddf8e670dd9c552bafc2"
+  },
+  {
+   "comment_id": 46356942,
+   "text_sha256": "8a457b1c1c5b42c4d96a22f9384370b7f1731e5cb094305aace435abd8f95fc4"
+  },
+  {
+   "comment_id": 46405603,
+   "text_sha256": "f8f2faa645f0ec2c1255cb585737c60c4e113a8838a52aedd9e803b5170167a9"
+  },
+  {
+   "comment_id": 46408846,
+   "text_sha256": "8cb77f7cbc3c22537f385549873bde9284556913964c2b0e29111714dc9ba502"
+  },
+  {
+   "comment_id": 46424965,
+   "text_sha256": "d6d9b4f2bfd0eb7f346596b219d47531e3edd1537f1e2610ac5bf127edf8bf41"
+  },
+  {
+   "comment_id": 46426035,
+   "text_sha256": "b45780f750f311cb6328c0470ddc4ad5bfb6d7e200b5c0b70ef33f7961349f39"
+  },
+  {
+   "comment_id": 46448741,
+   "text_sha256": "a6910ca05f6b8bb82c43b111ff429e18d46075f69a9dfdd241379d45e11904e8"
+  },
+  {
+   "comment_id": 46466460,
+   "text_sha256": "772c8e56f7593d23ff54d788c0debc04f111e556c5ed770029f78317cc7a9d55"
+  },
+  {
+   "comment_id": 46509811,
+   "text_sha256": "bc93a67f17751a8c5e2e5a349d46729f867fe0fe86b49fed4d62915a0556dc47"
+  },
+  {
+   "comment_id": 46513074,
+   "text_sha256": "c47dfdb93b8529a01c5629e5fc5c4f09159ea8a300818cdb9699e9e42f99709d"
+  },
+  {
+   "comment_id": 46542954,
+   "text_sha256": "9ac15f64223ea588252550d1036985a995ebcd1aceba44285699b66da82aaa71"
+  },
+  {
+   "comment_id": 46559173,
+   "text_sha256": "880a97741108ddd3002812ff117f31da865a4ed4574ac5e518fd5f154d0babbd"
+  },
+  {
+   "comment_id": 46630861,
+   "text_sha256": "f771cc2dd1692250473adb831833b61ce931c4da466139db34dab9375a16f9ca"
+  },
+  {
+   "comment_id": 46634353,
+   "text_sha256": "a33cbcafac1cc195745257bde1c729efd7ddd85462f7381745afeb5517dab806"
+  },
+  {
+   "comment_id": 46647487,
+   "text_sha256": "c49a8fc6437e96d2f59846b4a310cd5faad4b8ebd8cf35af26629eb3b8b6f121"
+  },
+  {
+   "comment_id": 46649318,
+   "text_sha256": "6a3c3ccefd7398d323d8010bfb08e858548438e4f40a4b1f90a4992cacdfa648"
+  },
+  {
+   "comment_id": 46654623,
+   "text_sha256": "ce6bf6883fd153ccc67406377cc44c53247013e5ec176ae33339f9ca3334eb81"
+  },
+  {
+   "comment_id": 46691432,
+   "text_sha256": "493df7a2335b4c7af3780c8512dc45b8577dee89b1db98c3335b66f5d0d903fb"
+  },
+  {
+   "comment_id": 46736636,
+   "text_sha256": "e8681f39fa79ce919fae9efafff04a43fda4be4fd1eb46552721286682eb83a1"
+  },
+  {
+   "comment_id": 46752799,
+   "text_sha256": "53d469392a47ec82aa8640b25ed5ea3e18f33bc3c1f91d968da81d02cac2982f"
+  },
+  {
+   "comment_id": 46757187,
+   "text_sha256": "341ea8fbf36023e2ae061fc27f481949d0fe2be6e33d7d98dbceb09acb873c4c"
+  },
+  {
+   "comment_id": 46759559,
+   "text_sha256": "a079de4948b01155acf3847ee00c9f478e27996bb23ce2262291674aaa45153e"
+  },
+  {
+   "comment_id": 46781292,
+   "text_sha256": "ed5791db2c720b163914e37951fff2337d344f8382a5270ac5cd06ea3f1266ab"
+  },
+  {
+   "comment_id": 46826026,
+   "text_sha256": "c9f6cb3d137e50b4be83a28a43ec6b09de3acca769663700d474ca1c3cef3caf"
+  },
+  {
+   "comment_id": 46839551,
+   "text_sha256": "fe34a3cf5d274574a14f9612c4858ab13b197f95b774018557c9babb269749b2"
+  },
+  {
+   "comment_id": 46860229,
+   "text_sha256": "81b43e227ae544408451a99632f0d3e8f024207e8986476bb6fbfe110a82e333"
+  },
+  {
+   "comment_id": 46885783,
+   "text_sha256": "53a6f3502926b86a7a25662b79add652a877f90497242dc6b97cce7dda441882"
+  },
+  {
+   "comment_id": 46906491,
+   "text_sha256": "077de54beed400d1bb8cd7852532bbd4d76581783365fd2d3b357ca8ccca28fe"
+  },
+  {
+   "comment_id": 46931819,
+   "text_sha256": "e716f1b0a120950a481c441db36dcbc5842816be5da86c9f285fc6df96af8d86"
+  },
+  {
+   "comment_id": 46932380,
+   "text_sha256": "ae60949107154e2dfe53f509eb567ce8bee55280d8ad90e35279d0cacfb901b9"
+  },
+  {
+   "comment_id": 47041128,
+   "text_sha256": "671d2cf83643a30bf5135f9f842dcb0ac57c202c2eb0b09972b479b73e203ebc"
+  },
+  {
+   "comment_id": 47049472,
+   "text_sha256": "8ea1ec5f6e6b1bcbb501c0dc53578f84fb795b9480240bfe558fc19a21c87073"
+  },
+  {
+   "comment_id": 47065759,
+   "text_sha256": "b8619159aa225998dce4f2591cabbe27965ad2468ef894660dda172c1bf3f056"
+  },
+  {
+   "comment_id": 47069637,
+   "text_sha256": "5f523dc5c961b091af836e3669845eec36000698968a209e6a2f03eb3fcf2d31"
+  },
+  {
+   "comment_id": 47071276,
+   "text_sha256": "70d51470df410eb2b52d719b72ffad2c2c6efa2daf66a37b5f3b124c158d610c"
+  },
+  {
+   "comment_id": 47082522,
+   "text_sha256": "aefb723c2e1b47a26979d5c24951f79c8e36b2713f5d3dba5f8b2400d65aeeb1"
+  },
+  {
+   "comment_id": 47102309,
+   "text_sha256": "7278e69f85b7ca4c3e2aa1b2a66a13e24c56688f441a7a4fdb6a9b40ecca6e97"
+  },
+  {
+   "comment_id": 47106421,
+   "text_sha256": "65a0664ff0cba92f5c80b2b63ceb9361171e8ada34e4ba63382fdf42c4cbf52c"
+  },
+  {
+   "comment_id": 47113174,
+   "text_sha256": "5f13910f900e1645bead3de1c5d5f4493eb2cf830a10f1e67db9a8fe42da92f6"
+  },
+  {
+   "comment_id": 47137244,
+   "text_sha256": "5a01edf81d516759816ec0c24736b0089df7b7e4ba6f31ab9cd4b394f27840df"
+  },
+  {
+   "comment_id": 47146564,
+   "text_sha256": "b6edf86417cc4212a8034b94286e925ccd90a0a507ddf96c914a026d4e682ec9"
+  },
+  {
+   "comment_id": 47155154,
+   "text_sha256": "c1005833dfb6fbce883e3b70fbb7046f238d560a69cad3bb6bb126d13d9bbd8f"
+  },
+  {
+   "comment_id": 47160043,
+   "text_sha256": "22f2f2c06b2bb86774758f3a8ac721fe0552aff128e8d4242f272e6753d781aa"
+  },
+  {
+   "comment_id": 47175664,
+   "text_sha256": "10da08a019864344d15a3c949e3c223474eb26d7de36f62db45664e6717dff56"
+  },
+  {
+   "comment_id": 47195408,
+   "text_sha256": "04b02e6571543cdcb11e5c8cb28ee3d8613439507fd38bfd83677b22f0f14dd5"
+  },
+  {
+   "comment_id": 47199871,
+   "text_sha256": "3cf33eaa55dfdd18c872deae138c137d22ffa3a9c0864fc08324d76cddfecee9"
+  },
+  {
+   "comment_id": 47202088,
+   "text_sha256": "f67788502abbb0484b000202ead28a32f61cf1544403fbdbe4fad8d14423e9cb"
+  },
+  {
+   "comment_id": 47202736,
+   "text_sha256": "0d23144ba610dc45d6deca0f0e50dd1b09c27b65fd18485c4764e318733dd557"
+  },
+  {
+   "comment_id": 47241315,
+   "text_sha256": "f75024defd978fe3b06278a978325cf5e5006ee77b3c45a23df70bb6f96d3b7c"
+  },
+  {
+   "comment_id": 47260779,
+   "text_sha256": "0c584b12f8f0077afe8f6d0ed2fee595cf40b1f22938540543e6b0c8e3222d61"
+  },
+  {
+   "comment_id": 47262797,
+   "text_sha256": "6ac42a4eb7cbc21384dabb541de4f783f264d62f7b00740c9c5a273bdf3e0843"
+  },
+  {
+   "comment_id": 47269337,
+   "text_sha256": "289daed0ad2b91cce25acca453271710d5a2d2d1ab5536a7c1a41de683928313"
+  },
+  {
+   "comment_id": 47274446,
+   "text_sha256": "81b7c8fb58840338b649f2d7cb8fce5f1fa64833dba7fa329fd0a80c418aa560"
+  },
+  {
+   "comment_id": 47288797,
+   "text_sha256": "7686b4712250070b8c1fb6d7e11af71e167ddccabea995acab68e9a2623c200c"
+  },
+  {
+   "comment_id": 47310300,
+   "text_sha256": "68f8afb9d78a323af882d256f318089480e2d986db80fdcc132c110c2c88541c"
+  },
+  {
+   "comment_id": 47322631,
+   "text_sha256": "d6ff868691f9077168c5ce5e22d1b2f4a42abb7c65fc67361541893dc901a12a"
+  },
+  {
+   "comment_id": 47327891,
+   "text_sha256": "fe641506466ac7c8a53d4af100a4240bb54f790404d997654b1602acc3944754"
+  },
+  {
+   "comment_id": 47361461,
+   "text_sha256": "62d4a85521cfcc39b25afd0f614ea14dfc97d9a39829a9f46693c12b6e235eba"
+  },
+  {
+   "comment_id": 47370668,
+   "text_sha256": "b7972d1c196895fc4d6c8479b8ea65a8f804b4df42567262ec78a77f1822d6dd"
+  },
+  {
+   "comment_id": 47379371,
+   "text_sha256": "ce4b7322c5f23e0851d94eec249b4d4f9094aef66f70e411d174e915a600bb87"
+  },
+  {
+   "comment_id": 47390432,
+   "text_sha256": "e158b38b647f4a12108423079516614b65e84fc159e4c216ff5655de3eb8faba"
+  },
+  {
+   "comment_id": 47410808,
+   "text_sha256": "2b5f78a9b2124f2217c3640b5e15dd517c85e0f44a546a0550b6aa360526c794"
+  },
+  {
+   "comment_id": 47428667,
+   "text_sha256": "dd4192e19f2be16242f4a371b9fd5b9d2b1c6428101e50794097ec2a58d58af4"
+  },
+  {
+   "comment_id": 47441509,
+   "text_sha256": "8f217e9be1412f261bf11794a85227e3bb428a42a1f3f9fe43f3c53cc4a9191a"
+  },
+  {
+   "comment_id": 47561232,
+   "text_sha256": "4c095691c01269f1f0c441f19cd759cc3abd8fec042aec7bb53f481b16eea0d0"
+  },
+  {
+   "comment_id": 47609228,
+   "text_sha256": "11b9f0e6e0bba299b89e2b4d1b4771d9c1196123c000bfc201a75d3273cbaf89"
+  },
+  {
+   "comment_id": 47609513,
+   "text_sha256": "95863888c5899e2b3c14687cf7c6e070e5520075f21cf48fb3caa7e81385d605"
+  },
+  {
+   "comment_id": 47612248,
+   "text_sha256": "f6a25d93188506998053e96c4bd708a3e71608eff75681f21421346e142d6887"
+  },
+  {
+   "comment_id": 47641200,
+   "text_sha256": "faa6019d7876ea0f87ba57e876e4397ad48c5dad4d34fe6fcb6a00fc5fe2f373"
+  },
+  {
+   "comment_id": 47669724,
+   "text_sha256": "f679b9eabf8d2a6daf9bddf74a4d8814929a1c7c4c15139bdd5a31160078b709"
+  },
+  {
+   "comment_id": 47679094,
+   "text_sha256": "dbcf250958b56056efd8e8ae608a6942e2b6d3e6237be782345fdca811749fa7"
+  },
+  {
+   "comment_id": 47691339,
+   "text_sha256": "aff1d8c3a1cb5badc54d51db6fef75ed4cb1587242d9c5b46fc657db490d133c"
+  },
+  {
+   "comment_id": 47696048,
+   "text_sha256": "35bab064b33bbba82fe9cbd5ac204a217917aeb64f120904e991a259ef8426ed"
+  },
+  {
+   "comment_id": 47745507,
+   "text_sha256": "5dc0c1031f5124e8e90656c7e9f5228b38456180ddd11fbd84d1135c4376b821"
+  },
+  {
+   "comment_id": 47782496,
+   "text_sha256": "c6be964d42012376c0132fd9724951ca5c5e97119faa9ab2f24b1f1e1555e0eb"
+  },
+  {
+   "comment_id": 47783974,
+   "text_sha256": "918237078842e7e5af50816b1f0fad5d6548b3a542fe8e454656231501a40bc7"
+  },
+  {
+   "comment_id": 47787447,
+   "text_sha256": "57cc7d4851ed872f96ddaa16e3fb804f8ad7c8b8010c648c8fa2590cc1bed99e"
+  },
+  {
+   "comment_id": 47806784,
+   "text_sha256": "b2aa0e172a679b789a7716ff50e3af8b74ef061e251a6c2c722f34d7770d93d6"
+  },
+  {
+   "comment_id": 47808463,
+   "text_sha256": "2776cffe0f4ba3cb8e5743589109c737830123f4cfce8d22911b9df755238dad"
+  },
+  {
+   "comment_id": 47834355,
+   "text_sha256": "cbeaaa8ae1be48766e7d0b014977290b8afffd3b94ebed26f14182c93ae01ea6"
+  },
+  {
+   "comment_id": 47845441,
+   "text_sha256": "417cbf5033a66908a6d3c4c44f542400dea36ef124acfc705788cb6fcb2ddfd4"
+  },
+  {
+   "comment_id": 47860942,
+   "text_sha256": "8667268e367168cec412abcdc19b1dece0701801b8edfbfad90dfff26422a75e"
+  },
+  {
+   "comment_id": 47877634,
+   "text_sha256": "dd082da0a744928934539b3899747e8ffc6631076f9832815dcd0d9a6a759126"
+  },
+  {
+   "comment_id": 47914226,
+   "text_sha256": "276c781a14066c9bc3a31f4afe7063d9d4b92dab4da8518d6049bebd3f310d0c"
+  },
+  {
+   "comment_id": 47934748,
+   "text_sha256": "1f10f69de7fa7b77daa8bd84d27a1602c3bf827746595b62f8cafd61191299b9"
+  },
+  {
+   "comment_id": 47978531,
+   "text_sha256": "8a7938f078428cdf0fc069706068796f7ce84ac3fa0396c1ff6ea05aac67189d"
+  },
+  {
+   "comment_id": 47987290,
+   "text_sha256": "504b7b05ff016b56ec412ead44762d343af8f11ae05391edcad68cf1c6d73a23"
+  },
+  {
+   "comment_id": 48091492,
+   "text_sha256": "2d19ccc1a69e88f1c4869bb224dde1cbf03098e61041bbd3f35bf9c4c09a9aac"
+  },
+  {
+   "comment_id": 48096929,
+   "text_sha256": "321558d403f1a4e52cca53f80d6e4303cbde2f5c931903cf68149fd8ac05e154"
+  },
+  {
+   "comment_id": 48103218,
+   "text_sha256": "3797a71142c1e65e868c5441fc7d64f7f80a7d63b09f76580474fcbaf3aed35e"
+  },
+  {
+   "comment_id": 48118546,
+   "text_sha256": "f2d01302433b43b63742b89fc1f51753135950abe4d28f536ae3bb6cfc4f4075"
+  },
+  {
+   "comment_id": 48130280,
+   "text_sha256": "3b90949a7c4e9877a8e6a6b832784924f7b63f38cc66f6e47527c8b5cd315011"
+  },
+  {
+   "comment_id": 48170912,
+   "text_sha256": "5fa68ce822dfc8524acd86634ed0bf47aaf0a4c16a32d0dece5344308f1e285b"
+  },
+  {
+   "comment_id": 48180390,
+   "text_sha256": "240aced7432cd60835e49bb6984a9312a15475945e391ea71fb9de45856d4edd"
+  },
+  {
+   "comment_id": 48201301,
+   "text_sha256": "15afa7a5f4b6b70ce5cc5c116b63ac298c94ce7fe0499c0a2e5535a15ac20d2d"
+  },
+  {
+   "comment_id": 48218795,
+   "text_sha256": "edb98468df4fa08eb4180ca5525fb8a2911d791531bca77e367a17236c964a24"
+  },
+  {
+   "comment_id": 48252155,
+   "text_sha256": "96c7be6f74c4b7d8c41e042fff7070dad8105fa823de08319b828a2692f405ae"
+  },
+  {
+   "comment_id": 48259187,
+   "text_sha256": "95d8e1e439325fc2cb85744932e7de1ce8649ea5871ac9a461dc6ccff1233c17"
+  },
+  {
+   "comment_id": 48264194,
+   "text_sha256": "a90815e85e21d7af15a75e10f19bf99d5f9625275309fc51bfeaf6f2696040c0"
+  },
+  {
+   "comment_id": 48276720,
+   "text_sha256": "fbd03a2e2c4b017185d9c7fb54ae7352d24b71c2255d988f97120ff873f1f436"
+  },
+  {
+   "comment_id": 48317868,
+   "text_sha256": "80257deef29d8865c7ea985942edcfd683bf282d6aa7a567dd0cf5cd1dc01961"
+  },
+  {
+   "comment_id": 48324227,
+   "text_sha256": "f0539a130e73fcab70a18d7e85ace1eb7058d473dd8abc6f9b63704389214607"
+  },
+  {
+   "comment_id": 48324696,
+   "text_sha256": "09adf25e442b8af80b16cacd84059bcd800fd8b856066f439cc0fa8cf4aa773c"
+  },
+  {
+   "comment_id": 48324711,
+   "text_sha256": "be4e22c877f2f5885e1e3433ffe8aa662ec88b276ac2022cdf6b17f31ac083a5"
+  },
+  {
+   "comment_id": 48324726,
+   "text_sha256": "7d65c68ca9ea235ef5f0927cd4dfaf7a515c787acc9cc811d9b76241be3a628c"
+  },
+  {
+   "comment_id": 48324815,
+   "text_sha256": "27cb05bfde3fcefcd69e1aa370f909acefdd465fb72e4129f6a64214fbc3c2ca"
+  },
+  {
+   "comment_id": 48324929,
+   "text_sha256": "9853a43c0f858fbf43f8d639aed8ef7dbb7bc55561a2fca5471d99f54b9a96a6"
+  },
+  {
+   "comment_id": 48324980,
+   "text_sha256": "c8d34106896b9a2fbfbe5348059d006bf89ce1b835092cb5a5ca315fccd90ae1"
+  },
+  {
+   "comment_id": 48325706,
+   "text_sha256": "37083da9ebe0b39cc667e5f41b273f6aacc1c9cd38dbb2101d379df669203721"
+  },
+  {
+   "comment_id": 48327074,
+   "text_sha256": "b93c3c51a91ef9ecd4b3d336334ef4bd7b06be6c453943ee5a44df27f4faf07a"
+  },
+  {
+   "comment_id": 48327192,
+   "text_sha256": "03c5f13ca6e7fc6dc25eda8b47b329ef9b055fcbb85012293bf11243014f4f5b"
+  },
+  {
+   "comment_id": 48327499,
+   "text_sha256": "bc0d2705f417e07f1cc9f0a57731b475c65d2f2761dfd23e5190dc40bb9f3b7d"
+  },
+  {
+   "comment_id": 48328546,
+   "text_sha256": "65e580a59cc8f9a4b0336304db7bdf04e0c3cf2ec2572b8dfb154a829188e946"
+  },
+  {
+   "comment_id": 48328873,
+   "text_sha256": "1154eff4d6eb1371b4dc3b4894b85adb53a8e28d8d1970ebfb6f20f297c19f1a"
+  },
+  {
+   "comment_id": 48328909,
+   "text_sha256": "518b355c4e2d5ab17644b0866e569ac4a2b4c7acaf002b6f4f49ed07ac0ec506"
+  },
+  {
+   "comment_id": 48330674,
+   "text_sha256": "b7c1c729f3b8845219490c4f83d3615c2cd0795c4b0bc270ee27341efa704ae8"
+  },
+  {
+   "comment_id": 48335850,
+   "text_sha256": "ac5c25680d95fa6018dbb4d49c57e68d7045ffbd915035b3462f58d1201b49ee"
+  },
+  {
+   "comment_id": 48349188,
+   "text_sha256": "155ec2d40d0c3843b751bca31e84955c8d223237d2ed27b36205b2b490789101"
+  },
+  {
+   "comment_id": 48354107,
+   "text_sha256": "10a21ea2bcf115933f2b76514ec4129a09d45568d053daa11ab156a4fb083984"
+  },
+  {
+   "comment_id": 48396944,
+   "text_sha256": "367cd9ccf32f90e330b322844142b279b3bc406b8e9e38bd24cfa45250230d2a"
+  },
+  {
+   "comment_id": 48419683,
+   "text_sha256": "8a8041477fb322e6c9648a73336b8e7f10822e158e5a36bfc95f5387f3efe5eb"
+  },
+  {
+   "comment_id": 48422439,
+   "text_sha256": "d30692890c4291df63275f9f17bbb667896f06c6d947a96ec1461902b26c1bd1"
+  },
+  {
+   "comment_id": 48422807,
+   "text_sha256": "28d2f78936ee8e1c62985f494494a4e35b4a566c684d32c6e04c0733a4a7b1b7"
+  },
+  {
+   "comment_id": 48424489,
+   "text_sha256": "f7a6eced3baab67f91c092b7ae318617831a8c03f2cf04000d9e5b3583941f43"
+  },
+  {
+   "comment_id": 48438239,
+   "text_sha256": "de8189c0fe1c35dcb3ecee1760b56b4de685e521d2fce92bb8da6611d7a7213a"
+  },
+  {
+   "comment_id": 48480875,
+   "text_sha256": "38cdf39774c1816c2636b723de78b6808b5b8a8b46a4c967d597f11ccdba29a3"
+  },
+  {
+   "comment_id": 48545304,
+   "text_sha256": "08c79008783c6c6a94cf34fa0a63b0adba52139db5f3cfbdb358f732ec6e5289"
+  },
+  {
+   "comment_id": 48545568,
+   "text_sha256": "98c834f33eb21927730c5b6e680f2991acf064c7c7a1c4e636ff53c88f01c0fd"
+  },
+  {
+   "comment_id": 48551246,
+   "text_sha256": "d90d172ad4d419a6a36665c931a5ba338ecc0b2a1a5ed4536e14b0f47f913fd0"
+  },
+  {
+   "comment_id": 48551693,
+   "text_sha256": "a25bd930c2f765ead8b8057ccc73e29234d71d32418d630d3377e7b9644fcfee"
+  },
+  {
+   "comment_id": 48558118,
+   "text_sha256": "d5e4d427905ab7fb384e6cab61a2a1f79d00eca915e5901e83e4e85333b00657"
+  },
+  {
+   "comment_id": 48633072,
+   "text_sha256": "64930db6eb607266b66c575c6d0f2e4c303e3f2b2bb5cc27511ac51533369c5b"
+  },
+  {
+   "comment_id": 48638491,
+   "text_sha256": "4c3270dd43d2132a106db78dd40debee1ea7b4f917d66d204c610e9f06796396"
+  },
+  {
+   "comment_id": 48653441,
+   "text_sha256": "e101407477f80c0f77bbd44940afa181e4de6961c4cfca3ab68afe01fa6dfbbb"
+  },
+  {
+   "comment_id": 48691691,
+   "text_sha256": "b05053dc925225b000228b89818f58f36442e2215ee181b8a635fd3f310517e9"
+  },
+  {
+   "comment_id": 48704252,
+   "text_sha256": "2bce00e1ff74f2f312c46aa61097fa09aa80d00cfc85d11c92a8a076579e0522"
+  },
+  {
+   "comment_id": 48730272,
+   "text_sha256": "576017f1809153d17dc080e94a09359dacd583d4b97e5e0478db84df598ddb3b"
+  },
+  {
+   "comment_id": 48774047,
+   "text_sha256": "d542a82518d54fa0c6481750aced3fd8f753d09e07ee3feb1961471e7f0dacf6"
+  },
+  {
+   "comment_id": 48821614,
+   "text_sha256": "0bf1c654f5304bac41a6cb2f7c04d0de51ac7f68d7181f35c3cd942f78bfd12c"
+  },
+  {
+   "comment_id": 48826001,
+   "text_sha256": "26a60c7c176c23846cb6424ab1a9a25236bbe1a47a197aa00ba2ad9f28da2c63"
+  },
+  {
+   "comment_id": 48851767,
+   "text_sha256": "9a40f2336fadb15631f8ba43fb7b9589d56ca3a22633fe7cdf16577f60372362"
+  },
+  {
+   "comment_id": 48862277,
+   "text_sha256": "07d1eca41a03b2f7536083e628e64399e48e26803f74066024dc5435877266a0"
+  },
+  {
+   "comment_id": 48880080,
+   "text_sha256": "effd936930f1e1ac50c6ac3c080e96f62c18b5a10003b021c6aaac17c353e0ed"
+  },
+  {
+   "comment_id": 48885689,
+   "text_sha256": "c56155dad28ff509e6bbad9d8f56b57fc7d11588050adf5dab0b99f04b670c5e"
+  },
+  {
+   "comment_id": 48887727,
+   "text_sha256": "b312bdfdac8c9d336fcd3693ca2a4f73c137a2220a6b03f544e27f37a9bc1c51"
+  },
+  {
+   "comment_id": 48901610,
+   "text_sha256": "68b9603b2192157c5b8e4597c01f9dce0be038178be69f9b884b8d0401878312"
+  },
+  {
+   "comment_id": 48941447,
+   "text_sha256": "88f5d270e9645d34ad9791221c5158f31d9edd3690906c7f7b9c4cf9f67c2318"
+  },
+  {
+   "comment_id": 48951989,
+   "text_sha256": "32c4bc9cab4e56b6d341cc70943d7a08096917744fe7c24e3f8ddf56717fc2ad"
+  },
+  {
+   "comment_id": 48994005,
+   "text_sha256": "ea987404d5b1eedeb309420f540f0c36e5180b4df864cd329d33e7f66beae54b"
+  },
+  {
+   "comment_id": 49013689,
+   "text_sha256": "2a40db80f048468d12876d21340d246e3f96175ed33acb3426e5800cd72e91bd"
+  },
+  {
+   "comment_id": 49093158,
+   "text_sha256": "d5afe925945f0bf396b2d14be475c5780750b2a8c9432c88fd0c520c87a76638"
+  },
+  {
+   "comment_id": 49109672,
+   "text_sha256": "aac6c53a20a4cb277990aec6d95756fd405b4b422b4e4fcee84660013d98889f"
+  },
+  {
+   "comment_id": 49115337,
+   "text_sha256": "de4298a34a3c871b428b0c9fcc8cef2d271897c8e6a2f2ba6b9c211a24f92ff8"
+  },
+  {
+   "comment_id": 49130852,
+   "text_sha256": "e038f3f5873cadc66b06864de262d8d6203b0dc373da0886c2ed57ea3b3207d6"
+  },
+  {
+   "comment_id": 49157400,
+   "text_sha256": "2292ac5bbe10e52ea70592550813cc98e615d040442f574e9da4bfd0224f89d5"
+  },
+  {
+   "comment_id": 49164923,
+   "text_sha256": "a026a726b54fedfb8a280004d10e85961aae65658891f814c588ad8565b79fb2"
+  },
+  {
+   "comment_id": 49201846,
+   "text_sha256": "0f613b17b8dd5f0f029e482a548ff5b52b3087b2cce95054db1b0331fbe52b7e"
+  },
+  {
+   "comment_id": 49207061,
+   "text_sha256": "641e0c76538783c7fb1b90ae1e11e895a298b82f70b740d861a15c0dfe164c23"
+  },
+  {
+   "comment_id": 49221626,
+   "text_sha256": "25323913f8f4132e61a7f52a6f3e47680e5101ba67304ceb7b67da989ed59e0a"
+  },
+  {
+   "comment_id": 49230298,
+   "text_sha256": "d3291780657e133c39e4a182e9d00c398c218ddabaa1dd82a612cfaf7e8d2459"
+  },
+  {
+   "comment_id": 49236278,
+   "text_sha256": "b4b8f651edd65e7e926d28c08532675446a57d6197492713b4178b288ba06378"
+  },
+  {
+   "comment_id": 49249668,
+   "text_sha256": "5efe287ecd007388a1b0ba29344d12f38a26e827573b1fd5b028853c26b97e7e"
+  },
+  {
+   "comment_id": 49317699,
+   "text_sha256": "a974d0ec670df85880f1af338be948cd004d5b22774b9362cb7d58a517376e87"
+  },
+  {
+   "comment_id": 49328171,
+   "text_sha256": "31b27db3ea8a63522daf1919e36ea6f93e66c0bc159d33a8f1601160949cfb10"
+  },
+  {
+   "comment_id": 49337348,
+   "text_sha256": "abbe2f542298e651d499785d90108513647fb7d5140164ed07fd811bf072cf4f"
+  },
+  {
+   "comment_id": 49341640,
+   "text_sha256": "b00170e338dc3c0b1fa12e18f2320642a4db56890c1dbae1766f5b75051527f6"
+  },
+  {
+   "comment_id": 49357014,
+   "text_sha256": "7b1b00f2ec27d2976cba3222feb71420665bfb1a4c8621e2cdc7ce13af4d22b4"
+  },
+  {
+   "comment_id": 49393232,
+   "text_sha256": "010ec0d5d9ddf5aec3c0b9273382f4280d6803c6bcb6a717b48140d095461069"
+  },
+  {
+   "comment_id": 49400716,
+   "text_sha256": "2a86b522729fed76d28da2a3ec02531f335278bb43d95532cb30ba51a9052e94"
+  },
+  {
+   "comment_id": 49444596,
+   "text_sha256": "ce633149658d2f7178b2174c2ef141d593c397ffac1c1b79f152d16ab2cffc6a"
+  },
+  {
+   "comment_id": 49455843,
+   "text_sha256": "d1a6dfe8195c505e7c18910b375f5bd46f55d09d72d9ee8b0d3782bbe3ce254f"
+  },
+  {
+   "comment_id": 49468678,
+   "text_sha256": "bc2085eeccf63d483638d277ccdb25b920630b3cc76cddcdc9230016b8cc9c7b"
+  },
+  {
+   "comment_id": 49469578,
+   "text_sha256": "48a13a7258948e0323226de6caf80fe3fad2608dce4126efca94c9b1218b8856"
+  },
+  {
+   "comment_id": 49473307,
+   "text_sha256": "e16a787e51cd24b64cccc617b9f5037b4f459603d5b57acf6cecb2cff079de01"
+  },
+  {
+   "comment_id": 49473394,
+   "text_sha256": "b273285b7e9ec3079c698dd5c0be1751e852ca2aad3b1297823f21e9fbd29f57"
+  },
+  {
+   "comment_id": 49518425,
+   "text_sha256": "6df3ea5ccfa271fa2c94862f963395e8f6a9ed7b6c75b718465e4c8724f310da"
+  },
+  {
+   "comment_id": 49522553,
+   "text_sha256": "e34a0d694da23316181752248f47137ab6089f6efc191f201b7ccba36c08112f"
+  },
+  {
+   "comment_id": 49599741,
+   "text_sha256": "d9d564f322878de8637c90a910a064dc61ad4707c729cf35918b228529c647e1"
+  },
+  {
+   "comment_id": 49632812,
+   "text_sha256": "231589fe002f60969c817b5ec4e29a20471d81a9d7c7fab597d441b0f4ae4096"
+  },
+  {
+   "comment_id": 49644575,
+   "text_sha256": "944739cc2818747168b836982c66698d446175fb86b5eb6521b8852e62b6d9e4"
+  },
+  {
+   "comment_id": 49675570,
+   "text_sha256": "45f866e037b3e02f17d186553dafec58bd12736ea4b45f374148e20e81195e9f"
+  },
+  {
+   "comment_id": 49706440,
+   "text_sha256": "f2c57ba9e35977203c8b5264619dbc172a306a61a534f80cace15511dbe8eca6"
+  },
+  {
+   "comment_id": 49735413,
+   "text_sha256": "4c705b33fec31e98a833f02bb84e2adc09b3c307e94e636a98d8877ce264883d"
+  },
+  {
+   "comment_id": 49757288,
+   "text_sha256": "a58ff589228f023faa6d69ef75c4947dc1a2f3213f8cb839b702760aa3e0b1cf"
+  },
+  {
+   "comment_id": 49799430,
+   "text_sha256": "27ea27d7d75fb89a00d3a689d4496d5e2be6b12ff6b1ab917b2cdca84685bdd5"
+  },
+  {
+   "comment_id": 49809897,
+   "text_sha256": "6c8b1e5d05cc3cde0522a53d3b68c580bdec24241dfbcd35c942687f2aa9a130"
+  },
+  {
+   "comment_id": 49853500,
+   "text_sha256": "d58d8af9f052b78edd750f48f2a97ccff109f504410eefdc2b2b8f96c16354b2"
+  }
+ ],
+ "n_inputs": 231,
+ "cost": "Claude subscription session, not metered per call"
+}

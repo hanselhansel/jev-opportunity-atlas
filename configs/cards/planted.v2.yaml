@@ -1,0 +1,78 @@
+# v2: each planted need sits in its own descriptively labeled group. v1 put all five in one
+# group labeled "Planted synthetic test needs", which no real comment matches at level 1, so
+# the test measured the label, not Jev (0% recovery). Synthetic cards and comments; no HN text.
+taxonomy_version: v2
+groups:
+  gp1: {label: "Tasks and follow-ups across tools"}
+  gp2: {label: "Sharing files with outside parties"}
+  gp3: {label: "Diagnosing performance problems"}
+  gp4: {label: "Access for contractors and new staff"}
+  gp5: {label: "Tracking software subscriptions and spend"}
+cards:
+  - {card_id: pc01, group_id: gp1, statement: "Follow-up tasks get lost across email, chat, and notes", status: approved, author: synthetic-test}
+  - {card_id: pc02, group_id: gp2, statement: "Sending large files to external clients is cumbersome", status: approved, author: synthetic-test}
+  - {card_id: pc03, group_id: gp3, statement: "Pinpointing the cause of a sudden slowdown takes hours", status: approved, author: synthetic-test}
+  - {card_id: pc04, group_id: gp4, statement: "Giving a new contractor correct access takes days of tickets", status: approved, author: synthetic-test}
+  - {card_id: pc05, group_id: gp5, statement: "Tracking and reconciling recurring software subscriptions is manual work", status: approved, author: synthetic-test}
+planted:
+  - {comment_id: 9200000001, card_id: pc01, text: "Half my follow-ups live in email threads, half in chat DMs, and I lose track of which is which by Wednesday."}
+  - {comment_id: 9200000002, card_id: pc01, text: "todo: answer finance, ping design, reply to that recruiter. All in different apps. I forget one every week."}
+  - {comment_id: 9200000003, card_id: pc01, text: "I dropped a client follow-up last month because the request came in a chat message I marked unread and never came back to."}
+  - {comment_id: 9200000004, card_id: pc01, text: "Does anyone else write the same to-do in three places and still miss it?"}
+  - {comment_id: 9200000005, card_id: pc01, text: "We counted 14 open asks across my inbox and our team channel. No single list anywhere."}
+  - {comment_id: 9200000006, card_id: pc01, text: "I keep a paper notebook next to my laptop because tasks buried in email basically do not exist for me."}
+  - {comment_id: 9200000007, card_id: pc01, text: "rambling but honest: every monday i spend the first hour scrolling chat history trying to rebuild what i promised people"}
+  - {comment_id: 9200000008, card_id: pc01, text: "Small thing, but: remembering who I owe a reply is the worst part of my job."}
+  - {comment_id: 9200000009, card_id: pc01, text: "My follow-up system is a starred folder, a draft message, and hope. One of those always fails."}
+  - {comment_id: 9200000010, card_id: pc01, text: "Missed two customer replies last quarter. They were in a channel I muted."}
+  - {comment_id: 9200000011, card_id: pc02, text: "The deliverable was 9GB and our client portal capped uploads at 25MB. Spent an afternoon splitting archives."}
+  - {comment_id: 9200000012, card_id: pc02, text: "Every week I wrestle with uploading video drafts for review. Half the time the recipient cannot open the link."}
+  - {comment_id: 9200000013, card_id: pc02, text: "Why is sending a big file to a client still a project in 2025?"}
+  - {comment_id: 9200000014, card_id: pc02, text: "Client asked for raw footage, about 40GB. We ended up mailing a USB stick."}
+  - {comment_id: 9200000015, card_id: pc02, text: "I resend the same giant deck three times because their mail server bounces anything over the limit."}
+  - {comment_id: 9200000016, card_id: pc02, text: "quick one: external vendors cannot access our drive, so large exports go through my personal account. hate that."}
+  - {comment_id: 9200000017, card_id: pc02, text: "We bill clients for deliverables and then burn a day figuring out how to actually deliver the file."}
+  - {comment_id: 9200000018, card_id: pc02, text: "Transfer link expired before the client opened it. Again."}
+  - {comment_id: 9200000019, card_id: pc02, text: "4k renders, 60GB total, client on hotel wifi. You can imagine how that went."}
+  - {comment_id: 9200000020, card_id: pc02, text: "I keep a shared folder just for oversized attachments, and onboarding a client to it takes a call."}
+  - {comment_id: 9200000021, card_id: pc03, text: "Response times doubled overnight and it took us six hours to find which of the nine deploys caused it."}
+  - {comment_id: 9200000022, card_id: pc03, text: "The dashboard got slow last Tuesday. Nobody could say why. Still cannot."}
+  - {comment_id: 9200000023, card_id: pc03, text: "is there a sane way to answer what made prod slow at 3pm without reading every deploy log by hand"}
+  - {comment_id: 9200000024, card_id: pc03, text: "Users complained pages hung. Two days later we traced it to a missing index after a migration."}
+  - {comment_id: 9200000025, card_id: pc03, text: "Every incident starts the same way: ten people guessing which change hurt latency."}
+  - {comment_id: 9200000026, card_id: pc03, text: "We ship 30 times a day, which is great until something slows down and the diff space is enormous."}
+  - {comment_id: 9200000027, card_id: pc03, text: "Minor rant: our p95 crept up 200ms over a month and finding the commit was pure archaeology."}
+  - {comment_id: 9200000028, card_id: pc03, text: "Checkout latency spiked; we rolled back three releases before finding the real culprit, a config change."}
+  - {comment_id: 9200000029, card_id: pc03, text: "I keep a personal runbook for when things get slow because our tooling cannot tell me."}
+  - {comment_id: 9200000030, card_id: pc03, text: "CPU was fine, memory was fine, and yet everything dragged. Took a week to find the chatty new endpoint."}
+  - {comment_id: 9200000031, card_id: pc04, text: "New contractor started Monday. Got repo access Thursday. The ticket queue ate the week."}
+  - {comment_id: 9200000032, card_id: pc04, text: "Every freelancer we hire needs five approvals across three systems before they can do any work."}
+  - {comment_id: 9200000033, card_id: pc04, text: "how do other teams grant access to a short-term contractor without a week of IT tickets"}
+  - {comment_id: 9200000034, card_id: pc04, text: "Our designer waited nine days for VPN access. Nine."}
+  - {comment_id: 9200000035, card_id: pc04, text: "I spend maybe 3 hours per new contractor just provisioning accounts, and we hire two a month."}
+  - {comment_id: 9200000036, card_id: pc04, text: "Offboarding is worse: nobody remembers which of the twelve tools the contractor still has keys to."}
+  - {comment_id: 9200000037, card_id: pc04, text: "contractor asked why this is taking so long and honestly i had no good answer. just process."}
+  - {comment_id: 9200000038, card_id: pc04, text: "We pay a day rate while someone sits idle waiting on access tickets."}
+  - {comment_id: 9200000039, card_id: pc04, text: "Small shop problem: access requests go through me, the ops person, and an external IT firm. Always something missed."}
+  - {comment_id: 9200000040, card_id: pc04, text: "Two weeks into a six-week contract, the analyst finally had the database credentials."}
+  - {comment_id: 9200000041, card_id: pc05, text: "Found out we have been paying for a tool nobody has logged into since March. 400 dollars a month."}
+  - {comment_id: 9200000042, card_id: pc05, text: "Our software invoices land in three different inboxes and I reconcile them in a spreadsheet quarterly."}
+  - {comment_id: 9200000043, card_id: pc05, text: "who else discovers a renewal the day after it charges the company card"}
+  - {comment_id: 9200000044, card_id: pc05, text: "I did an audit: 23 subscriptions, 5 unused, 2 duplicated. Nobody owned the list."}
+  - {comment_id: 9200000045, card_id: pc05, text: "Finance asked what we spend on software monthly and I could not answer in under an hour."}
+  - {comment_id: 9200000046, card_id: pc05, text: "cancelled the same seat twice and still got billed. now i keep a manual ledger of every subscription."}
+  - {comment_id: 9200000047, card_id: pc05, text: "Renewal season means digging through email for pricing documents while the vendor auto-charges us."}
+  - {comment_id: 9200000048, card_id: pc05, text: "We grew from 8 to 40 people and the subscription sprawl grew faster."}
+  - {comment_id: 9200000049, card_id: pc05, text: "Honestly embarrassing: I found out about our fifth video tool from an expense report."}
+  - {comment_id: 9200000050, card_id: pc05, text: "Every month I forward invoices to bookkeeping one by one. There has to be a better way."}
+decoys:
+  - {comment_id: 9200000051, text: "Swapped my keyboard switches again. Browns over reds, no contest."}
+  - {comment_id: 9200000052, text: "My standing desk motor died after two years and I fixed it with a twelve dollar capacitor."}
+  - {comment_id: 9200000053, text: "Best thing I did this quarter was delete social apps off my phone. Evenings came back."}
+  - {comment_id: 9200000054, text: "Tried meal prepping on Sundays. Cut my lunch spending roughly in half."}
+  - {comment_id: 9200000055, text: "The espresso grinder I bought refurbished has outlasted two new ones."}
+  - {comment_id: 9200000056, text: "Our office plants keep dying because nobody waters them over holidays."}
+  - {comment_id: 9200000057, text: "Started running at 6am before standup. The first week was rough, now it is the best part of the day."}
+  - {comment_id: 9200000058, text: "Does anyone have a favourite book on negotiation? Mine is getting re-read for the third time."}
+  - {comment_id: 9200000059, text: "We painted the meeting room a darker colour and video calls look noticeably better."}
+  - {comment_id: 9200000060, text: "I keep a rubber duck on my monitor and I am only slightly ashamed of how often it works."}
