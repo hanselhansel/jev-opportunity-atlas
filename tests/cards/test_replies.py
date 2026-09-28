@@ -558,12 +558,19 @@ def test_all_unclear_followups_report_unclear():
     assert row["author_says_solved"] == "unclear"
 
 
-def test_problem_with_only_followups_is_unsolved():
+def test_author_saying_solved_wins_even_when_no_reply_names_a_tool():
     mapping = mapping_of((31, 11, "followup", 200))
     answers = answers_table([followup_answer(31, "solved")])
     (row,) = unsolved_by_problem(answers, mapping).to_pylist()
     assert row["n_replies"] == 0 and row["any_solution_named"] is False
     assert row["author_says_solved"] == "solved"
+    assert row["unsolved"] is False and row["solved_p"] == 1.0
+
+
+def test_problem_with_only_unclear_followups_is_unsolved():
+    mapping = mapping_of((31, 11, "followup", 200))
+    answers = answers_table([followup_answer(31, "unclear")])
+    (row,) = unsolved_by_problem(answers, mapping).to_pylist()
     assert row["unsolved"] is True and row["solved_p"] == 0.0
 
 

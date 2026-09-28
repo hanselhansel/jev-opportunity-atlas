@@ -251,8 +251,9 @@ def unsolved_by_problem(answers, mapping, threshold=0.5) -> pa.Table:
     `answers` is a contract ANSWERS table; only rows whose comment_id is in
     `mapping` and whose question_id is one of the reply/follow-up questions
     count, and duplicates on (comment_id, question_id) raise ValueError. A
-    problem is `unsolved` when no reply reaches `names_solution >= threshold`
-    or the author's latest non-unclear follow-up says "still_unsolved".
+    problem is solved when the author's latest non-unclear follow-up says
+    "solved". Otherwise it is `unsolved` when no reply reaches
+    `names_solution >= threshold` or the author says "still_unsolved".
     `solved_p` is that same decision as a probability (0.0/1.0) so the table
     plugs into L13 `card_metrics(..., replies=)`, where solved_p >= 0.5 means
     solved.
@@ -313,7 +314,10 @@ def unsolved_by_problem(answers, mapping, threshold=0.5) -> pa.Table:
                 else "unclear"
             )
 
-        unsolved = not any_named or author_says == "still_unsolved"
+        if author_says == "solved":
+            unsolved = False
+        else:
+            unsolved = not any_named or author_says == "still_unsolved"
         out.append(
             {
                 "comment_id": problem_id,
