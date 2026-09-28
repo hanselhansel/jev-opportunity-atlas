@@ -27,6 +27,9 @@ def main() -> None:
     a.add_argument(
         "--limit-shards", type=int, default=None, help="Probe: only the first N shards"
     )
+    a.add_argument(
+        "--workers", type=int, default=1, help="Parallel processes (~190 ids/s each)"
+    )
     c = sub.add_parser("coverage", help="Summarize shard states and window coverage")
     c.add_argument("--config", default="configs/acquisition.toml")
     args = p.parse_args()
@@ -43,7 +46,10 @@ def main() -> None:
         else:
             from concurrent.futures import ProcessPoolExecutor
 
-            jobs = [(cfg, ROOT, args.limit_shards, (i, args.workers)) for i in range(args.workers)]
+            jobs = [
+                (cfg, ROOT, args.limit_shards, (i, args.workers))
+                for i in range(args.workers)
+            ]
             with ProcessPoolExecutor(args.workers) as pool:
                 for summary in pool.map(_run_worker, jobs):
                     print(json.dumps(summary), flush=True)
