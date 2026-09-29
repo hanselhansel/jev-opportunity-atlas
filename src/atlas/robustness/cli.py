@@ -174,9 +174,9 @@ def _assign_paraphrase(args) -> None:
     cs = load_cardset(args.cardset, args.version)
     rows = pq.read_table(args.items).to_pylist()
     biggest = max(cs.groups, key=lambda g: len(cs.cards_in(g)))
-    tokens = []
+    tokens = {"assign_group": [], "assign_card": []}
     for r in rows:
-        tokens.append(
+        tokens["assign_group"].append(
             cards_cli._est_tokens(
                 group_item(
                     r["comment_id"], r["pain_sentence"], r["sentences"], cs,
@@ -184,7 +184,7 @@ def _assign_paraphrase(args) -> None:
                 )
             )
         )
-        tokens.append(
+        tokens["assign_card"].append(
             cards_cli._est_tokens(
                 card_item(
                     r["comment_id"], r["pain_sentence"], r["sentences"], cs,

@@ -35,6 +35,17 @@ def input_price(model: str) -> float:
     return row["input_usd_per_million"] / 1e6
 
 
+def estimate_multiplier(family: str) -> float:
+    """Calibration factor for `family` from configs/prices.toml's
+    [estimate_calibration] table; 1.0 when the family is unlisted."""
+    prices = tomllib.loads(
+        (paths.CONFIGS / "prices.toml").read_text(encoding="utf-8")
+    )
+    return float(
+        prices.get("estimate_calibration", {}).get(family, 1.0)
+    )
+
+
 def body_bytes(item: dict, qs: QuestionSet, model: str) -> int:
     """UTF-8 length of the canonical request body, built as runner._process."""
     sentences = item.get("sentences") or []

@@ -155,7 +155,7 @@ def estimate_phase2(
 ) -> dict:
     """Cost of running `qs` (default facets@2) over the whole sample,
     extrapolated from an evenly spaced probe."""
-    from atlas.inference.estimate import estimate_cost
+    from atlas.inference.estimate import estimate_cost, estimate_multiplier
     from atlas.inference.questions import load_question_set
     from atlas.pilot.stages import MODEL
     from atlas.sources.items import load_items
@@ -175,10 +175,14 @@ def estimate_phase2(
     )
     est = estimate_cost(probe, qs, MODEL, {})
     scale = len(ids) / len(probe) if probe else 0.0
+    mult = estimate_multiplier("facets")
+    raw_usd = est["est_usd"] * scale
     return {
         "question_set": qs.label,
         "calls": len(ids),
-        "est_usd": round(est["est_usd"] * scale, 3),
+        "est_usd": round(raw_usd * mult, 3),
+        "est_usd_raw": round(raw_usd, 3),
+        "calibration": {"facets": mult},
         "probe": len(probe),
     }
 
