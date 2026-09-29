@@ -68,6 +68,13 @@ def allocate_by_yield(
     return {h: int(alloc[h]) for h in sorted(alloc)}
 
 
+def scale_costs(c: dict[str, float], scale: float) -> dict[str, float]:
+    """Every c_h times `scale` (e.g. packed/single tokens per comment)."""
+    if not scale > 0:
+        raise ValueError(f"cost scale must be > 0, got {scale}")
+    return {h: c[h] * scale for h in c}
+
+
 def expected_positives(alloc: dict[str, int], p: dict[str, float]) -> float:
     """Expected firsthand problems found: sum_h alloc_h * p_h."""
     return sum(alloc[h] * p[h] for h in alloc)
