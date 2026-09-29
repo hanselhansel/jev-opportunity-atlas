@@ -77,6 +77,11 @@ def register(sub) -> None:
 
     mp = commands.add_parser("merge", help="score card-merge candidates")
     common(mp, "merge_verify")
+    mp.add_argument(
+        "--all-pairs",
+        action="store_true",
+        help="score every pair of active cards, not just evidenced pairs",
+    )
     mp.set_defaults(func=_cmd_merge)
 
     vp = commands.add_parser("verify", help="verify card membership")
@@ -228,7 +233,7 @@ def _cmd_merge(args) -> None:
     cs = load_cardset(args.cardset, args.version)
     run_dir = paths.run_dir(args.run)
     result = load_assignments(run_dir, args.version)
-    pairs = merge_pairs(cs, result)
+    pairs = merge_pairs(cs, result, all_pairs=args.all_pairs)
     tokens = [_est_tokens(merge_item(cs.version, a, b, cs)) for a, b in pairs]
     _print_estimate("merge", tokens, args.budget, cap, usd_per_token)
     if not args.yes:
