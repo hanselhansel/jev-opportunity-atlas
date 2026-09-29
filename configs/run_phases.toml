@@ -1,0 +1,28 @@
+# Every Jev run behind the atlas, with the phase it belongs to. `atlas site data
+# --run-phases configs/run_phases.toml` builds the runs table (and the cost chart)
+# from exactly these ledgers, so the published spend covers the whole project.
+# A key is a run id; a nested ledger is named run_id/subdir (for example replies).
+[runs]
+"pilot-20260929" = "pilot"
+"pilot-20260929-packed" = "pilot"
+"pilot-20260929-packedcal" = "pilot"
+"pilot-20260929-injected" = "pilot"
+"pilot-20260929-cards" = "pilot"
+"pilot-20260929-cards-t1" = "pilot"
+"pilot-20260929-planted" = "pilot"
+"pilot-20260929-planted-v2" = "pilot"
+"main-screen-20260930" = "screen"
+"main-facets-20260930" = "facets"
+"main-cards-20260930" = "assign"
+"main-cards-20260930-t3" = "assign"
+"main-cards-wave1-t3all" = "assign"
+"main-cards-wave2-t3" = "assign"
+"main-cards-final-t3" = "verify (stopped, rerun below)"
+"main-cards-final2-t3" = "verify and merge"
+"main-cards-final2-t3/replies" = "replies"
+"main-planted-t3" = "checks"
+"main-benchmark-20260930" = "checks"
+"robust-screen-para1" = "robustness"
+"robust-screen-para2" = "robustness"
+"robust-assign-para1" = "robustness"
+"robust-assign-para2" = "robustness"
