@@ -60,6 +60,30 @@ function shareRows(cardShare, level, bucket) {
 function displayRows(rows) {
   return rows.map((r) => ({...r, display: r.short_label ?? r.label}));
 }
+
+// The cards that moved: significant risers and fallers (p < 0.05), up to
+// 8 each, padded with the largest absolute changes when fewer than 4
+// qualify. Mirrors select_change_rows in atlas.sitedata.xspecs.
+function selectChanged(rows) {
+  const data = rows.filter((r) => r.share != null);
+  const sig = data.filter((r) => r.p_adj != null && r.p_adj < 0.05);
+  const risers = sig
+    .filter((r) => r.share > 0)
+    .sort((a, b) => b.share - a.share)
+    .slice(0, 8);
+  const fallers = sig
+    .filter((r) => r.share < 0)
+    .sort((a, b) => a.share - b.share)
+    .slice(0, 8);
+  const picked = new Map([...risers, ...fallers].map((r) => [r.id, r]));
+  if (picked.size < 4) {
+    const rest = data
+      .filter((r) => !picked.has(r.id))
+      .sort((a, b) => Math.abs(b.share) - Math.abs(a.share));
+    for (const r of rest.slice(0, 4 - picked.size)) picked.set(r.id, r);
+  }
+  return [...picked.values()].sort((a, b) => b.share - a.share);
+}
 ```
 
 ```js
@@ -312,11 +336,8 @@ function whereTheProblemsAre(meta, cardShare, evidenceRows) {
   const byShare = (a, b) => (b.share ?? -1) - (a.share ?? -1);
   const groupAll = shareRows(cardShare, "group", "all").sort(byShare);
   const cardAll = shareRows(cardShare, "card", "all").sort(byShare).slice(0, 20);
-  const topIds = new Set(cardAll.map((r) => r.id));
   const groupDiff = shareRows(cardShare, "group", "H2_minus_H1").sort(byShare);
-  const cardDiff = shareRows(cardShare, "card", "H2_minus_H1")
-    .filter((r) => topIds.has(r.id))
-    .sort(byShare);
+  const cardDiff = selectChanged(shareRows(cardShare, "card", "H2_minus_H1"));
   const parts = [
     html`<h2 style="display:flex;gap:0.5rem;align-items:center">
       Where the problems are ${badge("estimated")}</h2>`,
@@ -340,7 +361,7 @@ function whereTheProblemsAre(meta, cardShare, evidenceRows) {
   ));
   parts.push(changeChart(
     meta, cardDiff,
-    "What changed between halves: top need cards",
+    "What changed between halves: need cards",
     denom, 220
   ));
   return parts;

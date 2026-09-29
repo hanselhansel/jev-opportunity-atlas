@@ -145,10 +145,63 @@ def _fmt(value, fmt: str) -> str:
     if value is None:
         return "n/a"
     if fmt == "pct":
+        if abs(value) * 100 < 10:
+            return f"{value * 100:.1f}%"
         return f"{value * 100:.0f}%"
     if fmt == "int":
         return f"{round(value):,}"
     return f"{value:.2f}"
+
+
+def _labels_clear(boxes, axis="y") -> bool:
+    """Adjacent tick-label boxes, sorted bottom-to-top (or left-to-right),
+    never intersect."""
+    from itertools import pairwise
+
+    if axis == "y":
+        boxes = sorted(boxes, key=lambda b: b.y0)
+        return all(a.y1 <= b.y0 + 1 for a, b in pairwise(boxes))
+    boxes = sorted(boxes, key=lambda b: b.x0)
+    return all(a.x1 <= b.x0 + 1 for a, b in pairwise(boxes))
+
+
+def _tick_boxes(ax, renderer, axis="y") -> list:
+    labels = ax.get_yticklabels() if axis == "y" else ax.get_xticklabels()
+    return [
+        t.get_window_extent(renderer) for t in labels if t.get_text().strip()
+    ]
+
+
+def _row_axis(ax, renderer, labels, wrap=34, gap=0.5):
+    """Row centers spaced by each label's wrapped line count; the tick
+    font shrinks until adjacent labels clear. Returns (y, line counts)."""
+    wrapped = [textwrap.fill(str(l), wrap) for l in labels]
+    lines = [w.count("\n") + 1 for w in wrapped]
+    y, edge = [], 0.0
+    for n in lines:
+        y.append(edge + n / 2)
+        edge += n + gap
+    total = max(edge - gap, 1)
+    scale = 1.0
+    for _ in range(8):
+        ax.set_ylim(0, total)
+        ax.set_yticks(y, wrapped)
+        ax.tick_params(axis="y", labelsize=_pt(TICK_PX) * scale)
+        if _labels_clear(_tick_boxes(ax, renderer)):
+            break
+        scale *= 0.85
+    return y, lines
+
+
+def _fit_tick_font(ax, renderer, axis="y", base_px=TICK_PX - 2) -> float:
+    """Shrink an axis's tick font until adjacent labels clear."""
+    scale = 1.0
+    for _ in range(8):
+        ax.tick_params(axis=axis, labelsize=_pt(base_px) * scale)
+        if _labels_clear(_tick_boxes(ax, renderer, axis), axis):
+            return scale
+        scale *= 0.85
+    return scale
 
 
 def _empty(ax) -> None:
@@ -165,15 +218,17 @@ def _empty(ax) -> None:
     )
 
 
-def _bars(ax, data: dict, fmt: str = "int") -> None:
+def _bars(ax, renderer, data: dict, fmt: str = "int") -> None:
     rows = list(data.get("rows", []))[::-1]
     if not rows:
         return _empty(ax)
-    y = range(len(rows))
+    y, lines = _row_axis(ax, renderer, [r["label"] for r in rows])
     vals = [r["value"] or 0 for r in rows]
     colors = [LIGHT if r.get("synthetic") else ACCENT for r in rows]
     hatches = ["//" if r.get("synthetic") else "" for r in rows]
-    bars = ax.barh(list(y), vals, color=colors, height=0.6)
+    bars = ax.barh(
+        y, vals, color=colors, height=[min(0.8 * n, 1.6) for n in lines]
+    )
     for bar, hatch in zip(bars, hatches, strict=True):
         bar.set_hatch(hatch)
     ends = []
@@ -183,7 +238,7 @@ def _bars(ax, data: dict, fmt: str = "int") -> None:
         if lo is not None and hi is not None:
             ax.errorbar(
                 vals[i],
-                i,
+                y[i],
                 xerr=[[max(vals[i] - lo, 0)], [max(hi - vals[i], 0)]],
                 fmt="none",
                 ecolor=INK,
@@ -196,21 +251,20 @@ def _bars(ax, data: dict, fmt: str = "int") -> None:
     for i, end in enumerate(ends):
         ax.text(
             end + top * 0.015,
-            i,
+            y[i],
             _fmt(vals[i], fmt),
             va="center",
             fontsize=_pt(TICK_PX),
             color=INK,
         )
     ax.set_xlim(0, top * 1.15)
-    ax.set_yticks(list(y), [textwrap.fill(r["label"], 34) for r in rows])
     ax.set_xlabel(data.get("xlabel", ""), fontsize=_pt(TICK_PX), color=MUTED)
     if fmt == "pct":
         ax.xaxis.set_major_formatter(lambda v, _: f"{v * 100:.0f}%")
     _style(ax)
 
 
-def _heat(ax, data: dict) -> None:
+def _heat(ax, renderer, data: dict) -> None:
     vals = data.get("values") or []
     if not vals or not vals[0]:
         return _empty(ax)
@@ -236,14 +290,17 @@ def _heat(ax, data: dict) -> None:
     )
     ax.xaxis.tick_top()
     ax.tick_params(length=0, labelsize=_pt(TICK_PX - 2), colors=INK)
+    _fit_tick_font(ax, renderer, "y")
+    _fit_tick_font(ax, renderer, "x")
     for side in ax.spines.values():
         side.set_visible(False)
 
 
-def _change(ax, data: dict) -> None:
+def _change(ax, renderer, data: dict) -> None:
     rows = list(data.get("rows", []))[::-1]
     if not rows:
         return _empty(ax)
+    y, _ = _row_axis(ax, renderer, [r["label"] for r in rows])
     extent = max(
         1e-9,
         *(
@@ -258,11 +315,11 @@ def _change(ax, data: dict) -> None:
         sig = bool(r.get("significant"))
         color = ACCENT if sig else MUTED
         if r.get("ci_low") is not None and r.get("ci_high") is not None:
-            ax.hlines(i, r["ci_low"], r["ci_high"], color=color, lw=4 if sig else 3)
-        ax.plot(r["estimate"], i, "o", ms=14, color=INK if sig else MUTED)
+            ax.hlines(y[i], r["ci_low"], r["ci_high"], color=color, lw=4 if sig else 3)
+        ax.plot(r["estimate"], y[i], "o", ms=14, color=INK if sig else MUTED)
         ax.text(
             right,
-            i,
+            y[i],
             f"{r['estimate']:+.1f}" if sig else "no clear change",
             ha="right",
             va="center",
@@ -271,8 +328,6 @@ def _change(ax, data: dict) -> None:
         )
     ax.axvline(0, color=MUTED, ls="--", lw=1.5)
     ax.set_xlim(-extent * 1.08, right + extent * 0.05)
-    ax.set_yticks(range(len(rows)), [textwrap.fill(r["label"], 34) for r in rows])
-    ax.set_ylim(-0.6, len(rows) - 0.4)
     ax.set_xlabel(data.get("xlabel", ""), fontsize=_pt(TICK_PX), color=MUTED)
     _style(ax)
 
@@ -351,22 +406,33 @@ def render_x_chart(spec: dict, out_png) -> dict:
     bottom, top = (box.y1 + below) / H, (tb.y0 - above) / H
     left = 0.05 if spec["kind"] == "cost" else 0.30
     area = (left, bottom, 0.95 - left, top - bottom)
+    ax = None
     if spec["kind"] == "cost":
         _cost(fig, (0.05, bottom, 0.9, top - bottom), spec["data"])
     else:
         ax = fig.add_axes(area)
         if spec["kind"] == "heat":
-            _heat(ax, spec["data"])
+            _heat(ax, renderer, spec["data"])
         elif spec["kind"] == "change":
-            _change(ax, spec["data"])
+            _change(ax, renderer, spec["data"])
         else:
             _bars(
                 ax,
+                renderer,
                 spec["data"],
                 "pct"
                 if spec["kind"] == "quality"
                 else spec["data"].get("format", "int"),
             )
+    row_boxes = (
+        [
+            [round(v, 1) for v in t.get_window_extent(renderer).extents]
+            for t in ax.get_yticklabels()
+            if t.get_text().strip()
+        ]
+        if ax is not None
+        else []
+    )
     out_png = Path(out_png)
     out_png.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_png, dpi=DPI, facecolor="white")
@@ -383,6 +449,7 @@ def render_x_chart(spec: dict, out_png) -> dict:
             round(box.x1, 1),
             round(box.y1, 1),
         ],
+        "row_label_boxes": row_boxes,
         "width": W,
         "height": H,
     }

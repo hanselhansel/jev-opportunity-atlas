@@ -2,7 +2,8 @@
 
 Eight named charts: top cards by distinct authors, a problem x domain heat
 strip, group and top-card shares of firsthand problems from ``card_share``, a
-half-year change dot plot on the top cards (``p_adj < 0.05`` highlighted), a
+half-year change dot plot on the cards that moved (``p_adj < 0.05``, with
+the largest moves filling in when few qualify), a
 wording-robustness range from ``robustness``, a cost and time panel, and a Jev
 quality panel (audit precision against the random-card baseline, and the
 synthetic benchmark labeled "synthetic cases"). Titles are full sentences that
@@ -45,6 +46,44 @@ def _short(r) -> str:
     """Display label for a card_share row: the labels.yaml short_label when
     the build wrote one, else the full card or group text."""
     return r.get("short_label") or r["label"]
+
+
+def select_change_rows(diff_rows, min_sig=4, per_side=8) -> list[dict]:
+    """The card rows for the change chart: those that moved (``p_adj <
+    0.05``), up to ``per_side`` risers and fallers each, sorted by change.
+    When fewer than ``min_sig`` qualify, the largest absolute changes fill
+    in as non-significant rows, drawn muted with "no clear change".
+    """
+    sig = [
+        r
+        for r in diff_rows
+        if r["share"] is not None
+        and r["p_adj"] is not None
+        and r["p_adj"] < 0.05
+    ]
+    risers = sorted(
+        (r for r in sig if r["share"] > 0),
+        key=lambda r: (-r["share"], r["id"]),
+    )[:per_side]
+    fallers = sorted(
+        (r for r in sig if r["share"] < 0),
+        key=lambda r: (r["share"], r["id"]),
+    )[:per_side]
+    picked = {r["id"]: r for r in risers + fallers}
+    if len(picked) < min_sig:
+        rest = sorted(
+            (
+                r
+                for r in diff_rows
+                if r["share"] is not None and r["id"] not in picked
+            ),
+            key=lambda r: (-abs(r["share"]), r["id"]),
+        )
+        for r in rest[: min_sig - len(picked)]:
+            picked[r["id"]] = r
+    return sorted(
+        picked.values(), key=lambda r: (-(r["share"] or 0.0), r["id"])
+    )
 
 
 def load_x_titles() -> tuple[dict, dict]:
@@ -238,16 +277,12 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
         },
     }
 
-    top_ids = {r["id"] for r in card_all}
-    diff = _by_share(
+    diff = select_change_rows(
         [
             r
             for r in shares
-            if r["level"] == "card"
-            and r["bucket"] == "H2_minus_H1"
-            and r["id"] in top_ids
-        ],
-        bucket="H2_minus_H1",
+            if r["level"] == "card" and r["bucket"] == "H2_minus_H1"
+        ]
     )
     card_change = {
         **common,
@@ -257,7 +292,7 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
         "denominator": fh_denom,
         "n": sum(r["n_items"] or 0 for r in diff),
         "qualifier": qualifier,
-        "title": "This chart shows how each top card's share moved between half-years.",
+        "title": "This chart shows how each need card's share moved between half-years.",
         "data": {
             "rows": [
                 {
