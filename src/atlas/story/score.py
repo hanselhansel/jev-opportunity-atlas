@@ -119,10 +119,13 @@ def _point_value(card, comp) -> float | None:
 
 def weighted_score(components, weights) -> float | None:
     """Weighted mean of non-null components, renormalized; an all-zero weight
-    vector falls back to equal weights."""
-    w = {k: float((weights or {}).get(k) or 0.0) for k in COMPONENTS}
-    if sum(w.values()) <= 0:
+    vector falls back to equal weights (mirrors ``effective()`` in the essay's
+    opportunity.js)."""
+    raw = weights or {}
+    if sum(float(v or 0.0) for v in raw.values()) <= 0:
         w = {k: 1.0 for k in COMPONENTS}
+    else:
+        w = {k: float(raw.get(k) or 0.0) for k in COMPONENTS}
     num = den = 0.0
     for k in COMPONENTS:
         v = (components or {}).get(k)
