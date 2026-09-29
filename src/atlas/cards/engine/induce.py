@@ -37,7 +37,7 @@ from atlas.cards.engine.assign import (
     read_answers,
 )
 from atlas.cards.engine.cardset import CardSetError
-from atlas.inference.runner import run_batch
+from atlas.inference.runner import raise_for_stopped, run_batch
 
 
 def check_superset(base_cs, new_cs) -> None:
@@ -120,7 +120,8 @@ async def induce(
         {"card": {"type": "choice", "instructions": CARD_INSTRUCTIONS}},
     )
     if level2:
-        await run_batch(ctx, level2, cqs)
+        out = await run_batch(ctx, level2, cqs)
+        raise_for_stopped(ctx, out, len(level2))
     c_answers = read_answers(ctx.run_dir, cqs.label)
     result = AssignResult()
     for r in base_result.rows:

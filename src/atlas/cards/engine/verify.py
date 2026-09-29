@@ -5,7 +5,7 @@ rows; everything else is copied through unchanged."""
 from __future__ import annotations
 
 from atlas.cards.engine.assign import AssignResult, engine_qs, read_answers
-from atlas.inference.runner import run_batch
+from atlas.inference.runner import raise_for_stopped, run_batch
 
 VERIFY_INSTRUCTIONS = "Does `problem` describe this need: `card`?"
 VERIFY_CRITERIA = {
@@ -51,7 +51,8 @@ async def verify(ctx, assignments, pain_sentences: dict, cs) -> list[dict]:
         if verifiable(row, pain_sentences)
     ]
     if items:
-        await run_batch(ctx, items, qs)
+        out = await run_batch(ctx, items, qs)
+        raise_for_stopped(ctx, out, len(items))
     answers = read_answers(ctx.run_dir, qs.label)
     out = []
     for row in rows:
