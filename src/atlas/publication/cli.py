@@ -126,6 +126,19 @@ def _release_restore(args) -> None:
     print(json.dumps(report, indent=2))
 
 
+def _release_rehydrate(args) -> None:
+    from atlas import paths
+    from atlas.publication.rehydrate import rehydrate_release
+
+    summary = rehydrate_release(
+        Path(args.release_dir),
+        paths.DATA / "rehydrated",
+        limit=args.limit,
+        concurrency=args.concurrency,
+    )
+    print(json.dumps(summary, indent=2))
+
+
 def _claims_check(args) -> None:
     from atlas import paths
     from atlas.publication.claims import check_claims, load_claims
@@ -203,6 +216,14 @@ def register(sub) -> None:
         "--gh", action="store_true", help="Download with gh instead of HTTPS"
     )
     rest.set_defaults(func=_release_restore)
+    rehy = rsub.add_parser(
+        "rehydrate",
+        help="Refetch comment text from the HN API into data/rehydrated/",
+    )
+    rehy.add_argument("--release-dir", required=True, help="Restored release dir")
+    rehy.add_argument("--limit", type=int, default=None, help="First N ids only")
+    rehy.add_argument("--concurrency", type=int, default=32)
+    rehy.set_defaults(func=_release_rehydrate)
 
     claims = sub.add_parser("claims", help="Claims ledger")
     csub = claims.add_subparsers(dest="claims_cmd", required=True)
