@@ -1,7 +1,12 @@
 """L26 task 26.1: `cards induce` reassigns only the card-level residue when a
 cardset grows from t2 to a superset t3 (same groups and labels, every t2 card
 unchanged, new cards added). The group answer is already known, so no
-group-level call may fire."""
+group-level call may fire.
+
+L30 task 30.1: `--scope all` re-asks the card level for every base row with a
+real group, so rows already on a base card can move to a card added in the new
+version. `--scope residue` (the default) is unchanged. Equal base and new
+versions are allowed only with `--scope all`."""
 
 import json
 import tomllib
@@ -192,6 +197,8 @@ def _write_base_run(tmp_path):
 
 def _items_file(tmp_path):
     rows = [
+        {"comment_id": 9_000_000_601, "pain_sentence": "alpha keep pain",
+         "sentences": ["alpha keep pain"]},
         {"comment_id": 9_000_000_602, "pain_sentence": "alpha three pain",
          "sentences": ["alpha three pain", "more context"]},
         {"comment_id": 9_000_000_603, "pain_sentence": "beta two pain",
@@ -211,6 +218,16 @@ def _chooser(state, qid, options):
     )
 
 
+def _chooser_all(state, qid, options):
+    assert qid == "card"  # no group-level call may fire
+    return {
+        "alpha keep pain": "a2",    # 601: a1 -> a2
+        "alpha three pain": "a3",   # 602: none -> a3
+        "beta two pain": "b1",      # 603: b1 -> b1 (unchanged)
+        "stray pain": "a3",         # 605: null -> a3
+    }[state["problem"]]
+
+
 def _induce_args(items, *extra):
     return [
         "cards", "induce", "--base-run", "rb", "--base-version", "t2",
@@ -224,6 +241,9 @@ def test_induce_parse_defaults():
     assert args.cards_command == "induce"
     assert args.budget == "assign" and args.rpm == 1000 and args.concurrency == 8
     assert args.base_run == "rb" and args.base_version == "t2"
+    assert args.scope == "residue"
+    args = cli.build_parser().parse_args(_induce_args("x.parquet", "--scope", "all"))
+    assert args.scope == "all"
 
 
 def test_induce_dry_run_prints_estimate_only(tmp_path, monkeypatch, capsys):
@@ -336,8 +356,10 @@ def test_induce_end_to_end(tmp_path, monkeypatch, capsys):
     side = json.loads((run_dir / "induce-t3.json").read_text())
     assert side["base_run"] == "rb" and side["base_version"] == "t2"
     assert side["taxonomy_version"] == "t3"
+    assert side["scope"] == "residue"
     assert side["carried"] == 2 and side["reassigned"] == 3
     assert side["moved_to_card"] == 2
+    assert side["changed_card"] == 2  # 602 none->a3, 603 b1->b2; 605 stayed none
     assert side["new_card_assignments"] == {"a3": 1, "b2": 1}
     assert pq.read_table(run_dir / "pain.parquet").num_rows == 5
 
@@ -357,3 +379,201 @@ def test_induce_rerun_resumes_without_paid_calls(tmp_path, monkeypatch, capsys):
     assert len(seen) == 3  # every residue item was already done
     rows = pq.read_table(paths.run_dir("r3") / "assignments-t3.parquet").to_pylist()
     assert len(rows) == 5
+
+
+def test_induce_scope_all_end_to_end(tmp_path, monkeypatch, capsys):
+    seen = []
+    _yes_env(
+        tmp_path, monkeypatch, make_transport(chooser=_chooser_all, seen=seen)
+    )
+    _write_base_run(tmp_path)
+    args = cli.build_parser().parse_args(
+        _induce_args(_items_file(tmp_path), "--scope", "all", "--yes")
+    )
+    args.func(args)
+    first = json.JSONDecoder().raw_decode(capsys.readouterr().out)[0]
+    assert first["command"] == "induce" and first["estimated_calls"] == 4
+
+    bodies = [json.loads(r.content) for r in seen]
+    assert len(bodies) == 4  # every base row with a real group
+    assert all(list(b["questions"]) == ["card"] for b in bodies)
+    by_problem = {
+        b["state"]["problem"]: list(b["questions"]["card"]["criteria"])
+        for b in bodies
+    }
+    assert by_problem["alpha keep pain"] == ["a1", "a2", "a3", "none"]
+    assert by_problem["alpha three pain"] == ["a1", "a2", "a3", "none"]
+    assert by_problem["beta two pain"] == ["b1", "b2", "none"]
+    assert by_problem["stray pain"] == ["a1", "a2", "a3", "none"]
+    answers = pq.read_table(paths.run_dir("r3") / "answers").to_pylist()
+    assert {r["question_set"] for r in answers} == {"assign-c@t3"}
+
+    run_dir = paths.run_dir("r3")
+    rows = {
+        r["comment_id"]: r
+        for r in pq.read_table(run_dir / "assignments-t3.parquet").to_pylist()
+    }
+    assert set(rows) == {
+        9_000_000_601, 9_000_000_602, 9_000_000_603, 9_000_000_604,
+        9_000_000_605,
+    }
+    assert all(
+        r["run_id"] == "r3" and r["taxonomy_version"] == "t3"
+        for r in rows.values()
+    )
+    assert rows[9_000_000_601]["card_id"] == "a2"  # moved within its base group
+    assert rows[9_000_000_601]["group_id"] == "g1"
+    assert rows[9_000_000_602]["card_id"] == "a3"
+    assert rows[9_000_000_603]["card_id"] == "b1"  # re-asked, same card
+    assert rows[9_000_000_605]["card_id"] == "a3"
+    carried = {
+        k: v
+        for k, v in rows[9_000_000_604].items()
+        if k not in ("run_id", "taxonomy_version")
+    }
+    base = {
+        k: v for k, v in _base_rows()[3].items()
+        if k not in ("run_id", "taxonomy_version")
+    }
+    assert carried == base  # group-none row carried unchanged
+
+    meta = json.loads((run_dir / "assignments-t3.meta.json").read_text())
+    assert meta[str(9_000_000_601)]["card_top2"][0] == "a2"  # fresh card meta
+    assert meta[str(9_000_000_601)]["group_probs"] == {
+        "g1": 0.9, "g2": 0.1, "none": 0.0
+    }
+
+    side = json.loads((run_dir / "induce-t3.json").read_text())
+    assert side["scope"] == "all"
+    assert side["base_run"] == "rb" and side["base_version"] == "t2"
+    assert side["carried"] == 1 and side["reassigned"] == 4
+    assert side["moved_to_card"] == 4
+    assert side["changed_card"] == 3  # 601 a1->a2, 602 none->a3, 605 null->a3
+    assert side["new_card_assignments"] == {"a3": 2, "b2": 0}
+
+
+def test_induce_scope_change_resumes(tmp_path, monkeypatch, capsys):
+    seen = []
+    _yes_env(
+        tmp_path, monkeypatch, make_transport(chooser=_chooser_all, seen=seen)
+    )
+    _write_base_run(tmp_path)
+    items = _items_file(tmp_path)
+    args = cli.build_parser().parse_args(_induce_args(items, "--yes"))
+    args.func(args)
+    assert len(seen) == 3
+    capsys.readouterr()
+
+    args = cli.build_parser().parse_args(
+        _induce_args(items, "--scope", "all", "--yes")
+    )
+    args.func(args)
+    capsys.readouterr()
+    assert len(seen) == 4  # only 601 was owed; residue rows were already done
+    assert json.loads(seen[-1].content)["state"]["problem"] == "alpha keep pain"
+
+    rows = {
+        r["comment_id"]: r
+        for r in pq.read_table(
+            paths.run_dir("r3") / "assignments-t3.parquet"
+        ).to_pylist()
+    }
+    assert rows[9_000_000_601]["card_id"] == "a2"
+    assert rows[9_000_000_602]["card_id"] == "a3"  # residue answer reused
+    assert rows[9_000_000_603]["card_id"] == "b1"
+    assert rows[9_000_000_605]["card_id"] == "a3"
+    side = json.loads((paths.run_dir("r3") / "induce-t3.json").read_text())
+    assert side["scope"] == "all" and side["changed_card"] == 3
+
+
+def _t3_row(cid, group, card, card_p=0.9):
+    return {**_row(cid, group, card, card_p), "taxonomy_version": "t3"}
+
+
+def _write_t3_base_run(tmp_path, run_id="rc"):
+    """A base run already stamped t3, as `cards induce` or `cards combine`
+    produces for the mixed-path main run."""
+    run_dir = paths.run_dir(run_id)
+    run_dir.mkdir(parents=True)
+    rows = [
+        _t3_row(9_000_000_601, "g1", "a1", 0.9),
+        _t3_row(9_000_000_602, "g1", "a3", 0.9),
+        _t3_row(9_000_000_603, "g2", "none", 1.0),
+        _t3_row(9_000_000_604, "none", None, None),
+    ]
+    write_assignments(run_dir, AssignResult(rows=rows), "t3")
+    pain = [
+        {"comment_id": r["comment_id"], "pain_sentence": "x"} for r in rows
+    ]
+    pq.write_table(
+        pa.Table.from_pylist(pain, schema=cards_cli.PAIN_SCHEMA),
+        str(run_dir / "pain.parquet"),
+    )
+
+
+def _induce_t3_args(items, *extra):
+    return [
+        "cards", "induce", "--base-run", "rc", "--base-version", "t3",
+        "--cardset", "mini", "--version", "t3", "--run", "r4",
+        "--items", items, *extra,
+    ]
+
+
+def test_induce_same_version_scope_all(tmp_path, monkeypatch, capsys):
+    seen = []
+    _yes_env(
+        tmp_path, monkeypatch, make_transport(chooser=_chooser_all, seen=seen)
+    )
+    _write_t3_base_run(tmp_path)
+    args = cli.build_parser().parse_args(
+        _induce_t3_args(_items_file(tmp_path), "--scope", "all", "--yes")
+    )
+    args.func(args)
+    capsys.readouterr()
+    assert len(seen) == 3  # every real-group row re-asked under assign-c@t3
+    answers = pq.read_table(paths.run_dir("r4") / "answers").to_pylist()
+    assert {r["question_set"] for r in answers} == {"assign-c@t3"}
+    rows = {
+        r["comment_id"]: r
+        for r in pq.read_table(
+            paths.run_dir("r4") / "assignments-t3.parquet"
+        ).to_pylist()
+    }
+    assert rows[9_000_000_601]["card_id"] == "a2"
+    assert rows[9_000_000_602]["card_id"] == "a3"  # re-asked, same card
+    assert rows[9_000_000_603]["card_id"] == "b1"  # was residue
+    assert rows[9_000_000_604]["card_id"] is None
+    side = json.loads((paths.run_dir("r4") / "induce-t3.json").read_text())
+    assert side["scope"] == "all" and side["base_version"] == "t3"
+    assert side["changed_card"] == 2  # 601 a1->a2, 603 none->b1
+    assert side["new_card_assignments"] == {}
+
+
+def test_induce_same_version_residue_rejected(tmp_path, monkeypatch, capsys):
+    _configs(tmp_path, monkeypatch)
+    monkeypatch.setattr(paths, "RUNS", tmp_path / "runs")
+    args = cli.build_parser().parse_args(_induce_t3_args("x.parquet"))
+    with pytest.raises(SystemExit):
+        args.func(args)
+    assert capsys.readouterr().out == ""
+
+
+def test_induce_scope_all_missing_items_fails(tmp_path, monkeypatch):
+    _configs(tmp_path, monkeypatch)
+    monkeypatch.setattr(paths, "RUNS", tmp_path / "runs")
+    _write_base_run(tmp_path)
+    rows = [  # only the residue rows; 601 is owed under --scope all
+        {"comment_id": 9_000_000_602, "pain_sentence": "alpha three pain",
+         "sentences": ["alpha three pain"]},
+        {"comment_id": 9_000_000_603, "pain_sentence": "beta two pain",
+         "sentences": ["beta two pain"]},
+        {"comment_id": 9_000_000_605, "pain_sentence": "stray pain",
+         "sentences": ["stray pain"]},
+    ]
+    path = tmp_path / "items.parquet"
+    pq.write_table(pa.Table.from_pylist(rows), str(path))
+    args = cli.build_parser().parse_args(
+        _induce_args(str(path), "--scope", "all")
+    )
+    with pytest.raises(ValueError, match="scope all"):
+        args.func(args)

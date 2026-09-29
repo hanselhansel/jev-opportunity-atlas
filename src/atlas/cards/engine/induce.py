@@ -1,13 +1,22 @@
-"""Residue reassignment after an induction round (L26).
+"""Residue reassignment after an induction round (L26), plus `--scope all`
+(L30).
 
 When a cardset grows from a base version to a superset (same groups and group
 labels, every base card unchanged, only new cards added), `cards induce`
-re-asks only the residue at the card level and writes one combined
-assignments table. The residue is rows whose base assignment found a real
-group but landed on card `none`, a null card, or card_p under
-LOW_CONFIDENCE; the group answer is already known, so no group-level call is
-made (its question-set label would embed the new version and miss the cache
-anyway).
+re-asks the residue at the card level and writes one combined assignments
+table. The residue is rows whose base assignment found a real group but
+landed on card `none`, a null card, or card_p under LOW_CONFIDENCE; the
+group answer is already known, so no group-level call is made (its
+question-set label would embed the new version and miss the cache anyway).
+
+`--scope all` re-asks the card level for every base row with a real group,
+so rows already on a base card can move to a card added in the new version
+(the wave-1 induce / wave-2 direct-assign mix biased card shares). It is
+also the only scope allowed when base and new versions are equal, e.g.
+re-running a mixed-path combined run under its own version. The card-level
+label `assign-c@<version>` is the same for both scopes, so a rerun with a
+different scope into the same run directory resumes: rows already answered
+are covered by the done set.
 """
 
 from __future__ import annotations
@@ -61,10 +70,19 @@ def residue(rows, threshold=LOW_CONFIDENCE) -> list[dict]:
     return out
 
 
-def residue_items(base_rows, items_by_cid, cs) -> list[dict]:
-    """Card-level run_batch items for residue rows, against cardset `cs`."""
+def scoped_rows(rows, scope="residue", threshold=LOW_CONFIDENCE) -> list[dict]:
+    """Rows re-asked at card level under `scope`: `residue` is real-group rows
+    with card null/'none' or card_p under `threshold`; `all` is every row
+    with a real group."""
+    if scope == "all":
+        return [r for r in rows if r.get("group_id") not in (None, NONE)]
+    return residue(rows, threshold)
+
+
+def scope_items(base_rows, items_by_cid, cs, scope="residue") -> list[dict]:
+    """Card-level run_batch items for `scope` rows, against cardset `cs`."""
     items, missing = [], []
-    for r in residue(base_rows):
+    for r in scoped_rows(base_rows, scope):
         it = items_by_cid.get(r["comment_id"])
         if it is None:
             missing.append(r["comment_id"])
@@ -80,18 +98,22 @@ def residue_items(base_rows, items_by_cid, cs) -> list[dict]:
         )
     if missing:
         raise ValueError(
-            f"items parquet is missing {len(missing)} residue comments "
-            f"(first: {missing[:5]})"
+            f"items parquet is missing {len(missing)} comments for "
+            f"--scope {scope} (first: {missing[:5]})"
         )
     return items
 
 
-async def induce(ctx, base_result, items_by_cid, cs) -> AssignResult:
-    """Re-ask the card level for residue rows under `assign-c@<cs.version>`;
+async def induce(
+    ctx, base_result, items_by_cid, cs, scope="residue"
+) -> AssignResult:
+    """Re-ask the card level for `scope` rows under `assign-c@<cs.version>`;
     every other base row is carried with run_id/taxonomy_version re-stamped."""
     check_lengths(cs)
-    res_ids = {r["comment_id"] for r in residue(base_result.rows)}
-    level2 = residue_items(base_result.rows, items_by_cid, cs)
+    res_ids = {
+        r["comment_id"] for r in scoped_rows(base_result.rows, scope)
+    }
+    level2 = scope_items(base_result.rows, items_by_cid, cs, scope)
     cqs = engine_qs(
         "assign-c",
         cs,
@@ -146,14 +168,24 @@ async def induce(ctx, base_result, items_by_cid, cs) -> AssignResult:
     return result
 
 
-def induce_stats(base_cs, new_cs, base_rows, out_rows, run_id, base_run) -> dict:
-    """Sidecar payload: provenance, carried/reassigned/moved counts, and the
-    assigned counts of the cards the induction round added."""
-    res_ids = {r["comment_id"] for r in residue(base_rows)}
+def _card_key(card_id):
+    """None and 'none' both mean unassigned for changed-card counting."""
+    return None if card_id in (None, NONE) else card_id
+
+
+def induce_stats(
+    base_cs, new_cs, base_rows, out_rows, run_id, base_run, scope="residue"
+) -> dict:
+    """Sidecar payload: provenance, scope, carried/reassigned/moved/changed
+    counts, and the assigned counts of the cards the induction round added."""
+    res_ids = {r["comment_id"] for r in scoped_rows(base_rows, scope)}
+    base_card = {
+        r["comment_id"]: _card_key(r.get("card_id")) for r in base_rows
+    }
     new_counts = {
         cid: 0 for cid in new_cs.cards if cid not in base_cs.all_cards
     }
-    reassigned = moved = 0
+    reassigned = moved = changed = 0
     for r in out_rows:
         card = r.get("card_id")
         if card in new_counts:
@@ -162,14 +194,18 @@ def induce_stats(base_cs, new_cs, base_rows, out_rows, run_id, base_run) -> dict
             reassigned += 1
             if card not in (None, NONE):
                 moved += 1
+        if _card_key(card) != base_card.get(r["comment_id"]):
+            changed += 1
     return {
         "run_id": run_id,
         "taxonomy_version": new_cs.version,
         "base_run": base_run,
         "base_version": base_cs.version,
+        "scope": scope,
         "carried": len(out_rows) - reassigned,
         "reassigned": reassigned,
         "moved_to_card": moved,
+        "changed_card": changed,
         "new_card_assignments": new_counts,
     }
 

@@ -28,7 +28,7 @@ from atlas.cards.engine.induce import (
     check_superset,
     induce,
     induce_stats,
-    residue_items,
+    scope_items,
     write_induce_sidecar,
 )
 from atlas.cards.engine.planted import (
@@ -77,6 +77,13 @@ def register(commands, common) -> None:
         required=True,
         help="parquet: comment_id, pain_sentence, sentences",
     )
+    ip.add_argument(
+        "--scope",
+        choices=["residue", "all"],
+        default="residue",
+        help="card-level re-ask set: residue only (default) or every row "
+        "with a real group",
+    )
     ip.set_defaults(func=_cmd_induce)
 
     cp = commands.add_parser(
@@ -124,13 +131,32 @@ def _cmd_induce(args) -> None:
     cap, worst = cli._budget_cap(budgets, args.budget)
     base_cs = load_cardset(args.cardset, args.base_version)
     new_cs = load_cardset(args.cardset, args.version)
-    check_superset(base_cs, new_cs)
+    if args.base_version == args.version:
+        if args.scope != "all":
+            raise SystemExit(
+                "--base-version equals --version only with --scope all"
+            )
+    else:
+        check_superset(base_cs, new_cs)
     base_run_dir = paths.run_dir(args.base_run)
     base_result = load_assignments(base_run_dir, args.base_version)
+    off_version = [
+        r["comment_id"]
+        for r in base_result.rows
+        if r["taxonomy_version"] != args.base_version
+    ]
+    if off_version:
+        raise ValueError(
+            f"base run {args.base_run} carries {len(off_version)} rows whose "
+            f"taxonomy_version is not {args.base_version!r} "
+            f"(first: {off_version[:5]})"
+        )
     items_by_cid = {
         r["comment_id"]: r for r in pq.read_table(args.items).to_pylist()
     }
-    level2 = residue_items(base_result.rows, items_by_cid, new_cs)
+    level2 = scope_items(
+        base_result.rows, items_by_cid, new_cs, args.scope
+    )
     cli._print_estimate(
         "induce", [cli._est_tokens(it) for it in level2], args.budget, cap,
         usd_per_token,
@@ -139,7 +165,9 @@ def _cmd_induce(args) -> None:
         return
     ctx = cli._run_ctx(args, price_row, cap, worst, usd_per_token)
     try:
-        result = asyncio.run(induce(ctx, base_result, items_by_cid, new_cs))
+        result = asyncio.run(
+            induce(ctx, base_result, items_by_cid, new_cs, args.scope)
+        )
         run_dir = paths.run_dir(args.run)
         run_dir.mkdir(parents=True, exist_ok=True)
         src_pain = base_run_dir / "pain.parquet"
@@ -149,7 +177,7 @@ def _cmd_induce(args) -> None:
         write_assignments(run_dir, result, new_cs.version)
         stats = induce_stats(
             base_cs, new_cs, base_result.rows, result.rows,
-            args.run, args.base_run,
+            args.run, args.base_run, scope=args.scope,
         )
         write_induce_sidecar(run_dir, stats, new_cs.version)
     finally:
