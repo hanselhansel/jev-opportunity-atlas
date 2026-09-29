@@ -68,7 +68,10 @@ def _active_groups(cs) -> list[str]:
     return [gid for gid in cs.groups if cs.cards_in(gid)]
 
 
-def group_item(comment_id, pain_sentence, comment_sentences, cs) -> dict:
+def group_item(
+    comment_id, pain_sentence, comment_sentences, cs,
+    instructions=GROUP_INSTRUCTIONS,
+) -> dict:
     criteria = {gid: cs.groups[gid] for gid in _active_groups(cs)}
     criteria[NONE] = GROUP_NONE_TEXT
     return {
@@ -80,14 +83,17 @@ def group_item(comment_id, pain_sentence, comment_sentences, cs) -> dict:
         "questions": {
             "group": {
                 "type": "choice",
-                "instructions": GROUP_INSTRUCTIONS,
+                "instructions": instructions,
                 "criteria": criteria,
             }
         },
     }
 
 
-def card_item(comment_id, pain_sentence, sentences, cs, group_id) -> dict:
+def card_item(
+    comment_id, pain_sentence, sentences, cs, group_id,
+    instructions=CARD_INSTRUCTIONS,
+) -> dict:
     criteria = {c.card_id: c.statement for c in cs.cards_in(group_id)}
     criteria[NONE] = CARD_NONE_TEXT
     return {
@@ -99,7 +105,7 @@ def card_item(comment_id, pain_sentence, sentences, cs, group_id) -> dict:
         "questions": {
             "card": {
                 "type": "choice",
-                "instructions": CARD_INSTRUCTIONS,
+                "instructions": instructions,
                 "criteria": criteria,
             }
         },
@@ -153,18 +159,28 @@ def _top2(probs: dict) -> list[str]:
     return [k for k, _ in ordered if k != NONE][:2]
 
 
-async def assign(ctx, rows, cs, question_set_prefix="assign") -> AssignResult:
+async def assign(
+    ctx,
+    rows,
+    cs,
+    question_set_prefix="assign",
+    group_instructions=GROUP_INSTRUCTIONS,
+    card_instructions=CARD_INSTRUCTIONS,
+) -> AssignResult:
     rows = list(rows)
     check_lengths(cs)
     gqs = engine_qs(
         f"{question_set_prefix}-g",
         cs,
-        {"group": {"type": "choice", "instructions": GROUP_INSTRUCTIONS}},
+        {"group": {"type": "choice", "instructions": group_instructions}},
     )
     await run_batch(
         ctx,
         (
-            group_item(r["comment_id"], r["pain_sentence"], r["sentences"], cs)
+            group_item(
+                r["comment_id"], r["pain_sentence"], r["sentences"], cs,
+                instructions=group_instructions,
+            )
             for r in rows
         ),
         gqs,
@@ -174,12 +190,13 @@ async def assign(ctx, rows, cs, question_set_prefix="assign") -> AssignResult:
     cqs = engine_qs(
         f"{question_set_prefix}-c",
         cs,
-        {"card": {"type": "choice", "instructions": CARD_INSTRUCTIONS}},
+        {"card": {"type": "choice", "instructions": card_instructions}},
     )
     level2 = [
         card_item(
             r["comment_id"], r["pain_sentence"], r["sentences"], cs,
             g_answers[r["comment_id"]]["group"]["choice"],
+            instructions=card_instructions,
         )
         for r in rows
         if g_answers.get(r["comment_id"], {}).get("group", {}).get("choice")

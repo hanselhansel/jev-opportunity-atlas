@@ -1,0 +1,30 @@
+{
+  "name": "screen_para2",
+  "version": 1,
+  "state_fields": [
+    "comment"
+  ],
+  "questions": {
+    "firsthand_problem": {
+      "type": "noul",
+      "instructions": "Is `comment` a first-person account of an actual problem?",
+      "criteria": {
+        "true": "The author directly experienced something broken, blocking, costly in time or money, or frustrating.",
+        "false": "No lived problem here: it is hypothetical, about someone else, a broad opinion, or a sales pitch."
+      }
+    },
+    "account_type": {
+      "type": "choice",
+      "instructions": "Classify the text in `comment`.",
+      "criteria": {
+        "firsthand_account": "first-person experience",
+        "secondhand_report": "relates another person's experience",
+        "general_opinion": "opinion only, no personal story",
+        "product_pitch": "sells or plugs own product",
+        "joke_or_sarcasm": "humor or sarcasm",
+        "question_or_request": "seeks help or advice",
+        "other": null
+      }
+    }
+  }
+}
