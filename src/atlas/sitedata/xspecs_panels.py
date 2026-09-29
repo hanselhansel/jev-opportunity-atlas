@@ -135,11 +135,17 @@ def _quality_spec(
         for r in bench
     ]
     jev_n = next((r["n"] for r in audit if r["system"] == "jev"), None)
+    # The footer names the audit run(s) behind the human-audit rows and the
+    # benchmark run behind the synthetic rows, not the assignment run.
+    run_ids = []
+    for r in audit + bench:
+        if r.get("run_id") and r["run_id"] not in run_ids:
+            run_ids.append(r["run_id"])
     spec = {
         **common,
         "kind": "quality",
         "name": "quality",
-        "run_id": assign_run,
+        "run_id": "+".join(run_ids) or assign_run,
         "denominator": "audited card assignments" if jev_n else "benchmark cases",
         "n": jev_n or sum(r["n"] or 0 for r in bench),
         "title": "The human audit compares Jev's card precision with a random-card baseline.",

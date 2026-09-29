@@ -32,7 +32,7 @@ from atlas.sitedata.tables import SITE_TABLES
 
 EXTRA_FIELDS = {
     "domain_share": [pa.field("qualifier", pa.string())],
-    "quality": [pa.field("system", pa.string())],
+    "quality": [pa.field("system", pa.string()), pa.field("run_id", pa.string())],
     "findings": [
         pa.field("unsolved_rate", pa.float64()),
         pa.field("short_label", pa.string()),

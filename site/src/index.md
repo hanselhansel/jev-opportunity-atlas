@@ -126,6 +126,7 @@ function shareBarChart(meta, rows, title, denom, marginLeft) {
     n: sumItems(data),
     lane: "breadth",
     meta,
+    run: meta.assign_run,
     qualifier: rows[0]?.qualifier,
     ariaLabel: `${title}; ${data.length} bars with intervals`,
     plot: {
@@ -189,6 +190,7 @@ function changeChart(meta, rows, title, denom, marginLeft) {
     n: sumItems(data),
     lane: "breadth",
     meta,
+    run: meta.assign_run,
     qualifier: rows[0]?.qualifier,
     ariaLabel:
       `${title}; ${changed.length} of ${data.length} rows ` +
