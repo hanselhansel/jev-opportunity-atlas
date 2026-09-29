@@ -52,6 +52,7 @@ the same plan.
 | `site build`, `site preview` | L6 |
 | `pilot draw`, `pilot screen`, `pilot facets`, `pilot packed`, `pilot injected`, `pilot gold`, `pilot report` | L7 |
 | `discover search` | L8 |
+| `benchmark run`, `benchmark report` | L18 |
 | `timeline mark` | existing |
 
 Common flags: `--snapshot` (default: `snapshot_id` in `configs/acquisition.toml`),
