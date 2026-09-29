@@ -57,7 +57,8 @@ def _footer_parts(spec: dict, n_txt) -> list[str]:
         f"n = {n_txt} of {spec['denominator']}",
         f"Lane: {spec['lane']}",
         f"Run: {spec['run_id']}",
-        *CAVEATS,
+        spec.get("qualifier") or CAVEATS[0],
+        CAVEATS[1],
     ]
 
 
@@ -192,11 +193,33 @@ def _change(ax, data: dict) -> None:
     rows = list(data.get("rows", []))[::-1]
     if not rows:
         return _empty(ax)
+    extent = max(
+        1e-9,
+        *(
+            abs(v)
+            for r in rows
+            for v in (r.get("ci_low"), r.get("ci_high"), r.get("estimate"))
+            if v is not None
+        ),
+    )
+    right = extent * 1.12
     for i, r in enumerate(rows):
+        sig = bool(r.get("significant"))
+        color = ACCENT if sig else MUTED
         if r.get("ci_low") is not None and r.get("ci_high") is not None:
-            ax.hlines(i, r["ci_low"], r["ci_high"], color=ACCENT, lw=4)
-        ax.plot(r["estimate"], i, "o", ms=14, color=INK)
+            ax.hlines(i, r["ci_low"], r["ci_high"], color=color, lw=4 if sig else 3)
+        ax.plot(r["estimate"], i, "o", ms=14, color=INK if sig else MUTED)
+        ax.text(
+            right,
+            i,
+            f"{r['estimate']:+.1f}" if sig else "no clear change",
+            ha="right",
+            va="center",
+            fontsize=_pt(TICK_PX - 2),
+            color=ACCENT if sig else MUTED,
+        )
     ax.axvline(0, color=MUTED, ls="--", lw=1.5)
+    ax.set_xlim(-extent * 1.08, right + extent * 0.05)
     ax.set_yticks(range(len(rows)), [textwrap.fill(r["label"], 34) for r in rows])
     ax.set_ylim(-0.6, len(rows) - 0.4)
     ax.set_xlabel(data.get("xlabel", ""), fontsize=_pt(TICK_PX), color=MUTED)
@@ -334,7 +357,7 @@ def render_site_charts(site_dir, out_dir) -> list[Path]:
     out_dir = Path(out_dir)
     written = []
     for i, spec in enumerate(site_chart_specs(site_dir), start=1):
-        path = out_dir / f"{i:02d}-{spec['kind']}.png"
+        path = out_dir / f"{i:02d}-{spec.get('name') or spec['kind']}.png"
         render_x_chart(spec, path)
         written.append(path)
     return written
