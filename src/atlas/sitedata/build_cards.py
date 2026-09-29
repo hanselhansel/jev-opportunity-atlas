@@ -236,7 +236,7 @@ def finding_rows(ctx, cs, criteria, weights, top_n=20, built_at=None, replies=No
             {
                 "finding_id": cid,
                 "title": card.statement,
-                "domain": _top_domain(mine, ctx["answers"]),
+                "domain": _top_domain(mine, ctx),
                 "subtopic": cid,
                 "n_comments": m["n_comments"],
                 "n_threads": m["n_threads"],
@@ -265,10 +265,17 @@ def finding_rows(ctx, cs, criteria, weights, top_n=20, built_at=None, replies=No
     return findings, evidence
 
 
-def _top_domain(members, answers) -> str | None:
-    counts: dict[str, int] = {}
+def _top_domain(members, ctx) -> str | None:
+    """Weighted modal facets ``domain`` choice over the card's comments.
+
+    Weights are the phase-2 weights (w1 / p2); ties break alphabetically.
+    """
+    counts: dict[str, float] = {}
     for r in members:
-        d = ((answers.get(r["comment_id"]) or {}).get("domain") or {}).get("choice")
-        if d is not None:
-            counts[d] = counts.get(d, 0) + 1
+        cid = r["comment_id"]
+        d = ((ctx["answers"].get(cid) or {}).get("domain") or {}).get("choice")
+        if d is None:
+            continue
+        w = (ctx["facet"].get(cid) or {}).get("weight") or 1.0
+        counts[d] = counts.get(d, 0.0) + w
     return min(counts, key=lambda d: (-counts[d], d)) if counts else None

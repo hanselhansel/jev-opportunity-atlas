@@ -250,11 +250,33 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
     calls = sum(r["calls"] or 0 for r in runs)
     usd = sum(r["calculated_usd"] or 0.0 for r in runs)
     biggest = max(runs, key=lambda r: r["calls"] or 0, default={})
+    by_phase: dict[str, dict] = {}
+    for r in runs:
+        phase = r["phase"] or "unknown"
+        b = by_phase.setdefault(
+            phase,
+            {
+                "phase": phase,
+                "calculated_usd": 0.0,
+                "calls": 0,
+                "runs": 0,
+                "wall_s": 0.0,
+            },
+        )
+        b["calculated_usd"] += r["calculated_usd"] or 0.0
+        b["calls"] += r["calls"] or 0
+        b["runs"] += 1
+        b["wall_s"] += r["wall_s"] or 0.0
+    phases = sorted(
+        by_phase.values(), key=lambda b: (-b["calculated_usd"], b["phase"])
+    )
     cost = {
         **common,
         "kind": "cost",
         "name": "cost",
-        "run_id": " + ".join(r["run_id"] for r in runs) or "none",
+        "run_id": (
+            f"{len(runs)} runs across {len(phases)} phases" if runs else "none"
+        ),
         "denominator": "Jev calls across all runs",
         "n": calls,
         "title": f"The runs behind this atlas cost ${usd:,.2f} of Jev credit over {calls:,} calls.",
@@ -263,6 +285,7 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
             "calls": calls,
             "p50_ms": biggest.get("p50_ms"),
             "wall_s": sum(r["wall_s"] or 0.0 for r in runs),
+            "phases": phases,
         },
     }
 

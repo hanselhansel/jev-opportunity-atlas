@@ -14,18 +14,18 @@ Branch: feat/l32-site-full-accounting
 **Files you own:** `src/atlas/sitedata/build.py`, `build_quality.py`, `build_cards.py`, `cli.py`, `xspecs.py`, and tests under `tests/sitedata/`.
 
 ### Task 32.1: Runs from a phase map
-- [ ] **Test:** `site data --run-phases <toml>` builds `runs` from every key in `[runs]`.
+- [x] **Test:** `site data --run-phases <toml>` builds `runs` from every key in `[runs]`.
   - A key `a/b` reads `runs/a/b/ledger.jsonl`, and its `run_id` is written as `a/b`.
   - `phase` comes from the value.
   - A key whose ledger is missing is an error naming the key.
   - Without the flag, behavior is unchanged.
   - `meta` gains `total_calculated_usd` (sum over rows) and `total_calls`.
-- [ ] Update the X cost chart spec to use the sum over all rows and to break it down by phase. Commit, push.
+- [x] Update the X cost chart spec to use the sum over all rows and to break it down by phase. Commit, push.
 
 ### Task 32.2: Audit runs
-- [ ] `site data --audit-run <run>` (repeatable) adds those runs' `eval_*.json` reports to `quality`, including the `random` group rows (system `random_card`). Test with a synthetic report shaped like `runs/pilot-20260929-cards/eval_assignment_audit.json` (groups jev and random, lenient and strict precision with ci, n). Commit, push.
+- [x] `site data --audit-run <run>` (repeatable) adds those runs' `eval_*.json` reports to `quality`, including the `random` group rows (system `random_card`). Test with a synthetic report shaped like `runs/pilot-20260929-cards/eval_assignment_audit.json` (groups jev and random, lenient and strict precision with ci, n). Commit, push.
 
 ### Task 32.3: Finding domain
-- [ ] `findings.domain` is the weighted modal facets `domain` choice among the card's comments (phase-2 weight). Ties break alphabetically. Test, commit, push.
+- [x] `findings.domain` is the weighted modal facets `domain` choice among the card's comments (phase-2 weight). Ties break alphabetically. Test, commit, push.
 
 - [ ] `scripts/verify.sh` prints `verify: ok`. Open the PR per AGENTS.md. Final message: PR URL and pytest summary line.
