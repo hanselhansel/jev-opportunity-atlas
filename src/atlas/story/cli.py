@@ -17,6 +17,17 @@ from atlas import paths
 
 SECTIONS: dict[str, object] = {}
 
+
+def _terms_section(args, story_path) -> None:
+    """`--with terms`: S4 distinctive terms. Lazy import keeps the CLI
+    cheap for lanes that never run this section."""
+    from atlas.story import terms
+
+    terms.story_section(args, story_path)
+
+
+SECTIONS["terms"] = _terms_section
+
 DEFAULTS = {
     "facet_sample": "main-facets-20260930x",
     "facets_run": "main-facets-20260930",
