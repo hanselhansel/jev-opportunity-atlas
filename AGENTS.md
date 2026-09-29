@@ -54,6 +54,7 @@ the same plan.
 | `discover search` | L8 |
 | `benchmark run`, `benchmark report` | L18 |
 | `screen run`, `screen table` | L17 |
+| `site data`, `x charts` | L20 |
 | `release pack`, `release restore`, `release rehydrate`, `release replay`, `release pages` | L21 |
 | `timeline mark` | existing |
 

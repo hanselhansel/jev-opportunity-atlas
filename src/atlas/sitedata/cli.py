@@ -1,9 +1,17 @@
-"""`atlas site build` and `atlas site preview`: the Observable Framework site."""
+"""`atlas site build|preview|data` and `atlas x charts`.
+
+`site build` and `site preview` drive the Observable Framework site. `site data`
+builds the real site tables from saved runs (no Jev calls). `x charts` renders
+the X-ready PNG charts from a site data directory.
+"""
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
+import tomllib
+from datetime import UTC, datetime
 
 
 def _env(args) -> dict:
@@ -43,6 +51,77 @@ def _preview(args) -> None:
     )
 
 
+def _default_snapshot() -> str:
+    from atlas import paths
+
+    with (paths.CONFIGS / "acquisition.toml").open("rb") as f:
+        return tomllib.load(f)["snapshot_id"]
+
+
+def _data(args) -> None:
+    from atlas import paths
+    from atlas.sitedata.build import build_site_data
+
+    counts = build_site_data(
+        args.out or paths.ROOT / "site" / "data-real",
+        args.snapshot or _default_snapshot(),
+        args.screen_run,
+        args.facets_run,
+        args.assign_run,
+        args.taxonomy,
+        args.label_set,
+        benchmark_run=args.benchmark_run,
+        facets_set=args.facets_set,
+        cardset=args.cardset,
+        top_n=args.top_n,
+        n_boot=args.n_boot,
+        seed=args.seed,
+    )
+    print(json.dumps(counts, sort_keys=True))
+
+
+def _charts(args) -> None:
+    from atlas import paths
+    from atlas.sitedata.xcharts import render_site_charts
+
+    data = args.data or paths.ROOT / "site" / "data-real"
+    out = args.out or paths.EXPORTS / "x" / datetime.now(UTC).date().isoformat()
+    for path in render_site_charts(data, out):
+        print(path)
+
+
+def _register_data(ssub) -> None:
+    d = ssub.add_parser("data", help="Build real site tables from saved runs")
+    d.add_argument("--out", help="Output directory (default site/data-real)")
+    d.add_argument("--snapshot", help="Snapshot id (default: acquisition.toml)")
+    d.add_argument("--screen-run", required=True)
+    d.add_argument("--facets-run", required=True)
+    d.add_argument("--assign-run", required=True)
+    d.add_argument("--taxonomy", required=True, help="Taxonomy version, e.g. t1")
+    d.add_argument(
+        "--label-set",
+        action="append",
+        default=[],
+        help="Gold label set for PPI and quality rows (repeatable)",
+    )
+    d.add_argument("--benchmark-run", help="Synthetic benchmark run id")
+    d.add_argument("--cardset", help="Cardset name (default: the only one)")
+    d.add_argument("--facets-set", default="facets@2")
+    d.add_argument("--top-n", type=int, default=20)
+    d.add_argument("--n-boot", type=int, default=2000)
+    d.add_argument("--seed", type=int, default=0)
+    d.set_defaults(func=_data)
+
+
+def _register_x(sub) -> None:
+    x = sub.add_parser("x", help="X-ready chart exports")
+    xsub = x.add_subparsers(dest="x_cmd", required=True)
+    c = xsub.add_parser("charts", help="Render 1600x900 PNG charts")
+    c.add_argument("--data", help="Site data directory (default site/data-real)")
+    c.add_argument("--out", help="Output directory (default exports/x/<date>)")
+    c.set_defaults(func=_charts)
+
+
 def register(sub) -> None:
     s = sub.add_parser("site", help="Build or preview the static atlas site")
     ssub = s.add_subparsers(dest="site_cmd", required=True)
@@ -59,3 +138,5 @@ def register(sub) -> None:
     p.add_argument("--data", help="Directory of exported site tables (parquet)")
     p.add_argument("--base", help="URL base path, e.g. /jev-opportunity-atlas/")
     p.set_defaults(func=_preview)
+    _register_data(ssub)
+    _register_x(sub)
