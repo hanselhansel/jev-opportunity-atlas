@@ -1,18 +1,27 @@
 """Per-card concentration: how much of a card sits in its biggest clusters.
 
-``top3_threads`` is the weighted share of the card's problems in its three
-largest threads; ``top3_authors`` the same over authors. The null bands come
-from reassigning the card's problems to clusters drawn with probability
+``top1_thread`` and ``top3_threads`` are the weighted shares of the card's
+problems in its single largest and three largest threads; ``top1_author``
+and ``top3_authors`` the same over authors. The null bands come from
+reassigning the card's problems to clusters drawn with probability
 proportional to each cluster's total firsthand problem count — the shares a
 card would show if it were sprinkled across the population at random.
-``flagged`` is true when either observed value clears its band's top.
+``flagged`` is the pre-registered rule: on cards with at least ``MIN_N``
+problems, ``top1_thread > 0.30 or top1_author > 0.10``; thinner cards get
+``None``.
 """
 
 from __future__ import annotations
 
 import numpy as np
 
+from atlas.story.io import MIN_N
+
 TOP_K = 3
+# Pre-registered concentration flag: a card is concentrated when one thread
+# holds over 30% of its problems, or one author over 10%.
+FLAG_TOP1_THREAD = 0.30
+FLAG_TOP1_AUTHOR = 0.10
 
 
 def _placed(frame):
@@ -57,7 +66,7 @@ def _null_band(rng, probs: np.ndarray, n: int, sims: int):
 
 
 def card_concentration(frame, sims: int = 500, seed: int = 0) -> dict:
-    """``{card: {top3_threads, top3_authors, null_*, flagged}}``."""
+    """``{card: {top1_*, top3_*, null_*, flagged}}``."""
     fh = _placed(frame)
     cards = sorted(
         fh["card"].unique()
@@ -76,30 +85,34 @@ def card_concentration(frame, sims: int = 500, seed: int = 0) -> dict:
         sub = fh[card_vals == card]
         w = sub["weight"].to_numpy(dtype=float)
         n = len(sub)
-        top_t = _top_share(sub["story_id"].astype(object).to_numpy(), w)
+        t_keys = sub["story_id"].astype(object).to_numpy()
+        top1_t = _top_share(t_keys, w, k=1)
+        top_t = _top_share(t_keys, w)
         sub_a = sub[sub["author"].notna()]
-        top_a = _top_share(
-            sub_a["author"].astype(object).to_numpy(),
-            sub_a["weight"].to_numpy(dtype=float),
-        )
+        a_keys = sub_a["author"].astype(object).to_numpy()
+        a_w = sub_a["weight"].to_numpy(dtype=float)
+        top1_a = _top_share(a_keys, a_w, k=1)
+        top_a = _top_share(a_keys, a_w)
         band_t = _null_band(rng, thread_probs, n, sims)
         band_a = _null_band(
             rng, author_probs, int(sub_a.shape[0]), sims
         )
-        flagged = (
-            top_t is not None
-            and band_t[1] is not None
-            and top_t > band_t[1]
-        ) or (
-            top_a is not None
-            and band_a[1] is not None
-            and top_a > band_a[1]
-        )
+        flagged = None
+        if n >= MIN_N:
+            flagged = any(
+                v is not None and v > bar
+                for v, bar in (
+                    (top1_t, FLAG_TOP1_THREAD),
+                    (top1_a, FLAG_TOP1_AUTHOR),
+                )
+            )
         out[card] = {
+            "top1_thread": top1_t,
+            "top1_author": top1_a,
             "top3_threads": top_t,
             "top3_authors": top_a,
             "null_threads": band_t,
             "null_authors": band_a,
-            "flagged": bool(flagged),
+            "flagged": flagged,
         }
     return out

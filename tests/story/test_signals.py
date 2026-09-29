@@ -1,6 +1,7 @@
 """Task 1: per-card coping, costs, and quality signal shares."""
 
 import pandas as pd
+import pytest
 
 from atlas.story import signals
 
@@ -53,6 +54,18 @@ def test_thin_card_sparse():
         for name, est in sig[block].items():
             assert est["sparse"] is True, (block, name)
             assert est["n"] == 12
+
+
+def test_severe_threshold_is_1_5():
+    # severity is a continuous 0-3 expected score; severe3 counts >= 1.5
+    rows = [_row(i) for i in range(40)]
+    rows[0]["severity"] = 1.5
+    rows[1]["severity"] = 2.0  # counts even though it is under 2.5
+    rows[2]["severity"] = 1.49
+    out = signals.card_signals(_df(rows), R=50, seed=0)
+    q = out["c1"]["quality"]
+    assert q["severe3"]["est"] == pytest.approx(0.05)
+    assert q["specific3"]["est"] == 0.0
 
 
 def test_signals_shape_and_population():

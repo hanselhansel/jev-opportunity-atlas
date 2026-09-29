@@ -2,8 +2,8 @@
 
 Each signal is the weighted share of the card's problems (phase-2 ``pos``
 rows that are firsthand and placed on the card) carrying the facet: a yes/no
-facet counts when its ``f_<q>`` noul is >= 0.5, and the severity/specificity
-scores count at >= 2.5. Intervals come from one ``boot.Replicates`` per card,
+facet counts when its ``f_<q>`` noul is >= 0.5, specificity counts at >= 2.5,
+and severity at >= 1.5. Intervals come from one ``boot.Replicates`` per card,
 so every share of the same card is jointly resampled. ``commercial`` is the
 share with any of paid, switched, or abandoned — a problem counts once.
 """
@@ -15,7 +15,11 @@ import numpy as np
 from atlas.story.boot import Replicates, summarize
 
 MIN_NOUL = 0.5
-MIN_SCORE = 2.5
+# Severity is a continuous expected score on 0-3 (median ~0.93, ~3% reach
+# 2.0), so ``severe3`` counts "real cost or worse" at >= 1.5.
+SEVERE_MIN = 1.5
+# Specificity keeps the top-of-scale cut: ``specific3`` counts at >= 2.5.
+SPECIFIC_MIN = 2.5
 
 COPING = {
     "paid": "f_paid",
@@ -78,9 +82,9 @@ def card_signals(frame, R: int = 1000, seed: int = 0) -> dict:
             for k, col in COSTS.items()
         }
         quality = {
-            "severe3": _share(rep, _flags(sub, "severity", MIN_SCORE), den, n),
+            "severe3": _share(rep, _flags(sub, "severity", SEVERE_MIN), den, n),
             "specific3": _share(
-                rep, _flags(sub, "specificity", MIN_SCORE), den, n
+                rep, _flags(sub, "specificity", SPECIFIC_MIN), den, n
             ),
         }
         out[card] = {"coping": coping, "costs": costs, "quality": quality}
