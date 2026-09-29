@@ -8,6 +8,8 @@ import {responsiveTable} from "./components/table.js";
 
 ```js
 const meta = metaOf(await FileAttachment("data/meta.parquet").parquet());
+const runLabels = JSON.parse(meta.run_labels ?? "{}");
+const runLabel = (v) => runLabels[v] ?? v;
 ```
 
 ```js
@@ -106,7 +108,7 @@ if (robustness.error) {
       ${(Math.max(...his) * 100).toFixed(1)}%.</p>`);
     kids.push(
       responsiveTable(prevRows, [
-        {key: "run_id", label: "wording run"},
+        {key: "run_id", label: "wording", format: runLabel},
         {
           key: "value",
           label: "prevalence",
@@ -125,7 +127,7 @@ if (robustness.error) {
         comments:</p>`,
       responsiveTable(agree, [
         {key: "check"},
-        {key: "run_id", label: "run"},
+        {key: "run_id", label: "run", format: runLabel},
         {key: "metric"},
         {
           key: "value",

@@ -2,7 +2,8 @@
 
 Eight named charts: top cards by distinct authors, a problem x domain heat
 strip, group and top-card shares of firsthand problems from ``card_share``, a
-half-year change dot plot on the top cards (``p_adj < 0.05`` highlighted), a
+half-year change dot plot on the cards that moved (``p_adj < 0.05``, with
+the largest moves filling in when few qualify), a
 wording-robustness range from ``robustness``, a cost and time panel, and a Jev
 quality panel (audit precision against the random-card baseline, and the
 synthetic benchmark labeled "synthetic cases"). Titles are full sentences that
@@ -15,6 +16,42 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
+from atlas.sitedata.xspecs_panels import (
+    _cost_spec,
+    _quality_spec,
+    _wording_spec,
+)
+from atlas.sitedata.xspecs_select import (
+    _by_share,
+    _pct,
+    _short,
+    select_change_rows,
+)
+from atlas.sitedata.xspecs_titles import (
+    _PLACEHOLDERS,
+    _share_fmt,
+    fill_title,
+    load_x_titles,
+)
+
+__all__ = [
+    "FIRSTHAND",
+    "POPULATION",
+    "_PLACEHOLDERS",
+    "_by_share",
+    "_cost_spec",
+    "_pct",
+    "_quality_spec",
+    "_rows",
+    "_share_fmt",
+    "_short",
+    "_wording_spec",
+    "fill_title",
+    "load_x_titles",
+    "select_change_rows",
+    "site_chart_specs",
+]
+
 POPULATION = "screen_positive"
 FIRSTHAND = "firsthand_account"
 
@@ -26,19 +63,9 @@ def _rows(site_dir: Path, name: str) -> list[dict]:
     return pq.read_table(path).to_pylist()
 
 
-def _by_share(rows, bucket="all"):
-    return sorted(
-        (r for r in rows if r["bucket"] == bucket),
-        key=lambda r: (-(r["share"] or 0.0), r["id"]),
-    )
-
-
-def _pct(x):
-    return None if x is None else x * 100
-
-
 def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> list[dict]:
     site_dir = Path(site_dir)
+    titles, run_labels = load_x_titles()
     meta = {r["key"]: r["value"] for r in _rows(site_dir, "meta")}
     findings = _rows(site_dir, "findings")
     fe = [r for r in _rows(site_dir, "finding_evidence") if r["role"] == "supporting"]
@@ -62,7 +89,9 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
     )
     assign_run = meta.get("assign_run") or meta.get("run_id")
     top = sorted(findings, key=lambda f: (-f["n_authors"], f["finding_id"]))[:top_n]
-    label = {f["finding_id"]: f"{f['finding_id']}: {f['title']}" for f in top}
+    label = {
+        f["finding_id"]: f.get("short_label") or f["title"] for f in top
+    }
     members = {
         f["finding_id"]: {
             r["comment_id"] for r in fe if r["finding_id"] == f["finding_id"]
@@ -81,7 +110,13 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
         "title": f"These {len(top)} need cards drew the most distinct authors in the sample.",
         "data": {
             "rows": [
-                {"label": label[f["finding_id"]], "value": f["n_authors"]} for f in top
+                {
+                    "id": f["finding_id"],
+                    "label": label[f["finding_id"]],
+                    "full_label": f["title"],
+                    "value": f["n_authors"],
+                }
+                for f in top
             ],
             "xlabel": "distinct authors (sample counts)",
             "format": "int",
@@ -133,7 +168,8 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
             "rows": [
                 {
                     "id": r["id"],
-                    "label": r["label"],
+                    "label": _short(r),
+                    "full_label": r["label"],
                     "value": r["share"],
                     "ci_low": r["lo"],
                     "ci_high": r["hi"],
@@ -157,7 +193,8 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
             "rows": [
                 {
                     "id": r["id"],
-                    "label": r["label"],
+                    "label": _short(r),
+                    "full_label": r["label"],
                     "value": r["share"],
                     "ci_low": r["lo"],
                     "ci_high": r["hi"],
@@ -169,16 +206,12 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
         },
     }
 
-    top_ids = {r["id"] for r in card_all}
-    diff = _by_share(
+    diff = select_change_rows(
         [
             r
             for r in shares
-            if r["level"] == "card"
-            and r["bucket"] == "H2_minus_H1"
-            and r["id"] in top_ids
-        ],
-        bucket="H2_minus_H1",
+            if r["level"] == "card" and r["bucket"] == "H2_minus_H1"
+        ]
     )
     card_change = {
         **common,
@@ -188,12 +221,13 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
         "denominator": fh_denom,
         "n": sum(r["n_items"] or 0 for r in diff),
         "qualifier": qualifier,
-        "title": "This chart shows how each top card's share moved between half-years.",
+        "title": "This chart shows how each need card's share moved between half-years.",
         "data": {
             "rows": [
                 {
                     "id": r["id"],
-                    "label": r["label"],
+                    "label": _short(r),
+                    "full_label": r["label"],
                     "estimate": _pct(r["share"]),
                     "ci_low": _pct(r["lo"]),
                     "ci_high": _pct(r["hi"]),
@@ -206,134 +240,10 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
         },
     }
 
-    prev = [
-        r
-        for r in robustness
-        if r["check"] == "screen_wording" and r["metric"] == "prevalence"
-    ]
-    para_runs = {
-        r["run_id"]
-        for r in robustness
-        if r["metric"] in ("agreement", "kappa", "spearman")
-    }
-    wording_range = {
-        **common,
-        "kind": "bars",
-        "name": "wording_range",
-        "run_id": "+".join(r["run_id"] for r in prev) or "none",
-        "denominator": (
-            f"{prev[0]['n']:,} comments in the paraphrase subsample"
-            if prev and prev[0].get("n")
-            else "comments in the paraphrase subsample"
-        ),
-        "n": prev[0]["n"] if prev else 0,
-        "title": "The headline prevalence moves this much when the question is reworded.",
-        "data": {
-            "rows": [
-                {
-                    "label": (
-                        f"{r['run_id']} (paraphrase)"
-                        if r["run_id"] in para_runs
-                        else f"{r['run_id']} (main)"
-                    ),
-                    "value": r["value"],
-                    "ci_low": r["lo"],
-                    "ci_high": r["hi"],
-                }
-                for r in prev
-            ],
-            "xlabel": "prevalence of firsthand problems at the screen cutoff",
-            "format": "pct",
-        },
-    }
-
-    calls = sum(r["calls"] or 0 for r in runs)
-    usd = sum(r["calculated_usd"] or 0.0 for r in runs)
-    biggest = max(runs, key=lambda r: r["calls"] or 0, default={})
-    by_phase: dict[str, dict] = {}
-    for r in runs:
-        phase = r["phase"] or "unknown"
-        b = by_phase.setdefault(
-            phase,
-            {
-                "phase": phase,
-                "calculated_usd": 0.0,
-                "calls": 0,
-                "runs": 0,
-                "wall_s": 0.0,
-            },
-        )
-        b["calculated_usd"] += r["calculated_usd"] or 0.0
-        b["calls"] += r["calls"] or 0
-        b["runs"] += 1
-        b["wall_s"] += r["wall_s"] or 0.0
-    phases = sorted(
-        by_phase.values(), key=lambda b: (-b["calculated_usd"], b["phase"])
-    )
-    cost = {
-        **common,
-        "kind": "cost",
-        "name": "cost",
-        "run_id": (
-            f"{len(runs)} runs across {len(phases)} phases" if runs else "none"
-        ),
-        "denominator": "Jev calls across all runs",
-        "n": calls,
-        "title": f"The runs behind this atlas cost ${usd:,.2f} of Jev credit over {calls:,} calls.",
-        "data": {
-            "calculated_usd": usd,
-            "calls": calls,
-            "p50_ms": biggest.get("p50_ms"),
-            "wall_s": sum(r["wall_s"] or 0.0 for r in runs),
-            "phases": phases,
-        },
-    }
-
-    names = {
-        "jev": "Jev card assignment (human audit)",
-        "random_card": "Random card (baseline)",
-    }
-    audit = [
-        r
-        for r in quality
-        if r["label_set"] == "assignment_audit"
-        and r["metric"] == "precision_strict"
-        and r["system"] in names
-    ]
-    audit.sort(key=lambda r: list(names).index(r["system"]))
-    bench = [r for r in quality if r["label_set"] == "synthetic"]
-    qrows = [
-        {
-            "label": names[r["system"]],
-            "value": r["value"],
-            "ci_low": r["ci_low"],
-            "ci_high": r["ci_high"],
-        }
-        for r in audit
-    ]
-    qrows += [
-        {
-            "label": (
-                f"{r['question_id'].replace('_', ' ')} "
-                f"{r['metric'].replace('_', ' ')} (synthetic cases)"
-            ),
-            "value": r["value"],
-            "synthetic": True,
-        }
-        for r in bench
-    ]
-    jev_n = next((r["n"] for r in audit if r["system"] == "jev"), None)
-    qual = {
-        **common,
-        "kind": "quality",
-        "name": "quality",
-        "run_id": assign_run,
-        "denominator": "audited card assignments" if jev_n else "benchmark cases",
-        "n": jev_n or sum(r["n"] or 0 for r in bench),
-        "title": "The human audit compares Jev's card precision with a random-card baseline.",
-        "data": {"rows": qrows, "xlabel": "precision or accuracy"},
-    }
-    return [
+    wording_range, prev = _wording_spec(common, robustness, run_labels)
+    cost, usd, calls = _cost_spec(common, runs)
+    qual, audit = _quality_spec(common, quality, assign_run)
+    specs = [
         bars,
         heat,
         group_share,
@@ -343,3 +253,22 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
         cost,
         qual,
     ]
+    shares = [r["value"] for r in prev if r["value"] is not None]
+    values = {
+        "top_share": card_all[0]["share"] if card_all else None,
+        "min_share": min(shares) if shares else None,
+        "max_share": max(shares) if shares else None,
+        "total_usd": usd if runs else None,
+        "total_calls": calls if runs else None,
+        "jev_precision": next(
+            (r["value"] for r in audit if r["system"] == "jev"), None
+        ),
+        "random_precision": next(
+            (r["value"] for r in audit if r["system"] == "random_card"), None
+        ),
+    }
+    for s in specs:
+        template = titles.get(s["name"])
+        if template:
+            s["title"] = fill_title(template, values) or s["title"]
+    return specs

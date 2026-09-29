@@ -33,18 +33,24 @@ from atlas.sitedata.tables import SITE_TABLES
 EXTRA_FIELDS = {
     "domain_share": [pa.field("qualifier", pa.string())],
     "quality": [pa.field("system", pa.string())],
-    "findings": [pa.field("unsolved_rate", pa.float64())],
+    "findings": [
+        pa.field("unsolved_rate", pa.float64()),
+        pa.field("short_label", pa.string()),
+    ],
+    "card_share": [pa.field("short_label", pa.string())],
 }
 # Approved cardset text (Claude drafts, Hansel approves). The release text gate
 # flags these findings columns by name or length; the build instead checks that
 # every value is exactly an approved statement or group label.
 CARD_TEXT_COLUMNS = ("title", "problem_statement", "user_workflow")
-# Tables whose columns may hold approved cardset text (card statements and
-# group labels). The gate checks every value against the cardset in meta.
+# Tables whose columns may hold approved cardset text (card statements, group
+# labels, and short display labels from the cardset's labels.yaml). The gate
+# checks every value against the cardset in meta plus the labels file.
 APPROVED_TEXT_COLUMNS = {
-    "findings.parquet": CARD_TEXT_COLUMNS,
-    "card_share.parquet": ("label",),
+    "findings.parquet": CARD_TEXT_COLUMNS + ("short_label",),
+    "card_share.parquet": ("label", "short_label"),
 }
+MAX_LABEL_CHARS = 32
 
 
 class SiteDataError(RuntimeError):
@@ -56,6 +62,33 @@ def site_schema(name: str) -> pa.Schema:
     for field in EXTRA_FIELDS.get(name, []):
         schema = schema.append(field)
     return schema
+
+
+def load_short_labels(cardset: str) -> dict[str, dict[str, str]]:
+    """Short display labels from ``configs/cards/<cardset>.labels.yaml``.
+
+    Claude-drafted display text of at most 32 characters, keyed by group and
+    card id. Returns empty maps when the file is absent; a label over the cap
+    is a build error.
+    """
+    import yaml
+
+    out: dict[str, dict[str, str]] = {"groups": {}, "cards": {}}
+    name, _, version = cardset.partition(".")
+    path = paths.CONFIGS / "cards" / f"{name}.{version}.labels.yaml"
+    if not name or not version or not path.exists():
+        return out
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    for kind in list(out):
+        for key, value in (data.get(kind) or {}).items():
+            text = str(value)
+            if len(text) > MAX_LABEL_CHARS:
+                raise SiteDataError(
+                    f"{path.name} {kind}.{key} is {len(text)} chars "
+                    f"(max {MAX_LABEL_CHARS})"
+                )
+            out[kind][key] = text
+    return out
 
 
 def _gate_copy(src: Path, dest: Path) -> Path:
@@ -95,6 +128,8 @@ def site_text_problems(out_dir) -> list[str]:
         approved = {c.statement for c in cs.all_cards.values()} | set(
             cs.groups.values()
         )
+        labels = load_short_labels(meta.get("cardset", ""))
+        approved |= set(labels["groups"].values()) | set(labels["cards"].values())
     ok = {}
     for rel, cols in APPROVED_TEXT_COLUMNS.items():
         path = out_dir / rel
@@ -205,6 +240,9 @@ def build_site_data(
     findings, finding_evidence = finding_rows(
         ctx, cs, load_criteria(), load_weights(), top_n, built_at, replies=replies
     )
+    short = load_short_labels(f"{cs.name}.{cs.version}")
+    for f in findings:
+        f["short_label"] = short["cards"].get(f["finding_id"]) or f["title"]
     ev_ids = {c for c, a in ctx["answers"].items() if a}
     ev_ids |= {r["comment_id"] for r in finding_evidence}
     snap = paths.snapshot_dir(snapshot_id)
@@ -224,6 +262,11 @@ def build_site_data(
     }
     n = {"screened": len(ctx["screen"]), "faceted": len(ev_ids), "gold": len(gold)}
     meta = _meta(args, manifest.get("window") or {}, n)
+    from atlas.sitedata.xspecs import load_x_titles
+
+    _, run_labels = load_x_titles()
+    if run_labels:
+        meta["run_labels"] = json.dumps(run_labels)
     roles = [("screen", screen_run), ("facets", facets_run), ("assign", assign_run)]
     if benchmark_run:
         roles.append(("benchmark", benchmark_run))
@@ -242,7 +285,7 @@ def build_site_data(
         "domain_share": domain_share_rows(
             frame, gold, screen_run, facets_set, n_boot, seed
         ),
-        "card_share": card_share_rows(ctx, cs, n_boot, seed),
+        "card_share": card_share_rows(ctx, cs, n_boot, seed, short_labels=short),
         "robustness": robustness_rows(
             screen=(
                 json.loads(Path(robust_screen).read_text(encoding="utf-8"))

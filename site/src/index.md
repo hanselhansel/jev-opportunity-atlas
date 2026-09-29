@@ -54,6 +54,36 @@ function shareRows(cardShare, level, bucket) {
     (r) => r.level === level && r.population === POP && r.bucket === bucket
   );
 }
+
+// Display labels are the cardset's short_label (<= 32 chars); the full
+// statement stays in `label` for tooltips and the data tables.
+function displayRows(rows) {
+  return rows.map((r) => ({...r, display: r.short_label ?? r.label}));
+}
+
+// The cards that moved: significant risers and fallers (p < 0.05), up to
+// 8 each, padded with the largest absolute changes when fewer than 4
+// qualify. Mirrors select_change_rows in atlas.sitedata.xspecs.
+function selectChanged(rows) {
+  const data = rows.filter((r) => r.share != null);
+  const sig = data.filter((r) => r.p_adj != null && r.p_adj < 0.05);
+  const risers = sig
+    .filter((r) => r.share > 0)
+    .sort((a, b) => b.share - a.share)
+    .slice(0, 8);
+  const fallers = sig
+    .filter((r) => r.share < 0)
+    .sort((a, b) => a.share - b.share)
+    .slice(0, 8);
+  const picked = new Map([...risers, ...fallers].map((r) => [r.id, r]));
+  if (picked.size < 4) {
+    const rest = data
+      .filter((r) => !picked.has(r.id))
+      .sort((a, b) => Math.abs(b.share) - Math.abs(a.share));
+    for (const r of rest.slice(0, 4 - picked.size)) picked.set(r.id, r);
+  }
+  return [...picked.values()].sort((a, b) => b.share - a.share);
+}
 ```
 
 ```js
@@ -87,7 +117,7 @@ function findingCard(f) {
 
 ```js
 function shareBarChart(meta, rows, title, denom, marginLeft) {
-  const data = rows.filter((r) => r.share != null);
+  const data = displayRows(rows).filter((r) => r.share != null);
   const maxX = Math.max(0.01, ...data.map((r) => Number(r.hi ?? r.share ?? 0)));
   return chart({
     title,
@@ -107,24 +137,28 @@ function shareBarChart(meta, rows, title, denom, marginLeft) {
         domain: [0, maxX * 1.3],
         tickFormat: "%",
       },
-      y: {label: null, domain: data.map((r) => r.label)},
+      y: {label: null, domain: data.map((r) => r.display)},
       marks: [
         Plot.ruleX([0]),
-        Plot.barX(data, {x: "share", y: "label", fill: "var(--cat-1)"}),
+        Plot.barX(data, {x: "share", y: "display", fill: "var(--cat-1)"}),
         Plot.ruleX(data, {
           x1: "lo",
           x2: "hi",
-          y: "label",
+          y: "display",
           stroke: "var(--atlas-fg)",
         }),
         Plot.text(data, {
           x: "share",
-          y: "label",
+          y: "display",
           text: (r) => pct(r.share),
           dx: 8,
           textAnchor: "start",
           fill: "var(--atlas-fg)",
         }),
+        Plot.tip(
+          data,
+          Plot.pointerX({x: "share", y: "display", title: (r) => r.label})
+        ),
       ],
     },
     rows,
@@ -135,7 +169,7 @@ function shareBarChart(meta, rows, title, denom, marginLeft) {
 
 ```js
 function changeChart(meta, rows, title, denom, marginLeft) {
-  const data = rows.filter((r) => r.share != null);
+  const data = displayRows(rows).filter((r) => r.share != null);
   const changed = data.filter((r) => r.p_adj != null && r.p_adj < 0.05);
   const same = data.filter((r) => !(r.p_adj != null && r.p_adj < 0.05));
   const lim =
@@ -168,34 +202,34 @@ function changeChart(meta, rows, title, denom, marginLeft) {
         domain: [-lim, lim],
         tickFormat: "%",
       },
-      y: {label: null, domain: data.map((r) => r.label)},
+      y: {label: null, domain: data.map((r) => r.display)},
       marks: [
         Plot.ruleX([0], {strokeDasharray: "4 3", stroke: "var(--atlas-muted)"}),
         Plot.ruleX(same, {
           x1: "lo",
           x2: "hi",
-          y: "label",
+          y: "display",
           stroke: "var(--atlas-muted)",
         }),
         Plot.ruleX(changed, {
           x1: "lo",
           x2: "hi",
-          y: "label",
+          y: "display",
           stroke: "var(--cat-1)",
           strokeWidth: 2,
         }),
-        Plot.dot(same, {x: "share", y: "label", fill: "var(--atlas-muted)", r: 4}),
-        Plot.dot(changed, {x: "share", y: "label", fill: "var(--cat-1)", r: 5}),
+        Plot.dot(same, {x: "share", y: "display", fill: "var(--atlas-muted)", r: 4}),
+        Plot.dot(changed, {x: "share", y: "display", fill: "var(--cat-1)", r: 5}),
         Plot.text(changed, {
           x: () => lim,
-          y: "label",
+          y: "display",
           text: (r) => signedPct(r.share),
           textAnchor: "end",
           fill: "var(--cat-1)",
         }),
         Plot.text(same, {
           x: () => lim,
-          y: "label",
+          y: "display",
           text: () => "no clear change",
           textAnchor: "end",
           opacity: 0.8,
@@ -302,11 +336,8 @@ function whereTheProblemsAre(meta, cardShare, evidenceRows) {
   const byShare = (a, b) => (b.share ?? -1) - (a.share ?? -1);
   const groupAll = shareRows(cardShare, "group", "all").sort(byShare);
   const cardAll = shareRows(cardShare, "card", "all").sort(byShare).slice(0, 20);
-  const topIds = new Set(cardAll.map((r) => r.id));
   const groupDiff = shareRows(cardShare, "group", "H2_minus_H1").sort(byShare);
-  const cardDiff = shareRows(cardShare, "card", "H2_minus_H1")
-    .filter((r) => topIds.has(r.id))
-    .sort(byShare);
+  const cardDiff = selectChanged(shareRows(cardShare, "card", "H2_minus_H1"));
   const parts = [
     html`<h2 style="display:flex;gap:0.5rem;align-items:center">
       Where the problems are ${badge("estimated")}</h2>`,
@@ -330,7 +361,7 @@ function whereTheProblemsAre(meta, cardShare, evidenceRows) {
   ));
   parts.push(changeChart(
     meta, cardDiff,
-    "What changed between halves: top need cards",
+    "What changed between halves: need cards",
     denom, 220
   ));
   return parts;

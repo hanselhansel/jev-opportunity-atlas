@@ -15,20 +15,73 @@ import json
 import textwrap
 from pathlib import Path
 
-W, H, DPI = 1600, 900, 100
-MARGIN = 48
+from atlas.sitedata.xcharts_kinds import _bars, _change, _cost, _heat
+from atlas.sitedata.xcharts_layout import (
+    ACCENT,
+    DPI,
+    INK,
+    LIGHT,
+    MARGIN,
+    MUTED,
+    TICK_PX,
+    TITLE_PX,
+    H,
+    W,
+    _empty,
+    _fit_tick_font,
+    _fit_title,
+    _fmt,
+    _labels_clear,
+    _pt,
+    _row_axis,
+    _rule,
+    _style,
+    _tick_boxes,
+    _two_lines,
+)
+
+__all__ = [
+    "ACCENT",
+    "CAVEATS",
+    "DPI",
+    "FOOTER_FIELDS",
+    "FOOTER_PX",
+    "INK",
+    "KINDS",
+    "LIGHT",
+    "MARGIN",
+    "MUTED",
+    "SYNTHETIC",
+    "TICK_PX",
+    "TITLE_PX",
+    "H",
+    "W",
+    "_bars",
+    "_change",
+    "_cost",
+    "_empty",
+    "_fit_tick_font",
+    "_fit_title",
+    "_fmt",
+    "_heat",
+    "_labels_clear",
+    "_pt",
+    "_row_axis",
+    "_rule",
+    "_style",
+    "_tick_boxes",
+    "_two_lines",
+    "footer_text",
+    "render_site_charts",
+    "render_x_chart",
+    "site_chart_specs",
+]
+
 FOOTER_PX = 32
-TITLE_PX = 46
-TICK_PX = 22
 KINDS = ("bars", "heat", "change", "cost", "quality")
 FOOTER_FIELDS = ("source", "window", "n", "denominator", "lane", "run_id")
 CAVEATS = ("as classified by Jev", "HN comments only; not market demand")
 SYNTHETIC = "synthetic cases"
-INK, MUTED, ACCENT, LIGHT = "#1f2328", "#57606a", "#2f6fb0", "#9cc3e6"
-
-
-def _pt(px: float) -> float:
-    return px * 72 / DPI
 
 
 def _check(spec: dict) -> None:
@@ -84,177 +137,6 @@ def _normalize(spec: dict) -> dict:
     return spec
 
 
-def _style(ax) -> None:
-    for side in ("top", "right"):
-        ax.spines[side].set_visible(False)
-    ax.tick_params(labelsize=_pt(TICK_PX), colors=INK)
-
-
-def _fmt(value, fmt: str) -> str:
-    if value is None:
-        return "n/a"
-    if fmt == "pct":
-        return f"{value * 100:.0f}%"
-    if fmt == "int":
-        return f"{round(value):,}"
-    return f"{value:.2f}"
-
-
-def _empty(ax) -> None:
-    ax.axis("off")
-    ax.text(
-        0.5,
-        0.5,
-        "No data in this run.",
-        ha="center",
-        va="center",
-        fontsize=_pt(30),
-        color=MUTED,
-        transform=ax.transAxes,
-    )
-
-
-def _bars(ax, data: dict, fmt: str = "int") -> None:
-    rows = list(data.get("rows", []))[::-1]
-    if not rows:
-        return _empty(ax)
-    y = range(len(rows))
-    vals = [r["value"] or 0 for r in rows]
-    colors = [LIGHT if r.get("synthetic") else ACCENT for r in rows]
-    hatches = ["//" if r.get("synthetic") else "" for r in rows]
-    bars = ax.barh(list(y), vals, color=colors, height=0.6)
-    for bar, hatch in zip(bars, hatches, strict=True):
-        bar.set_hatch(hatch)
-    ends = []
-    for i, r in enumerate(rows):
-        lo, hi = r.get("ci_low"), r.get("ci_high")
-        end = vals[i]
-        if lo is not None and hi is not None:
-            ax.errorbar(
-                vals[i],
-                i,
-                xerr=[[max(vals[i] - lo, 0)], [max(hi - vals[i], 0)]],
-                fmt="none",
-                ecolor=INK,
-                elinewidth=2.5,
-                capsize=8,
-            )
-            end = max(end, hi)
-        ends.append(end)
-    top = max(ends) or 1
-    for i, end in enumerate(ends):
-        ax.text(
-            end + top * 0.015,
-            i,
-            _fmt(vals[i], fmt),
-            va="center",
-            fontsize=_pt(TICK_PX),
-            color=INK,
-        )
-    ax.set_xlim(0, top * 1.15)
-    ax.set_yticks(list(y), [textwrap.fill(r["label"], 34) for r in rows])
-    ax.set_xlabel(data.get("xlabel", ""), fontsize=_pt(TICK_PX), color=MUTED)
-    if fmt == "pct":
-        ax.xaxis.set_major_formatter(lambda v, _: f"{v * 100:.0f}%")
-    _style(ax)
-
-
-def _heat(ax, data: dict) -> None:
-    vals = data.get("values") or []
-    if not vals or not vals[0]:
-        return _empty(ax)
-    top = max(max(r) for r in vals) or 1
-    ax.imshow(vals, cmap="Blues", aspect="auto", vmin=0, vmax=top)
-    for i, row in enumerate(vals):
-        for j, v in enumerate(row):
-            ax.text(
-                j,
-                i,
-                f"{v:,}",
-                ha="center",
-                va="center",
-                fontsize=_pt(TICK_PX),
-                color="white" if v > 0.6 * top else INK,
-            )
-    ax.set_xticks(
-        range(len(data["cols"])),
-        [textwrap.fill(c.replace("_", " "), 14) for c in data["cols"]],
-    )
-    ax.set_yticks(
-        range(len(data["rows"])), [textwrap.fill(r, 40) for r in data["rows"]]
-    )
-    ax.xaxis.tick_top()
-    ax.tick_params(length=0, labelsize=_pt(TICK_PX - 2), colors=INK)
-    for side in ax.spines.values():
-        side.set_visible(False)
-
-
-def _change(ax, data: dict) -> None:
-    rows = list(data.get("rows", []))[::-1]
-    if not rows:
-        return _empty(ax)
-    extent = max(
-        1e-9,
-        *(
-            abs(v)
-            for r in rows
-            for v in (r.get("ci_low"), r.get("ci_high"), r.get("estimate"))
-            if v is not None
-        ),
-    )
-    right = extent * 1.12
-    for i, r in enumerate(rows):
-        sig = bool(r.get("significant"))
-        color = ACCENT if sig else MUTED
-        if r.get("ci_low") is not None and r.get("ci_high") is not None:
-            ax.hlines(i, r["ci_low"], r["ci_high"], color=color, lw=4 if sig else 3)
-        ax.plot(r["estimate"], i, "o", ms=14, color=INK if sig else MUTED)
-        ax.text(
-            right,
-            i,
-            f"{r['estimate']:+.1f}" if sig else "no clear change",
-            ha="right",
-            va="center",
-            fontsize=_pt(TICK_PX - 2),
-            color=ACCENT if sig else MUTED,
-        )
-    ax.axvline(0, color=MUTED, ls="--", lw=1.5)
-    ax.set_xlim(-extent * 1.08, right + extent * 0.05)
-    ax.set_yticks(range(len(rows)), [textwrap.fill(r["label"], 34) for r in rows])
-    ax.set_ylim(-0.6, len(rows) - 0.4)
-    ax.set_xlabel(data.get("xlabel", ""), fontsize=_pt(TICK_PX), color=MUTED)
-    _style(ax)
-
-
-def _cost(fig, box, data: dict) -> None:
-    left, bottom, width, height = box
-    wall = data.get("wall_s") or 0.0
-    wall_txt = f"{wall / 3600:.1f} h" if wall >= 3600 else f"{wall / 60:.0f} min"
-    p50 = data.get("p50_ms")
-    tiles = [
-        (f"${data.get('calculated_usd') or 0:,.2f}", "calculated USD"),
-        (f"{int(data.get('calls') or 0):,}", "Jev calls"),
-        ("n/a" if p50 is None else f"{p50:,.0f} ms", "p50 latency"),
-        (wall_txt, "wall time"),
-    ]
-    for i, (value, label) in enumerate(tiles):
-        x = left + width * (i + 0.5) / len(tiles)
-        y = bottom + height * 0.55
-        fig.text(
-            x,
-            y,
-            value,
-            ha="center",
-            va="bottom",
-            fontsize=_pt(76),
-            weight="bold",
-            color=INK,
-        )
-        fig.text(
-            x, y - 0.02, label, ha="center", va="top", fontsize=_pt(30), color=MUTED
-        )
-
-
 def render_x_chart(spec: dict, out_png) -> dict:
     """Draw one chart to ``out_png`` (1600x900) and return what was drawn."""
     from matplotlib.backends.backend_agg import FigureCanvasAgg
@@ -266,11 +148,12 @@ def render_x_chart(spec: dict, out_png) -> dict:
     fig = Figure(figsize=(W / DPI, H / DPI), dpi=DPI, facecolor="white")
     canvas = FigureCanvasAgg(fig)
     renderer = canvas.get_renderer()
+    title_txt, title_pt = _fit_title(fig, renderer, spec["title"])
     title = fig.text(
         MARGIN / W,
         1 - MARGIN / H,
-        textwrap.fill(spec["title"], 58),
-        fontsize=_pt(TITLE_PX),
+        title_txt,
+        fontsize=title_pt,
         weight="bold",
         va="top",
         color=INK,
@@ -299,22 +182,33 @@ def render_x_chart(spec: dict, out_png) -> dict:
     bottom, top = (box.y1 + below) / H, (tb.y0 - above) / H
     left = 0.05 if spec["kind"] == "cost" else 0.30
     area = (left, bottom, 0.95 - left, top - bottom)
+    ax = None
     if spec["kind"] == "cost":
         _cost(fig, (0.05, bottom, 0.9, top - bottom), spec["data"])
     else:
         ax = fig.add_axes(area)
         if spec["kind"] == "heat":
-            _heat(ax, spec["data"])
+            _heat(ax, renderer, spec["data"])
         elif spec["kind"] == "change":
-            _change(ax, spec["data"])
+            _change(ax, renderer, spec["data"])
         else:
             _bars(
                 ax,
+                renderer,
                 spec["data"],
                 "pct"
                 if spec["kind"] == "quality"
                 else spec["data"].get("format", "int"),
             )
+    row_boxes = (
+        [
+            [round(v, 1) for v in t.get_window_extent(renderer).extents]
+            for t in ax.get_yticklabels()
+            if t.get_text().strip()
+        ]
+        if ax is not None
+        else []
+    )
     out_png = Path(out_png)
     out_png.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_png, dpi=DPI, facecolor="white")
@@ -322,12 +216,16 @@ def render_x_chart(spec: dict, out_png) -> dict:
         **spec,
         "footer": footer,
         "footer_px": FOOTER_PX,
+        "title_px": round(title_pt * DPI / 72, 1),
+        "title_lines": title_txt.count("\n") + 1,
+        "title_bbox": [round(v, 1) for v in tb.extents],
         "footer_bbox": [
             round(box.x0, 1),
             round(box.y0, 1),
             round(box.x1, 1),
             round(box.y1, 1),
         ],
+        "row_label_boxes": row_boxes,
         "width": W,
         "height": H,
     }
@@ -336,18 +234,6 @@ def render_x_chart(spec: dict, out_png) -> dict:
         encoding="utf-8",
     )
     return record
-
-
-def _rule(fig, y: float):
-    from matplotlib.lines import Line2D
-
-    return Line2D(
-        [MARGIN / W, 1 - MARGIN / W],
-        [y, y],
-        color=MUTED,
-        lw=1,
-        transform=fig.transFigure,
-    )
 
 
 def render_site_charts(site_dir, out_dir) -> list[Path]:

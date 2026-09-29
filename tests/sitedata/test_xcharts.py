@@ -249,7 +249,6 @@ def test_share_and_change_specs_come_from_card_share(tmp_path, monkeypatch):
     top = specs["card_share_top"]["data"]["rows"]
     assert len(top) <= 12
     diff = specs["card_change"]["data"]["rows"]
-    assert {r["label"] for r in diff} == {r["label"] for r in top}
     for r in diff:
         x = card[("card", r["id"], "H2_minus_H1")]
         assert r["estimate"] == x["share"] * 100
@@ -280,6 +279,166 @@ def test_wording_range_spec_from_fixture_tables(tmp_path):
             *CAVEATS,
         ):
             assert part in rec["footer"], (name, part)
+
+
+def _change_dir(tmp_path, diffs):
+    """Minimal site dir: meta + a card_share table with crafted diffs."""
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    d = tmp_path / "site"
+    d.mkdir(parents=True)
+    pq.write_table(
+        pa.table({"key": ["source"], "value": ["synthetic"]}),
+        d / "meta.parquet",
+    )
+    rows = []
+    for cid, share, p_adj in diffs:
+        for bucket in ("all", "H1", "H2"):
+            rows.append(
+                {
+                    "level": "card",
+                    "id": cid,
+                    "label": f"Card {cid}",
+                    "short_label": f"Card {cid}",
+                    "population": "screen_positive",
+                    "bucket": bucket,
+                    "share": 0.05,
+                    "lo": 0.04,
+                    "hi": 0.06,
+                    "n_items": 3,
+                    "n_authors": 2,
+                    "p_adj": None,
+                    "qualifier": "q",
+                }
+            )
+        rows.append(
+            {
+                "level": "card",
+                "id": cid,
+                "label": f"Card {cid}",
+                "short_label": f"Card {cid}",
+                "population": "screen_positive",
+                "bucket": "H2_minus_H1",
+                "share": share,
+                "lo": share - 0.02,
+                "hi": share + 0.02,
+                "n_items": 3,
+                "n_authors": 2,
+                "p_adj": p_adj,
+                "qualifier": "q",
+            }
+        )
+    pq.write_table(pa.Table.from_pylist(rows), d / "card_share.parquet")
+    return d
+
+
+def test_card_change_selects_significant_movers(tmp_path):
+    from atlas.sitedata.xspecs import site_chart_specs
+
+    diffs = [
+        ("c01", 0.050, 0.01),
+        ("c02", 0.030, 0.02),
+        ("c03", -0.020, 0.03),
+        ("c04", -0.040, 0.04),
+        # Bigger moves that did not clear p < 0.05 stay off the chart.
+        ("c05", -0.200, 0.90),
+        ("c06", 0.150, 0.80),
+    ]
+    spec_c = {s["name"]: s for s in site_chart_specs(_change_dir(tmp_path, diffs))}[
+        "card_change"
+    ]
+    rows = spec_c["data"]["rows"]
+    assert [r["id"] for r in rows] == ["c01", "c02", "c03", "c04"]
+    assert all(r["significant"] for r in rows)
+
+
+def test_card_change_fills_with_largest_moves(tmp_path):
+    from atlas.sitedata.xspecs import site_chart_specs
+
+    diffs = [
+        ("c01", 0.050, 0.01),
+        ("c02", -0.040, 0.03),
+        ("c03", -0.200, 0.90),
+        ("c04", 0.150, 0.80),
+        ("c05", 0.010, 0.70),
+    ]
+    rows = {
+        s["name"]: s for s in site_chart_specs(_change_dir(tmp_path, diffs))
+    }["card_change"]["data"]["rows"]
+    assert [r["id"] for r in rows] == ["c04", "c01", "c02", "c03"]
+    assert [r["significant"] for r in rows] == [False, True, True, False]
+
+
+def test_card_change_caps_eight_risers_and_fallers(tmp_path):
+    from atlas.sitedata.xspecs import site_chart_specs
+
+    diffs = [
+        *[(f"r{i:02d}", 0.20 - i * 0.01, 0.01) for i in range(10)],
+        *[(f"f{i:02d}", -0.20 + i * 0.01, 0.01) for i in range(10)],
+    ]
+    rows = {
+        s["name"]: s for s in site_chart_specs(_change_dir(tmp_path, diffs))
+    }["card_change"]["data"]["rows"]
+    risers = [r for r in rows if r["estimate"] > 0]
+    fallers = [r for r in rows if r["estimate"] < 0]
+    assert len(risers) == 8 and len(fallers) == 8
+    assert {r["id"] for r in risers} == {f"r{i:02d}" for i in range(8)}
+    assert {r["id"] for r in fallers} == {f"f{i:02d}" for i in range(8)}
+
+
+def test_bar_value_labels_use_one_decimal_under_ten():
+    from atlas.sitedata.xcharts import _fmt
+
+    assert _fmt(0.042, "pct") == "4.2%"
+    assert _fmt(0.095, "pct") == "9.5%"
+    assert _fmt(0.116, "pct") == "12%"
+    assert _fmt(0.5, "pct") == "50%"
+    assert _fmt(0.0, "pct") == "0.0%"
+
+
+def test_adjacent_row_labels_never_intersect(tmp_path):
+    from itertools import pairwise
+
+    from atlas.sitedata.xcharts import render_x_chart
+
+    bars = {
+        **spec("bars"),
+        "data": {
+            "rows": [
+                {
+                    "label": f"A fairly long synthetic need statement {i} "
+                    "that wraps onto a second line",
+                    "value": 30 - i,
+                }
+                for i in range(6)
+            ],
+            "xlabel": "distinct authors",
+        },
+    }
+    change = {
+        **spec("change"),
+        "data": {
+            "rows": [
+                {
+                    "label": f"Another long synthetic need statement {i} "
+                    "spanning several wrapped label lines",
+                    "estimate": float(4 - i),
+                    "ci_low": float(4 - i) - 1,
+                    "ci_high": float(4 - i) + 1,
+                    "significant": i % 2 == 0,
+                }
+                for i in range(6)
+            ],
+            "xlabel": "change",
+        },
+    }
+    for name, s in (("bars", bars), ("change", change)):
+        rec = render_x_chart(s, tmp_path / f"{name}.png")
+        boxes = sorted(rec["row_label_boxes"], key=lambda b: b[1])
+        assert len(boxes) == 6, (name, boxes)
+        for a, b in pairwise(boxes):
+            assert a[3] <= b[1] + 1.5, (name, a, b)
 
 
 def test_x_charts_cli_writes_pngs(tmp_path, monkeypatch, capsys):
