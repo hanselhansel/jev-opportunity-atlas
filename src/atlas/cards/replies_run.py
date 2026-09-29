@@ -21,7 +21,7 @@ import pyarrow.parquet as pq
 from atlas import contracts
 from atlas.cards import replies
 from atlas.inference.questions import canonical_json
-from atlas.inference.runner import run_batch
+from atlas.inference.runner import raise_for_stopped, run_batch
 
 MODEL = "jev-1.13.0"
 MIN_CARD_P = 0.5
@@ -89,9 +89,21 @@ async def run(ctx, items) -> dict:
         out["replies"] = await run_batch(
             ctx, reply_items, replies.reply_question_set()
         )
+        raise_for_stopped(
+            ctx, out["replies"], len(reply_items) + len(follow_items)
+        )
     if follow_items:
         out["followups"] = await run_batch(
             ctx, follow_items, replies.followup_question_set()
+        )
+        prior = 0
+        if out["replies"]:
+            prior = (
+                out["replies"]["completed"]
+                + out["replies"]["skipped_completed"]
+            )
+        raise_for_stopped(
+            ctx, out["followups"], len(follow_items), prior=prior
         )
     return out
 

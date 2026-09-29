@@ -38,7 +38,7 @@ from atlas.inference import keys
 from atlas.inference.budget import BudgetGuard
 from atlas.inference.client import JevClient
 from atlas.inference.questions import canonical_json
-from atlas.inference.runner import RunContext
+from atlas.inference.runner import BudgetStopped, RunContext
 
 MODEL = "jev-1.13.0"
 
@@ -140,6 +140,14 @@ def _print_estimate(command, tokens, budget, cap, usd_per_token) -> None:
     )
 
 
+def _run_or_exit(coro):
+    """Run an engine coroutine; a budget stop prints its line and exits."""
+    try:
+        return asyncio.run(coro)
+    except BudgetStopped as exc:
+        exc.fail()
+
+
 def _run_ctx(args, price_row, cap, worst, usd_per_token) -> RunContext:
     guard = BudgetGuard.for_budget(args.budget, cap, usd_per_token, worst)
     try:
@@ -174,7 +182,7 @@ def _cmd_assign(args) -> None:
         return
     ctx = _run_ctx(args, price_row, cap, worst, usd_per_token)
     try:
-        result = asyncio.run(assign(ctx, rows, cs))
+        result = _run_or_exit(assign(ctx, rows, cs))
         run_dir = paths.run_dir(args.run)
         pain = [
             {"comment_id": r["comment_id"], "pain_sentence": r["pain_sentence"]}
@@ -201,9 +209,14 @@ def _cmd_merge(args) -> None:
         return
     ctx = _run_ctx(args, price_row, cap, worst, usd_per_token)
     try:
-        scored = asyncio.run(score_merges(ctx, pairs, cs))
+        scored = _run_or_exit(score_merges(ctx, pairs, cs))
     finally:
         ctx.guard.close()
+    if len(scored) != len(pairs):
+        raise SystemExit(
+            f"scored {len(scored)} of {len(pairs)} merge pairs; "
+            f"refusing to write merge-{cs.version}.json"
+        )
     proposals = propose_merges(scored)
     out = {"scored": scored, "proposals": proposals}
     (run_dir / f"merge-{cs.version}.json").write_text(
@@ -232,7 +245,7 @@ def _cmd_verify(args) -> None:
         return
     ctx = _run_ctx(args, price_row, cap, worst, usd_per_token)
     try:
-        rows = asyncio.run(verify(ctx, result, pain, cs))
+        rows = _run_or_exit(verify(ctx, result, pain, cs))
     finally:
         ctx.guard.close()
     write_assignments(run_dir, AssignResult(rows=rows, meta=result.meta), cs.version)

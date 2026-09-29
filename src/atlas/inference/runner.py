@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import asyncio
 import itertools
+import json
 import math
+import sys
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -332,3 +334,53 @@ async def _process(ctx, item, qs, ledger, cache, sem, out, rows, done_ids) -> No
             out["completed"] += 1
         else:
             out["failed"] += 1
+
+
+class BudgetStopped(RuntimeError):
+    """A `run_batch` call returned `stopped`; results below it are partial.
+
+    Engine functions raise this so the command fails loudly instead of
+    printing or writing a result that reads as complete."""
+
+    def __init__(self, budget, completed, remaining, stopped="budget"):
+        self.budget = budget
+        self.completed = completed
+        self.remaining = remaining
+        self.stopped = stopped
+        super().__init__(
+            f"stopped={stopped!r} budget={budget!r}: "
+            f"{completed} completed, {remaining} remaining"
+        )
+
+    def fail(self) -> None:
+        """Print the stop line on stderr and exit non-zero."""
+        print(
+            json.dumps(
+                {
+                    "stopped": self.stopped,
+                    "budget": self.budget,
+                    "completed": self.completed,
+                    "remaining": self.remaining,
+                }
+            ),
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
+
+def raise_for_stopped(ctx, out: dict, owed: int, prior: int = 0) -> None:
+    """Raise BudgetStopped when a `run_batch` result stopped early.
+
+    `owed` counts the batch just run plus later batches the command still
+    owes; `prior` adds items completed in earlier batches to the total.
+    """
+    stopped = out.get("stopped")
+    if not stopped:
+        return
+    done = out["completed"] + out["skipped_completed"]
+    raise BudgetStopped(
+        ctx.budget,
+        prior + done,
+        max(0, owed - done - out["failed"]),
+        stopped,
+    )

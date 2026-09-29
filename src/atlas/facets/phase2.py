@@ -282,7 +282,7 @@ def run_phase2(
     from atlas.inference.budget import BudgetGuard
     from atlas.inference.client import JevClient
     from atlas.inference.questions import load_question_set
-    from atlas.inference.runner import RunContext
+    from atlas.inference.runner import BudgetStopped, RunContext
     from atlas.pilot import stages
 
     if rpm is not None and not 0 < rpm <= RPM_CAP:
@@ -335,6 +335,11 @@ def run_phase2(
         )
     finally:
         guard.close()
+    if stopped:
+        done = totals["completed"] + totals["skipped_completed"]
+        BudgetStopped(
+            budget, done, max(0, len(ids) - done - totals["failed"]), stopped
+        ).fail()
     return {
         "estimate": est,
         "dispatched": True,

@@ -25,7 +25,7 @@ from atlas import paths
 from atlas.inference import keys, runner_io
 from atlas.inference.budget import BudgetGuard
 from atlas.inference.client import JevClient
-from atlas.inference.runner import RunContext, run_batch
+from atlas.inference.runner import BudgetStopped, RunContext, run_batch
 from atlas.pilot import packed, stages
 
 RPM_CAP = 1200  # TypeSafe documented requests-per-minute ceiling
@@ -274,6 +274,14 @@ def screen_sample(
         )
     finally:
         guard.close()
+    if stopped:
+        done = totals["completed"] + totals["skipped_completed"]
+        BudgetStopped(
+            budget,
+            done,
+            max(0, total_calls - done - totals["failed"]),
+            stopped,
+        ).fail()
     return {
         "estimate": est,
         "dispatched": True,

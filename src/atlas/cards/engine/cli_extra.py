@@ -7,7 +7,6 @@ monkeypatch points (`cli._transport`, `cli.RunContext`) keep working.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import shutil
 
@@ -110,7 +109,7 @@ def _cmd_planted(args) -> None:
         return
     ctx = cli._run_ctx(args, price_row, cap, worst, usd_per_token)
     try:
-        result = asyncio.run(assign(ctx, items, cs))
+        result = cli._run_or_exit(assign(ctx, items, cs))
     finally:
         ctx.guard.close()
     print(json.dumps(planted_score(result.rows, planted), indent=1))
@@ -165,7 +164,7 @@ def _cmd_induce(args) -> None:
         return
     ctx = cli._run_ctx(args, price_row, cap, worst, usd_per_token)
     try:
-        result = asyncio.run(
+        result = cli._run_or_exit(
             induce(ctx, base_result, items_by_cid, new_cs, args.scope)
         )
         run_dir = paths.run_dir(args.run)
@@ -208,7 +207,7 @@ def _cmd_replies(args) -> None:
     ctx = cli._run_ctx(args, price_row, cap, worst, usd_per_token)
     ctx.run_dir = run_dir / "replies"
     try:
-        asyncio.run(replies_run.run(ctx, items))
+        cli._run_or_exit(replies_run.run(ctx, items))
     finally:
         ctx.guard.close()
     answers = replies_run.answers_table(ctx.run_dir)

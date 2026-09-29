@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 
 
@@ -215,7 +214,7 @@ def _assign_paraphrase(args) -> None:
             budget=args.budget,
             rpm=args.rpm,
         )
-        result = asyncio.run(
+        result = cards_cli._run_or_exit(
             assign(
                 ctx,
                 rows,
