@@ -57,6 +57,10 @@ the same plan.
 | `site data`, `x charts` | L20 |
 | `release pack`, `release restore`, `release rehydrate`, `release replay`, `release pages` | L21 |
 | `robust subsample-screen`, `robust subsample-items`, `robust assign-paraphrase`, `robust compare-screen`, `robust compare-assign` | L25 |
+| `sample draw-pooled` | L22 |
+| `facets draw`, `facets estimate`, `facets run` | L22 |
+| `pilot packed-cal` | L22 |
+| `jev measure` | L22 |
 | `timeline mark` | existing |
 
 Common flags: `--snapshot` (default: `snapshot_id` in `configs/acquisition.toml`),
