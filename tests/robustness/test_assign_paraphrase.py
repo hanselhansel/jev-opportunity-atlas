@@ -2,6 +2,7 @@
 instructions under budget `robustness`, printing an estimate first."""
 
 import json
+import tomllib
 from pathlib import Path
 
 import pyarrow as pa
@@ -92,7 +93,8 @@ def test_assign_paraphrase_dry_run(tmp_path, monkeypatch, capsys):
     out = json.loads(capsys.readouterr().out)
     assert out["command"] == "assign-para1"
     assert out["estimated_calls"] == 4  # level 1 + level-2 upper bound
-    assert out["budget"] == "robustness" and out["cap_usd"] == 1.30
+    budgets = tomllib.loads((paths.CONFIGS / "budgets.toml").read_text())
+    assert out["budget"] == "robustness" and out["cap_usd"] == budgets["robustness"]
     assert not (tmp_path / "runs").exists()
 
 

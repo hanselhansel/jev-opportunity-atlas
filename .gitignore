@@ -33,3 +33,6 @@ site/data-real/
 node_modules/
 
 .DS_Store
+
+# story essay real data (aggregates built locally)
+/essay/data/

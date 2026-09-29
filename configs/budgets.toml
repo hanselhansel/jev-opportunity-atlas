@@ -11,10 +11,13 @@ screen = 8.00   # approved 2026-09-29: packed screen, ~760k comments
 facets = 6.50   # Hansel 2026-09-29: deepen cards, facet ~50k more screen positives (+$4.00)
 assign = 6.50   # Hansel 2026-09-29: deepen cards (+$3.20) plus the dropped autoresearch $0.80
 merge_verify = 0.80   # Hansel 2026-09-29: +$0.20 from discovery for the all-pairs duplicate-card check
-replies = 0.30
-robustness = 1.30
+replies = 0.65   # Hansel 2026-09-30: story, replies on the top 40 cards
+robustness = 0.95   # Hansel 2026-09-30: lowered to what was used (0.91)
 autoresearch = 0.00   # Hansel 2026-09-29: dropped (needed 200 'worth interviewing' labels)
-discovery = 0.80   # includes the one-finding spike; $0.20 moved to merge_verify (Hansel 2026-09-29)
-# Unallocated reserve: 25.00 - 24.71 = 0.29 (retries, unknown charges, reruns).
+discovery = 0.00   # Hansel 2026-09-30: discovery lane not run; moved to the story budgets
+# Unallocated reserve: 25.00 - 24.91 = 0.09 (retries, unknown charges, reruns).
+
+solutions = 0.30   # Hansel 2026-09-30: story, named-fix confirmation
+builders = 0.70   # Hansel 2026-09-30: story, Show HN launch assignment
 
 worst_case_tokens_per_unknown_attempt = 8000
