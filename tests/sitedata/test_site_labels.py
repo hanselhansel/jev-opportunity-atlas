@@ -33,7 +33,8 @@ def test_finding_card_heading_is_the_short_label():
 def test_finding_card_shows_the_full_statement_once():
     body = _finding_card()
     assert body.count("f.problem_statement") == 1
-    assert "f.title" not in re.search(r"<h3[^>]*>(.*?)</h3>", body, re.DOTALL).group(1)
+    h3 = re.search(r"<h3[^>]*>(.*?)</h3>", body, re.DOTALL).group(1)
+    assert "f.problem_statement" not in h3
 
 
 def test_share_tables_have_a_short_label_column():
@@ -51,7 +52,7 @@ def test_evidence_loads_a_card_label_map():
 
 def test_evidence_subtopic_cell_maps_to_label_and_titles_the_id():
     src = (SITE_SRC / "evidence.md").read_text()
-    col = re.search(r'\{key: "subtopic"[^}]*\}', src)
+    col = re.search(r'\{\s*key: "subtopic"[^}]*\}', src)
     assert col, "subtopic column not found"
     assert "title:" in col.group(0) and "format:" in col.group(0)
 
