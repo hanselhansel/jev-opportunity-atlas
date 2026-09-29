@@ -15,6 +15,8 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from atlas import paths
+from atlas.cards import items as items_mod
+from atlas.cards import replies_run
 from atlas.cards.engine.assign import (
     AssignResult,
     assign,
@@ -64,6 +66,8 @@ def register(sub) -> None:
         p.add_argument("--version", required=True)
         p.add_argument("--run", required=True)
         p.add_argument("--budget", default=budget)
+        p.add_argument("--rpm", type=float, default=1000)
+        p.add_argument("--concurrency", type=int, default=8)
         p.add_argument("--yes", action="store_true")
 
     ap = commands.add_parser("assign", help="assign comments to need cards")
@@ -73,6 +77,11 @@ def register(sub) -> None:
 
     mp = commands.add_parser("merge", help="score card-merge candidates")
     common(mp, "merge_verify")
+    mp.add_argument(
+        "--all-pairs",
+        action="store_true",
+        help="score every pair of active cards, not just evidenced pairs",
+    )
     mp.set_defaults(func=_cmd_merge)
 
     vp = commands.add_parser("verify", help="verify card membership")
@@ -84,12 +93,28 @@ def register(sub) -> None:
     pp.add_argument("--planted", default="v1")
     pp.set_defaults(func=_cmd_planted)
 
+    xp = commands.add_parser(
+        "replies", help="unsolved-replies check over an assign run"
+    )
+    xp.add_argument("--run", required=True, help="assign run id")
+    xp.add_argument("--version", required=True)
+    xp.add_argument("--snapshot", required=True)
+    xp.add_argument("--budget", default="replies")
+    xp.add_argument("--top-cards", type=int, default=None)
+    xp.add_argument("--max-replies", type=int, default=5)
+    xp.add_argument("--rpm", type=float, default=1000)
+    xp.add_argument("--concurrency", type=int, default=8)
+    xp.add_argument("--yes", action="store_true")
+    xp.set_defaults(func=_cmd_replies)
+
     rp = commands.add_parser("residue", help="sample unassigned comments")
     rp.add_argument("--run", required=True)
     rp.add_argument("--version", required=True)
     rp.add_argument("--k", type=int, default=200)
     rp.add_argument("--seed", type=int, default=1)
     rp.set_defaults(func=_cmd_residue)
+
+    items_mod.register(commands)
 
 
 def _load_configs():
@@ -165,6 +190,8 @@ def _run_ctx(args, price_row, cap, worst, usd_per_token) -> RunContext:
             price_version=price_row["version"],
             run_dir=paths.run_dir(args.run),
             budget=args.budget,
+            rpm=args.rpm,
+            concurrency=args.concurrency,
         )
     except BaseException:
         guard.close()
@@ -201,7 +228,7 @@ def _cmd_merge(args) -> None:
     cs = load_cardset(args.cardset, args.version)
     run_dir = paths.run_dir(args.run)
     result = load_assignments(run_dir, args.version)
-    pairs = merge_pairs(cs, result)
+    pairs = merge_pairs(cs, result, all_pairs=args.all_pairs)
     tokens = [_est_tokens(merge_item(cs.version, a, b, cs)) for a, b in pairs]
     _print_estimate("merge", tokens, args.budget, cap, usd_per_token)
     if not args.yes:
@@ -268,3 +295,39 @@ def _cmd_planted(args) -> None:
 def _cmd_residue(args) -> None:
     result = load_assignments(paths.run_dir(args.run), args.version)
     print(json.dumps(residue_sample(result.rows, args.k, args.seed), indent=1))
+
+
+def _cmd_replies(args) -> None:
+    budgets, price_row, usd_per_token = _load_configs()
+    cap, worst = _budget_cap(budgets, args.budget)
+    run_dir = paths.run_dir(args.run)
+    result = load_assignments(run_dir, args.version)
+    pain = {
+        r["comment_id"]: r["pain_sentence"]
+        for r in pq.read_table(run_dir / "pain.parquet").to_pylist()
+    }
+    problem_ids = replies_run.selected_problems(result.rows, args.top_cards)
+    items = replies_run.collect_items(
+        paths.snapshot_dir(args.snapshot),
+        problem_ids,
+        pain,
+        max_replies=args.max_replies,
+    )
+    tokens = [replies_run.item_tokens(it) for it in items]
+    _print_estimate("replies", tokens, args.budget, cap, usd_per_token)
+    if not args.yes:
+        return
+    ctx = _run_ctx(args, price_row, cap, worst, usd_per_token)
+    ctx.run_dir = run_dir / "replies"
+    try:
+        asyncio.run(replies_run.run(ctx, items))
+    finally:
+        ctx.guard.close()
+    answers = replies_run.answers_table(ctx.run_dir)
+    out = replies_run.write_outputs(ctx.run_dir, items, answers)
+    print(
+        json.dumps(
+            {**out, "problems": len(problem_ids), "items": len(items)},
+            indent=1,
+        )
+    )

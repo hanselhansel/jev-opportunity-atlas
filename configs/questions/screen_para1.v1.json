@@ -1,0 +1,30 @@
+{
+  "name": "screen_para1",
+  "version": 1,
+  "state_fields": [
+    "comment"
+  ],
+  "questions": {
+    "firsthand_problem": {
+      "type": "noul",
+      "instructions": "Does the writer of `comment` report a problem they ran into themselves?",
+      "criteria": {
+        "true": "The writer (I, we, my team, our company) personally hit something real: it failed, blocked them, cost them time or money, or frustrated them.",
+        "false": "Not the writer's own problem: someone else's issue, a hypothetical, a general view, or a product pitch."
+      }
+    },
+    "account_type": {
+      "type": "choice",
+      "instructions": "Which category best describes `comment`?",
+      "criteria": {
+        "firsthand_account": "the author's own experience",
+        "secondhand_report": "a report of someone else's experience",
+        "general_opinion": "a view with no personal account",
+        "product_pitch": "promotes the author's product",
+        "joke_or_sarcasm": "joking or sarcastic, not literal",
+        "question_or_request": "a request for help or advice",
+        "other": null
+      }
+    }
+  }
+}

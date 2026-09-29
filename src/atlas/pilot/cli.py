@@ -93,6 +93,16 @@ def _packed(args) -> None:
     )
 
 
+def _packed_cal(args) -> None:
+    from atlas.pilot.packed_cal import run_packed_cal
+
+    _paid(
+        run_packed_cal(
+            args.run, k=args.k, budget=args.budget, yes=args.yes
+        )
+    )
+
+
 def _injected(args) -> None:
     from atlas.pilot.injected import run_injected
 
@@ -164,6 +174,16 @@ def register(sub) -> None:
     pk.add_argument("--budget", default="pilot")
     pk.add_argument("--yes", action="store_true")
     pk.set_defaults(func=_packed)
+
+    pc = cmds.add_parser(
+        "packed-cal",
+        help="Packed screen for calibration ids missing from -packed (paid)",
+    )
+    pc.add_argument("--run", required=True)
+    pc.add_argument("--k", type=int, default=5)
+    pc.add_argument("--budget", default="pilot")
+    pc.add_argument("--yes", action="store_true")
+    pc.set_defaults(func=_packed_cal)
 
     ij = cmds.add_parser(
         "injected", help="Injected-instruction cases (paid)"
