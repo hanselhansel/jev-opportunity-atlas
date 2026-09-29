@@ -1,0 +1,189 @@
+# Main-run need cards, taxonomy t3 (t2 plus one induction round on the explore-half residue).
+# t3 adds n136-n150 after Claude read 600 weighted explore-half residue pain sentences
+# (in-group none or card_p < 0.5 under t2; seed 20261004). Base t2 notes follow.
+# Drafted by Claude (Opus 5.5, Claude Code main
+# session) after reading 1,500 pain sentences that Jev selected (facets@2 pain_sentence)
+# from explore-half screen positives with account_type firsthand_account, drawn with
+# probability proportional to survey weight (seed 20261001). Builds on pilot t1: most
+# t1 cards survive with sharper wording; the Hacker News site-mechanics theme is split
+# out of the old c29. Inputs are recorded by comment ID and text hash only in
+# taxonomy/t2/provenance.json. Jev never writes card text. Any edit bumps the version.
+taxonomy_version: t3
+groups:
+  g01: {label: "AI coding agents and developer AI tools"}
+  g02: {label: "AI chatbots, model quality, and AI services"}
+  g03: {label: "AI effects on work, writing, and the web"}
+  g04: {label: "Programming languages, developer tools, and code workflow"}
+  g05: {label: "Cloud, servers, networking, and operations"}
+  g06: {label: "Security, privacy, accounts, scams, and ads tracking"}
+  g07: {label: "Operating systems, devices, hardware, and cars"}
+  g08: {label: "Consumer apps, websites, subscriptions, and online shopping"}
+  g09: {label: "Online communities, moderation, and reaching an audience"}
+  g10: {label: "Jobs, hiring, management, and running a company"}
+  g11: {label: "Health, family, relationships, and personal habits"}
+  g12: {label: "Money, housing, travel, transport, and public services"}
+  g13: {label: "Learning, studying, and schools"}
+cards:
+  # g01 AI coding agents and developer AI tools
+  - {card_id: n001, group_id: g01, statement: "AI coding agents write buggy, over-engineered, or unreadable code that needs heavy review and rework", status: approved, author: claude}
+  - {card_id: n002, group_id: g01, statement: "AI coding agents lose track on long tasks, loop, or ignore project instructions and specs", status: approved, author: claude}
+  - {card_id: n003, group_id: g01, statement: "AI coding agents take destructive actions, like deleting work, without safe sandboxing or permissions", status: approved, author: claude}
+  - {card_id: n004, group_id: g01, statement: "AI coding tools cost too much, with large token bills and usage limits hit quickly", status: approved, author: claude}
+  - {card_id: n005, group_id: g01, statement: "AI coding assistants do poorly on large, legacy, or unusual codebases and languages", status: approved, author: claude}
+  - {card_id: n006, group_id: g01, statement: "Codebases written largely by AI are hard for people to understand, trust, or maintain", status: approved, author: claude}
+  - {card_id: n007, group_id: g01, statement: "Switching between AI coding tools or models loses context, memory, habits, and workflows", status: approved, author: claude}
+  - {card_id: n008, group_id: g01, statement: "Reviewing the volume of AI-generated pull requests and changes overwhelms human reviewers", status: approved, author: claude}
+  - {card_id: n136, group_id: g01, statement: "Open or local models run too slowly or need too much memory for coding agents", status: approved, author: claude}
+  - {card_id: n137, group_id: g01, statement: "AI coding tools and editor integrations are buggy, poorly integrated, or hard to configure", status: approved, author: claude}
+  # g02 AI chatbots, model quality, and AI services
+  - {card_id: n009, group_id: g02, statement: "AI chatbots state false facts, sources, or numbers that the user then has to catch", status: approved, author: claude}
+  - {card_id: n010, group_id: g02, statement: "AI chatbots flatter, pad answers, or write in a grating, formulaic style", status: approved, author: claude}
+  - {card_id: n011, group_id: g02, statement: "AI model quality changes or gets worse after release without notice", status: approved, author: claude}
+  - {card_id: n012, group_id: g02, statement: "AI services have outages, rate limits, and capacity errors that interrupt work", status: approved, author: claude}
+  - {card_id: n013, group_id: g02, statement: "AI models refuse or censor legitimate requests", status: approved, author: claude}
+  - {card_id: n014, group_id: g02, statement: "Running capable AI models locally is slow, costly, or fiddly to set up", status: approved, author: claude}
+  - {card_id: n015, group_id: g02, statement: "AI subscription plans, prices, credits, and usage terms change and restrict what users can do", status: approved, author: claude}
+  - {card_id: n016, group_id: g02, statement: "Measuring whether an AI model or agent works well on real tasks is hard", status: approved, author: claude}
+  - {card_id: n017, group_id: g02, statement: "AI features built into office, email, or calendar apps fail at basic tasks", status: approved, author: claude}
+  - {card_id: n018, group_id: g02, statement: "AI voice, transcription, and translation features misunderstand speech or non-English input", status: approved, author: claude}
+  - {card_id: n019, group_id: g02, statement: "AI chat apps lose conversations, context, or long chats through bugs and poor organization", status: approved, author: claude}
+  - {card_id: n138, group_id: g02, statement: "AI models are slow, overthink, second-guess, or give up before finishing a task", status: approved, author: claude}
+  # g03 Effects of AI on work, writing, and the web
+  - {card_id: n020, group_id: g03, statement: "AI-generated slop floods search results, feeds, code repositories, and articles", status: approved, author: claude}
+  - {card_id: n021, group_id: g03, statement: "AI scrapers and bot traffic overload websites and raise costs for site owners", status: approved, author: claude}
+  - {card_id: n022, group_id: g03, statement: "Employers push AI tools and raise expectations without real productivity gains", status: approved, author: claude}
+  - {card_id: n023, group_id: g03, statement: "AI lowers the value and pay of skilled creative or engineering work", status: approved, author: claude}
+  - {card_id: n024, group_id: g03, statement: "Relying on AI makes people lose skills, craft, or the enjoyment of their work", status: approved, author: claude}
+  - {card_id: n025, group_id: g03, statement: "People are wrongly accused of using AI to write their text or work", status: approved, author: claude}
+  - {card_id: n026, group_id: g03, statement: "People worry about their own or others' emotional dependence on AI chatbots", status: approved, author: claude}
+  # g04 Programming languages, developer tools, and code workflow
+  - {card_id: n027, group_id: g04, statement: "Dependency and framework churn breaks builds and forces constant maintenance", status: approved, author: claude}
+  - {card_id: n028, group_id: g04, statement: "Version control workflows like branching, rebasing, and large files are confusing and error-prone", status: approved, author: claude}
+  - {card_id: n029, group_id: g04, statement: "Languages and frameworks have steep learning curves, confusing type systems, or poor documentation", status: approved, author: claude}
+  - {card_id: n030, group_id: g04, statement: "Frontend, CSS, and user interface work is painful, especially for backend developers", status: approved, author: claude}
+  - {card_id: n031, group_id: g04, statement: "Builds, continuous integration, and test suites are slow, flaky, or costly", status: approved, author: claude}
+  - {card_id: n032, group_id: g04, statement: "Hosted developer platforms like code hosting go down, get slower, or get worse", status: approved, author: claude}
+  - {card_id: n033, group_id: g04, statement: "Editors, IDEs, and language servers are slow, clunky, or missing key features", status: approved, author: claude}
+  - {card_id: n034, group_id: g04, statement: "Developers rebuild the same small tools because nothing existing fits their exact need", status: approved, author: claude}
+  - {card_id: n035, group_id: g04, statement: "Code review nitpicks, specs, and process overhead slow down delivery", status: approved, author: claude}
+  - {card_id: n036, group_id: g04, statement: "Packaging, installing, and distributing software across platforms and environments is painful", status: approved, author: claude}
+  - {card_id: n037, group_id: g04, statement: "Maintaining open source or side projects is draining and gets little feedback or adoption", status: approved, author: claude}
+  - {card_id: n038, group_id: g04, statement: "Legacy code and poor architecture make simple changes slow, risky, and hard to trace", status: approved, author: claude}
+  - {card_id: n039, group_id: g04, statement: "Terminal, shell, and workspace setups are fragile and time-consuming to maintain", status: approved, author: claude}
+  - {card_id: n040, group_id: g04, statement: "Writing and maintaining documentation is hard and nobody reads it", status: approved, author: claude}
+  - {card_id: n041, group_id: g04, statement: "Processing large or messy data files crashes, runs out of memory, or takes too long", status: approved, author: claude}
+  - {card_id: n139, group_id: g04, statement: "Databases need constant tuning or break in surprising ways", status: approved, author: claude}
+  - {card_id: n140, group_id: g04, statement: "Browser engines and web platform gaps block features web developers need", status: approved, author: claude}
+  - {card_id: n141, group_id: g04, statement: "Estimating and scoping software work is hard and tasks grow unexpectedly", status: approved, author: claude}
+  # g05 Cloud, servers, networking, and operations
+  - {card_id: n042, group_id: g05, statement: "Cloud, SaaS, and monitoring bills rise sharply with scale or pricing changes", status: approved, author: claude}
+  - {card_id: n043, group_id: g05, statement: "Outages at cloud providers or third-party services halt dependent work", status: approved, author: claude}
+  - {card_id: n044, group_id: g05, statement: "Deployment, DNS, certificates, and configuration eat time on small projects", status: approved, author: claude}
+  - {card_id: n045, group_id: g05, statement: "Self-hosted and homelab setups break on updates or need constant care", status: approved, author: claude}
+  - {card_id: n046, group_id: g05, statement: "Filesystems, disks, and backups fail, fill up, or lose data", status: approved, author: claude}
+  - {card_id: n047, group_id: g05, statement: "Home networking, VPNs, and remote access tools are unreliable across devices and networks", status: approved, author: claude}
+  - {card_id: n048, group_id: g05, statement: "Production incidents are hard to debug because logs, alerts, and monitoring are noisy or missing", status: approved, author: claude}
+  - {card_id: n049, group_id: g05, statement: "Vendor support is slow or useless even for paying business customers", status: approved, author: claude}
+  - {card_id: n050, group_id: g05, statement: "Businesses depend on big platforms that can cut them off or change terms suddenly", status: approved, author: claude}
+  - {card_id: n051, group_id: g05, statement: "Scaling an app to heavy traffic is technically hard and costly", status: approved, author: claude}
+  - {card_id: n052, group_id: g05, statement: "Corporate IT locks down machines and slows requests so engineers cannot work", status: approved, author: claude}
+  - {card_id: n142, group_id: g05, statement: "Running a mail server and getting email delivered reliably is hard", status: approved, author: claude}
+  # g06 Security, privacy, accounts, scams, and ads tracking
+  - {card_id: n053, group_id: g06, statement: "Big platforms ban or lock accounts with no reason given and no human appeal", status: approved, author: claude}
+  - {card_id: n054, group_id: g06, statement: "Accounts get hacked, hijacked, or stolen", status: approved, author: claude}
+  - {card_id: n055, group_id: g06, statement: "Scams, phishing, and spam messages keep getting through", status: approved, author: claude}
+  - {card_id: n056, group_id: g06, statement: "Elderly or vulnerable relatives fall for scams on phones and social apps", status: approved, author: claude}
+  - {card_id: n057, group_id: g06, statement: "Companies collect, share, or sell personal data without meaningful consent or control", status: approved, author: claude}
+  - {card_id: n058, group_id: g06, statement: "Ads and tracking follow people across apps and devices despite blockers", status: approved, author: claude}
+  - {card_id: n059, group_id: g06, statement: "Age and identity verification demands burden or exclude legitimate users", status: approved, author: claude}
+  - {card_id: n060, group_id: g06, statement: "CAPTCHAs and bot checks block real users, especially privacy-minded ones", status: approved, author: claude}
+  - {card_id: n061, group_id: g06, statement: "Secrets or personal data leak into systems or code where they should never be", status: approved, author: claude}
+  - {card_id: n062, group_id: g06, statement: "Login, two-factor, and single sign-on flows are clumsy and break password managers", status: approved, author: claude}
+  - {card_id: n063, group_id: g06, statement: "Security vulnerabilities and compliance rules create risk and busywork for teams", status: approved, author: claude}
+  - {card_id: n143, group_id: g06, statement: "Services demand phone numbers or block privacy email aliases and VPNs", status: approved, author: claude}
+  # g07 Operating systems, devices, hardware, and cars
+  - {card_id: n064, group_id: g07, statement: "Operating system and app updates make devices slower or break features people rely on", status: approved, author: claude}
+  - {card_id: n065, group_id: g07, statement: "Operating systems push ads, upsells, storage nags, and bundled services", status: approved, author: claude}
+  - {card_id: n066, group_id: g07, statement: "Desktop Linux still has driver, display, gaming, and app compatibility gaps", status: approved, author: claude}
+  - {card_id: n067, group_id: g07, statement: "TVs, audio gear, monitors, and peripherals glitch or fail to work together", status: approved, author: claude}
+  - {card_id: n068, group_id: g07, statement: "Devices and parts fail early and warranty or repair is refused or impossible", status: approved, author: claude}
+  - {card_id: n069, group_id: g07, statement: "Phones and devices lose software support or lock owners out, becoming e-waste", status: approved, author: claude}
+  - {card_id: n070, group_id: g07, statement: "Smart home devices depend on vendor clouds or need fragile manual setup", status: approved, author: claude}
+  - {card_id: n071, group_id: g07, statement: "Cloud photo and file storage is hard to export, sync, or restore", status: approved, author: claude}
+  - {card_id: n072, group_id: g07, statement: "Car software, infotainment, and phone integration are buggy, distracting, or poorly designed", status: approved, author: claude}
+  - {card_id: n073, group_id: g07, statement: "Computer parts and devices have become much more expensive, especially memory and graphics cards", status: approved, author: claude}
+  - {card_id: n074, group_id: g07, statement: "Laptops and computers overheat, freeze, or run out of memory under normal use", status: approved, author: claude}
+  - {card_id: n075, group_id: g07, statement: "Keyboards, touchscreens, and autocorrect misread input and slow typing", status: approved, author: claude}
+  - {card_id: n076, group_id: g07, statement: "Electronics hobbyists struggle to find parts, documentation, or reliable tools for their projects", status: approved, author: claude}
+  - {card_id: n144, group_id: g07, statement: "Computers fill up with hidden system data and caches that are hard to clean", status: approved, author: claude}
+  - {card_id: n145, group_id: g07, statement: "Moving text, links, or files between phones and computers is clumsy", status: approved, author: claude}
+  - {card_id: n146, group_id: g07, statement: "Desktop window management, animations, and system menus are clumsy", status: approved, author: claude}
+  - {card_id: n147, group_id: g07, statement: "USB-C cables, ports, and chargers are confusing or unreliable", status: approved, author: claude}
+  - {card_id: n148, group_id: g07, statement: "Cars have costly mechanical, rust, cold-weather, or parts problems", status: approved, author: claude}
+  # g08 Consumer apps, websites, subscriptions, and online shopping
+  - {card_id: n077, group_id: g08, statement: "Websites and apps are slow, broken, or unusable on mobile or some browsers", status: approved, author: claude}
+  - {card_id: n078, group_id: g08, statement: "Apps and websites ignore accessibility needs like zoom, contrast, font size, and reader mode", status: approved, author: claude}
+  - {card_id: n079, group_id: g08, statement: "Interfaces change layouts, animations, and shortcuts without warning or an opt-out", status: approved, author: claude}
+  - {card_id: n080, group_id: g08, statement: "Subscriptions replace one-time purchases and prices keep rising", status: approved, author: claude}
+  - {card_id: n081, group_id: g08, statement: "Paid products add ads, cut quality, or remove features to squeeze more money", status: approved, author: claude}
+  - {card_id: n082, group_id: g08, statement: "Recommendation feeds show unwanted, repeated, or stale content and ignore user feedback", status: approved, author: claude}
+  - {card_id: n083, group_id: g08, statement: "Online marketplaces are flooded with junk products, counterfeits, and fake reviews", status: approved, author: claude}
+  - {card_id: n084, group_id: g08, statement: "Paywalls, region locks, and DRM block access to articles, books, and video", status: approved, author: claude}
+  - {card_id: n085, group_id: g08, statement: "Messaging and chat apps lose history, notify badly, or bury important messages", status: approved, author: claude}
+  - {card_id: n086, group_id: g08, statement: "Search engines return spam, ads, or irrelevant results", status: approved, author: claude}
+  - {card_id: n087, group_id: g08, statement: "Simple tasks force people into bloated, ad-filled, or invasive apps", status: approved, author: claude}
+  - {card_id: n088, group_id: g08, statement: "Notes, documents, media, and personal records are scattered across too many apps", status: approved, author: claude}
+  - {card_id: n089, group_id: g08, statement: "Customer support is unreachable, scripted, or unable to fix the problem", status: approved, author: claude}
+  - {card_id: n090, group_id: g08, statement: "Sign-up, checkout, and download flows on websites fail or lose user input", status: approved, author: claude}
+  - {card_id: n091, group_id: g08, statement: "Creative and design software is too expensive or too hard to learn", status: approved, author: claude}
+  - {card_id: n149, group_id: g08, statement: "Office and work software like documents, wikis, and issue trackers is clunky or broken", status: approved, author: claude}
+  # g09 Online communities, moderation, and reaching an audience
+  - {card_id: n092, group_id: g09, statement: "Community sites change defaults, ranking, or access in ways regular users dislike", status: approved, author: claude}
+  - {card_id: n093, group_id: g09, statement: "Hacker News mechanics like flagging, downvotes, rate limits, and link handling frustrate users", status: approved, author: claude}
+  - {card_id: n094, group_id: g09, statement: "Moderation feels arbitrary, biased, or unaccountable", status: approved, author: claude}
+  - {card_id: n095, group_id: g09, statement: "Online discussions turn hostile, bad-faith, or dismissive", status: approved, author: claude}
+  - {card_id: n096, group_id: g09, statement: "Social platforms make it hard to find calm, niche, or bot-free communities", status: approved, author: claude}
+  - {card_id: n097, group_id: g09, statement: "Creators and makers struggle to reach an audience, get traction, or earn from their work", status: approved, author: claude}
+  # g10 Jobs, hiring, management, and running a company
+  - {card_id: n098, group_id: g10, statement: "Experienced engineers struggle to find jobs in a crowded market", status: approved, author: claude}
+  - {card_id: n099, group_id: g10, statement: "Hiring processes and interviews are slow, arbitrary, and give no feedback", status: approved, author: claude}
+  - {card_id: n100, group_id: g10, statement: "Layoffs and job insecurity disrupt careers and finances", status: approved, author: claude}
+  - {card_id: n101, group_id: g10, statement: "Pay stagnates unless people switch jobs, and good work goes unrecognized", status: approved, author: claude}
+  - {card_id: n102, group_id: g10, statement: "Leaders impose tools, processes, or decisions over engineers' objections", status: approved, author: claude}
+  - {card_id: n103, group_id: g10, statement: "Meetings, interruptions, and context switching destroy focus time", status: approved, author: claude}
+  - {card_id: n104, group_id: g10, statement: "Burnout, stress, and lost motivation make it hard to keep working", status: approved, author: claude}
+  - {card_id: n105, group_id: g10, statement: "Bad management, office politics, or unethical employers damage teams", status: approved, author: claude}
+  - {card_id: n106, group_id: g10, statement: "Hiring skilled engineers is too expensive or slow for small companies", status: approved, author: claude}
+  - {card_id: n107, group_id: g10, statement: "Founders struggle to find customers, market their product, or get people to pay", status: approved, author: claude}
+  - {card_id: n108, group_id: g10, statement: "Remote workers and freelancers face isolation, spam offers, or unfair pay", status: approved, author: claude}
+  # g11 Health, family, relationships, and personal habits
+  - {card_id: n109, group_id: g11, statement: "Healthcare is expensive and insurers deny or fight claims", status: approved, author: claude}
+  - {card_id: n110, group_id: g11, statement: "Doctors and health systems misdiagnose, rush, or dismiss patients", status: approved, author: claude}
+  - {card_id: n111, group_id: g11, statement: "Mental health conditions like depression, anxiety, or ADHD are hard to manage and treat", status: approved, author: claude}
+  - {card_id: n112, group_id: g11, statement: "Chronic conditions, injuries, and medication side effects limit daily life", status: approved, author: claude}
+  - {card_id: n113, group_id: g11, statement: "Sleep, exercise, and diet routines are hard to keep", status: approved, author: claude}
+  - {card_id: n114, group_id: g11, statement: "Parents struggle with children's screen time, behavior, and schooling", status: approved, author: claude}
+  - {card_id: n115, group_id: g11, statement: "People feel lonely and find it hard to make friends or date", status: approved, author: claude}
+  - {card_id: n116, group_id: g11, statement: "Compulsive phone, feed, and internet use eats time and attention", status: approved, author: claude}
+  - {card_id: n117, group_id: g11, statement: "Finding time for hobbies, learning, and personal projects is hard", status: approved, author: claude}
+  - {card_id: n118, group_id: g11, statement: "Caring for aging parents or relatives is hard, especially with modern technology", status: approved, author: claude}
+  # g12 Money, housing, travel, transport, and public services
+  - {card_id: n119, group_id: g12, statement: "Housing, rent, and home ownership costs are too high", status: approved, author: claude}
+  - {card_id: n120, group_id: g12, statement: "Banks and payment apps are clunky, charge fees, or block legitimate transactions", status: approved, author: claude}
+  - {card_id: n121, group_id: g12, statement: "Tariffs, customs fees, and shipping costs add unexpected charges", status: approved, author: claude}
+  - {card_id: n122, group_id: g12, statement: "Government services and bureaucracy require paper forms, visits, or slow processes", status: approved, author: claude}
+  - {card_id: n123, group_id: g12, statement: "Public transit, roads, and car dependency make getting around hard or unsafe", status: approved, author: claude}
+  - {card_id: n124, group_id: g12, statement: "Flights and trains are delayed or cancelled, and travel policies are frustrating", status: approved, author: claude}
+  - {card_id: n125, group_id: g12, statement: "Home or mobile internet is slow or unreliable and individuals cannot get it fixed", status: approved, author: claude}
+  - {card_id: n126, group_id: g12, statement: "Electric vehicles face charging, range, and cold-weather limits", status: approved, author: claude}
+  - {card_id: n127, group_id: g12, statement: "Home heating, repairs, and maintenance are costly and hard to arrange", status: approved, author: claude}
+  - {card_id: n128, group_id: g12, statement: "Immigration, visa, and residency rules block or complicate moving countries", status: approved, author: claude}
+  - {card_id: n129, group_id: g12, statement: "Legal disputes, contracts, and intellectual property questions are costly for individuals", status: approved, author: claude}
+  - {card_id: n130, group_id: g12, statement: "Tracking personal finances and comparing options takes manual spreadsheets and effort", status: approved, author: claude}
+  - {card_id: n131, group_id: g12, statement: "Stores, pharmacies, and services fail at the point of need when their systems go down", status: approved, author: claude}
+  # g13 Learning, studying, and schools
+  - {card_id: n132, group_id: g13, statement: "Learning a hard subject alone lacks guidance, feedback, or good written materials", status: approved, author: claude}
+  - {card_id: n133, group_id: g13, statement: "Students never learned how to study, and schools teach to the exam", status: approved, author: claude}
+  - {card_id: n134, group_id: g13, statement: "Teachers cannot assess students fairly when AI use is hard to detect", status: approved, author: claude}
+  - {card_id: n135, group_id: g13, statement: "Schools handle bullying and discipline poorly", status: approved, author: claude}
+  - {card_id: n150, group_id: g13, statement: "Learning materials are missing for niche languages, subjects, or learning styles", status: approved, author: claude}
