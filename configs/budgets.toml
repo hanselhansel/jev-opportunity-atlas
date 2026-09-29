@@ -17,7 +17,7 @@ autoresearch = 0.00   # Hansel 2026-09-29: dropped (needed 200 'worth interviewi
 discovery = 0.03   # Hansel 2026-09-30: discovery lane not run; kept only for synthetic benchmark reruns ($0.011 used)
 # Unallocated reserve: 25.00 - 24.94 = 0.06 (retries, unknown charges, reruns).
 
-solutions = 0.30   # Hansel 2026-09-30: story, named-fix confirmation
-builders = 0.70   # Hansel 2026-09-30: story, Show HN launch assignment
+solutions = 0.35   # Hansel 2026-09-30: +$0.05 from builders to finish the named-fix check (stopped at 94.6%)
+builders = 0.65   # Hansel 2026-09-30: story, Show HN launch assignment ($0.05 moved to solutions)
 
 worst_case_tokens_per_unknown_attempt = 8000
