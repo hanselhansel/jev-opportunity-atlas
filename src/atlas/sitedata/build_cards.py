@@ -30,9 +30,16 @@ def _mean(values) -> float | None:
 
 
 def evidence_rows(ids, ctx) -> list[dict]:
-    """One evidence row per comment id (faceted or assigned)."""
+    """One evidence row per phase-2 ``pos`` comment id (faceted or assigned).
+
+    The ``neg`` check slice never reaches the site, and the weight is always
+    the phase-2 weight (w1 / p2), never the screen weight.
+    """
     rows = []
     for cid in sorted(ids):
+        f = ctx["facet"].get(cid)
+        if f is None or f.get("phase") != "pos":
+            continue
         c = ctx["comments"].get(cid, {})
         s = ctx["screen"].get(cid, {})
         by_q = ctx["answers"].get(cid, {})
@@ -73,7 +80,7 @@ def evidence_rows(ids, ctx) -> list[dict]:
                 "text_sha256": c.get("text_sha256"),
                 "question_set": ctx["question_set"],
                 "taxonomy_version": ctx["taxonomy_version"],
-                "weight": s.get("weight"),
+                "weight": f.get("weight"),
                 "confidence": dom.get("confidence"),
                 "probabilities_json": dom.get("probabilities_json"),
             }
@@ -139,10 +146,13 @@ def _tables(ctx, assign_rows):
             ]
         ),
     )
+    # Correct weights for faceted and assigned comments are the phase-2
+    # weights (w1 / p2) on the pos phase; the screen weight w1 is wrong here.
     sample = pa.Table.from_pylist(
         [
-            {"comment_id": cid, "weight": s["weight"]}
-            for cid, s in ctx["screen"].items()
+            {"comment_id": cid, "weight": f["weight"]}
+            for cid, f in ctx["facet"].items()
+            if f.get("phase") == "pos"
         ],
         schema=pa.schema([("comment_id", pa.int64()), ("weight", pa.float64())]),
     )
@@ -164,20 +174,25 @@ def _explore_order(explore, answers, comments, sample, weights) -> list[str]:
     return ranked["card_id"].to_pylist()
 
 
-def finding_rows(ctx, cs, criteria, weights, top_n=20, built_at=None):
+def finding_rows(ctx, cs, criteria, weights, top_n=20, built_at=None, replies=None):
     """(findings rows, finding_evidence rows) for the top ``top_n`` cards."""
     from atlas.cards.metrics import card_comments, card_metrics
     from atlas.cards.rank import evaluate_criteria, split_by_half
 
     assign_rows = [
-        r for r in ctx["assign"].values() if r.get("card_id") not in (None, NONE)
+        r
+        for r in ctx["assign"].values()
+        if r.get("card_id") not in (None, NONE)
+        and (ctx["facet"].get(r["comment_id"]) or {}).get("phase") == "pos"
     ]
     assignments, answers, comments, sample = _tables(ctx, assign_rows)
     if assignments.num_rows == 0:
         return [], []
     metrics = {
         r["card_id"]: r
-        for r in card_metrics(assignments, answers, comments, sample).to_pylist()
+        for r in card_metrics(
+            assignments, answers, comments, sample, replies=replies
+        ).to_pylist()
     }
     halves = split_by_half(assignments)
     gate = {
@@ -240,6 +255,7 @@ def finding_rows(ctx, cs, criteria, weights, top_n=20, built_at=None):
                 "first_period": m["first_period"],
                 "last_period": m["last_period"],
                 "max_thread_share": m["max_thread_share"],
+                "unsolved_rate": m.get("unsolved_rate"),
                 "run_id": ctx["assign_run"],
                 "question_set": ctx["question_set"],
                 "taxonomy_version": ctx["taxonomy_version"],

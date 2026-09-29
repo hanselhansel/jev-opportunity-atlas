@@ -1,12 +1,13 @@
 """Site tables from saved run outputs (``meta.mode == "real"``). No Jev calls.
 
-``build_site_data`` reads a snapshot, a screen run, a facets run, an assign run,
-optional audit evaluations and a synthetic benchmark run, and the gold labels,
-then writes every table in ``atlas.sitedata.tables.SITE_TABLES`` as Parquet.
-Two tables carry one column beyond the contract: ``domain_share.qualifier``
-(how the share was estimated) and ``quality.system`` (jev, a baseline, or the
-random-card control). The output must pass the release text gate before it
-replaces ``out_dir``.
+``build_site_data`` reads a snapshot, a screen run, a facets run, an assign
+run, the phase-2 facet sample, optional audit evaluations and a synthetic
+benchmark run, and the gold labels, then writes every table in
+``atlas.sitedata.tables.SITE_TABLES`` as Parquet. Three tables carry one
+column beyond the contract: ``domain_share.qualifier`` (how the share was
+estimated), ``quality.system`` (jev, a baseline, or the random-card control),
+and ``findings.unsolved_rate`` (null unless ``replies_run`` was given). The
+output must pass the release text gate before it replaces ``out_dir``.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from atlas.sitedata.tables import SITE_TABLES
 EXTRA_FIELDS = {
     "domain_share": [pa.field("qualifier", pa.string())],
     "quality": [pa.field("system", pa.string())],
+    "findings": [pa.field("unsolved_rate", pa.float64())],
 }
 # Approved cardset text (Claude drafts, Hansel approves). The release text gate
 # flags these findings columns by name or length; the build instead checks that
@@ -110,7 +112,9 @@ def _gold(label_sets, fh, dom, screen) -> dict:
     return gold
 
 
-def _load(snapshot_id, screen_run, facets_run, assign_run, tv, facets_set, cs):
+def _load(
+    snapshot_id, screen_run, facets_run, assign_run, tv, facets_set, cs, facet_sample
+):
     from atlas.cards.engine import assign
 
     screen = {
@@ -127,7 +131,13 @@ def _load(snapshot_id, screen_run, facets_run, assign_run, tv, facets_set, cs):
         if card not in (None, "none") and card in cs.all_cards:
             r = {**r, "card_id": cs.resolve(card)}
         assigned[int(r["comment_id"])] = r
-    ids = sorted(set(screen) | set(answers) | set(assigned))
+    # Phase-2 facet sample: comment_id -> phase (pos|neg) and the correct
+    # weight for any faceted or assigned comment (w1 / p2).
+    facet = {
+        int(r["comment_id"]): r
+        for r in pq.read_table(paths.sample_path(facet_sample)).to_pylist()
+    }
+    ids = sorted(set(screen) | set(answers) | set(assigned) | set(facet))
     comments = pq.read_table(
         paths.snapshot_dir(snapshot_id) / "comments.parquet",
         columns=["id", "author", "story_id", "period", "thread_type", "text_sha256"],
@@ -138,6 +148,7 @@ def _load(snapshot_id, screen_run, facets_run, assign_run, tv, facets_set, cs):
         "answers": answers,
         "assign": assigned,
         "comments": {r["id"]: r for r in comments},
+        "facet": facet,
     }
 
 
@@ -150,6 +161,7 @@ def _meta(args: dict, window: dict, n: dict) -> dict:
         "facets_run": args["facets_run"],
         "assign_run": args["assign_run"],
         "benchmark_run": args["benchmark_run"] or "",
+        "facet_sample": args["facet_sample"],
         "window_start": window.get("start", ""),
         "window_end": window.get("end", ""),
         "built_at": args["built_at"],
@@ -233,6 +245,8 @@ def build_site_data(
     benchmark_run=None,
     facets_set="facets@2",
     cardset=None,
+    facet_sample=None,
+    replies_run=None,
     top_n=20,
     n_boot=2000,
     seed=0,
@@ -243,6 +257,8 @@ def build_site_data(
     from atlas.sitedata.build_cards import evidence_rows, finding_rows
     from atlas.sitedata.build_share import domain_share_rows
 
+    if facet_sample is None:
+        raise SiteDataError("facet_sample is required in real mode")
     label_sets = list(label_sets)
     built_at = built_at or datetime.now(UTC).isoformat(timespec="seconds")
     cs = find_cardset(taxonomy_version, cardset)
@@ -254,6 +270,7 @@ def build_site_data(
         taxonomy_version,
         facets_set,
         cs,
+        facet_sample,
     )
     fh, dom = _labels(label_sets)
     gold = _gold(label_sets, fh, dom, ctx["screen"])
@@ -265,13 +282,35 @@ def build_site_data(
         taxonomy_version=taxonomy_version,
     )
 
+    # Domain share is estimated on the phase-2 pos population: one frame row
+    # per screen-positive comment, carrying the phase-2 weight (w1 / p2) and
+    # Jev's facet answers. ``domain_share_rows`` restricts to firsthand
+    # problems (account_type == "firsthand_account") itself.
     frame = []
-    for cid, s in ctx["screen"].items():
+    for cid, f in ctx["facet"].items():
+        if f.get("phase") != "pos":
+            continue
+        by_q = ctx["answers"].get(cid) or {}
         c = ctx["comments"].get(cid, {})
-        d = ((ctx["answers"].get(cid) or {}).get("domain") or {}).get("choice")
-        frame.append({**s, "period": c.get("period"), "domain": d})
+        frame.append(
+            {
+                "comment_id": cid,
+                "story_id": f.get("story_id"),
+                "stratum": f.get("stratum"),
+                "weight": f.get("weight"),
+                "firsthand_p": f.get("firsthand_p"),
+                "period": c.get("period"),
+                "domain": (by_q.get("domain") or {}).get("choice"),
+                "account_type": (by_q.get("account_type") or {}).get("choice"),
+            }
+        )
+    replies = None
+    if replies_run:
+        replies = pq.read_table(
+            paths.run_dir(replies_run) / "replies" / "unsolved_by_problem.parquet"
+        )
     findings, finding_evidence = finding_rows(
-        ctx, cs, load_criteria(), load_weights(), top_n, built_at
+        ctx, cs, load_criteria(), load_weights(), top_n, built_at, replies=replies
     )
     ev_ids = {c for c, a in ctx["answers"].items() if a}
     ev_ids |= {r["comment_id"] for r in finding_evidence}
@@ -283,6 +322,7 @@ def build_site_data(
         "facets_run": facets_run,
         "assign_run": assign_run,
         "benchmark_run": benchmark_run,
+        "facet_sample": facet_sample,
         "built_at": built_at,
         "facets_set": facets_set,
         "taxonomy_version": taxonomy_version,
@@ -294,6 +334,8 @@ def build_site_data(
     roles = [("screen", screen_run), ("facets", facets_run), ("assign", assign_run)]
     if benchmark_run:
         roles.append(("benchmark", benchmark_run))
+    if replies_run:
+        roles.append(("replies", replies_run))
     tables = {
         "meta": pa.table({"key": list(meta), "value": list(meta.values())}),
         "coverage": pq.read_table(snap / "coverage.parquet")

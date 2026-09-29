@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import pytest
 
@@ -14,7 +15,11 @@ from atlas.sitedata.tables import SITE_TABLES
 from tests.sitedata.world import CARDS, DOMAINS, TV, build, build_world, read
 
 UNAUDITED = "as classified by Jev; unaudited"
-EXTRA_COLUMNS = {"domain_share": ["qualifier"], "quality": ["system"]}
+EXTRA_COLUMNS = {
+    "domain_share": ["qualifier"],
+    "quality": ["system"],
+    "findings": ["unsolved_rate"],
+}
 
 @pytest.fixture
 def world(tmp_path, monkeypatch):
@@ -35,6 +40,7 @@ def test_writes_every_site_table_with_contract_columns(world, tmp_path):
     assert meta["run_id"] == "screen-syn"
     assert meta["facets_run"] == "facets-syn"
     assert meta["assign_run"] == "assign-syn"
+    assert meta["facet_sample"] == "facet-syn"
     assert meta["window_start"] == "2025-09-28T00:00:00Z"
     assert meta["window_end"] == "2026-09-28T00:00:00Z"
     assert meta["built_at"] == "2026-09-29T12:00:00Z"
@@ -53,14 +59,21 @@ def test_domain_share_is_ppi_corrected_with_gold(world, tmp_path):
         assert r["lane"] == "breadth" and r["badge"] == "estimated"
         assert r["qualifier"].startswith("PPI-corrected")
         assert r["ci_low"] <= r["weighted_share"] <= r["ci_high"]
-        assert r["n"] == sum(1 for d in world["domain"].values() if d == r["domain"])
+        assert r["n"] == sum(
+            1
+            for c in world["pos"]
+            if world["account"][c] == "firsthand_account"
+            and world["domain"][c] == r["domain"]
+        )
         assert "firsthand" in r["denominator"] and len(r["denominator"]) <= 80
-    # Same numbers as calling the estimator directly on the saved files.
-    screen = read(paths.run_dir("screen-syn"), "screen_by_comment")
-    fac = world["domain"]
+    # Same numbers as calling the estimator directly on the saved files: the
+    # numerator and denominator are PPI means over phase-2 pos rows, weighted
+    # by the phase-2 weight and restricted to firsthand problems.
+    facet = world["facet"]
+    sub = [c for c in facet if facet[c]["phase"] == "pos"]
+    fa = {c for c in sub if world["account"][c] == "firsthand_account"}
     d = DOMAINS[0]
-    gold = world["gold"]
-    rows_by = {r["comment_id"]: r for r in screen}
+    gold = [c for c in world["gold"] if c in set(sub)]
     labels = [
         json.loads(x) for x in (paths.LABELS / "labels.jsonl").read_text().splitlines()
     ]
@@ -72,23 +85,26 @@ def test_domain_share_is_ppi_corrected_with_gold(world, tmp_path):
     dom_y = {
         r["comment_id"]: r["value"] for r in labels if r["question_id"] == "domain"
     }
-    all_ids = [r["comment_id"] for r in screen]
-    num_hat = [float(fac.get(c) == d) for c in all_ids]
-    den_hat = [float(c in fac) for c in all_ids]
+    num_hat = [float(c in fa and world["domain"][c] == d) for c in sub]
+    den_hat = [float(c in fa) for c in sub]
     res = ppi_ratio(
         (
-            [*num_hat],
+            num_hat,
             [float(fh_y[c] and dom_y.get(c) == d) for c in gold],
-            [float(fac.get(c) == d) for c in gold],
+            [float(c in fa and world["domain"][c] == d) for c in gold],
         ),
-        (den_hat, [float(fh_y[c]) for c in gold], [float(c in fac) for c in gold]),
-        w_all=[rows_by[c]["weight"] for c in all_ids],
-        w_gold=[rows_by[c]["weight"] for c in gold],
+        (
+            den_hat,
+            [float(fh_y[c]) for c in gold],
+            [float(c in fa) for c in gold],
+        ),
+        w_all=[facet[c]["weight"] for c in sub],
+        w_gold=[facet[c]["weight"] for c in gold],
         sel_prob_gold=[0.25] * len(gold),
-        strata_all=[rows_by[c]["stratum"] for c in all_ids],
-        strata_gold=[rows_by[c]["stratum"] for c in gold],
-        clusters_all=[rows_by[c]["story_id"] for c in all_ids],
-        clusters_gold=[rows_by[c]["story_id"] for c in gold],
+        strata_all=[facet[c]["stratum"] for c in sub],
+        strata_gold=[facet[c]["stratum"] for c in gold],
+        clusters_all=[facet[c]["story_id"] for c in sub],
+        clusters_gold=[facet[c]["story_id"] for c in gold],
         n_boot=200,
         seed=0,
     )
@@ -127,6 +143,7 @@ def test_evidence_has_ids_labels_probabilities_and_hashes_only(world, tmp_path):
         assert json.loads(r["probabilities_json"])[r["domain"]] == 0.8
         assert r["run_id"] == "facets-syn" and r["taxonomy_version"] == TV
         assert (r["human_label"] is not None) == (c in gold)
+        assert r["weight"] == pytest.approx(world["facet"][c]["weight"])
         assert 0.0 <= r["evidence_strength"] <= 1.0
     blob = b"".join(p.read_bytes() for p in out.iterdir())
     assert b"synthetic comment body" not in blob and b"u14" not in blob
@@ -146,10 +163,14 @@ def test_findings_come_from_card_metrics_and_ranking(world, tmp_path):
     assert {r["comment_id"] for r in fe} <= ev_ids
     run = paths.run_dir("assign-syn")
     snap = pq.read_table(paths.snapshot_dir("snap-syn") / "comments.parquet")
+    pos = pa.array(sorted(world["pos"]))
+    assignments = pq.read_table(run / f"assignments-{TV}.parquet").filter(
+        pc.is_in(pc.field("comment_id"), value_set=pos)
+    )
     metrics = {
         r["card_id"]: r
         for r in card_metrics(
-            pq.read_table(run / f"assignments-{TV}.parquet"),
+            assignments,
             pq.read_table(paths.run_dir("facets-syn") / "answers" / "part-0.parquet"),
             snap,
             None,
@@ -229,6 +250,7 @@ def test_site_data_cli_writes_real_tables(world, tmp_path, capsys):
         ["site", "data", "--out", str(out), "--snapshot", "snap-syn",
          "--screen-run", "screen-syn", "--facets-run", "facets-syn",
          "--assign-run", "assign-syn", "--taxonomy", TV,
+         "--facet-sample", "facet-syn",
          "--label-set", "calibration", "--benchmark-run", "bench-syn",
          "--n-boot", "50"])
     args.func(args)
