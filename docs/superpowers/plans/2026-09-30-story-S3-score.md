@@ -66,3 +66,9 @@ Branch: feat/s3-story-score
 
 - [ ] **Test** `test_bundle_persistence_one_for_tight_clique`: four cards with mutual score 2.0 and 0 elsewhere give persistence 1.0.
 - [ ] Implement, wire `story data --with score`, pass, commit. `scripts/verify.sh` prints `verify: ok`. Open the PR. Final message: PR URL and pytest summary line.
+
+## Amendments
+
+- **A1 (review of S6):** `src/atlas/builders/cli.py::_complaint_reps` selects `fr[fr["firsthand"]]`. That includes below-cutoff `neg` rows with very large weights. It must select `fr[(fr["phase"] == "pos") & fr["firsthand"]]`, the population in the master plan.
+  - This lane owns that one-line fix.
+  - Add `tests/builders/test_complaint_population.py`: a synthetic world where a heavy `neg` firsthand row on card X must not change X's complaint share.
