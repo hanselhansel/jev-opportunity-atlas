@@ -183,7 +183,7 @@ def build_world(root: Path, monkeypatch) -> dict:
     pos = [c for c in ids if fh[c] >= 0.7]
     neg = [c for c in ids if fh[c] < 0.5][:24]
     faceted = pos + neg
-    pos_set, neg_set = set(pos), set(neg)
+    pos_set = set(pos)
     p2 = {"pos": 0.5, "neg": 0.05}
     idx = {c: i for i, c in enumerate(ids)}
     facet = {}
