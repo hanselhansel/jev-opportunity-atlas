@@ -1,8 +1,9 @@
 """Batch runner: items -> ANSWERS parquet parts, with ledger, budget, cache, resume.
 
-Order of operations per item: done-set skip -> cache replay -> per-attempt
-reserve/settle through `on_attempt` with a `pending` ledger row before each send
-and a final row after each response. A crash leaves a `pending` row that the
+Order of operations per item: done-set skip -> cache replay -> rate-limit
+acquire (when ctx.limiter is set) -> per-attempt reserve/settle through
+`on_attempt` with a `pending` ledger row before each send and a final row after
+each response. A crash leaves a `pending` row that the
 next run reconciles to `unknown` (never silently dropped). BudgetExceeded sets
 `stopped="budget"`: no new sends, in-flight tasks drain, completed items flush.
 """
@@ -25,6 +26,7 @@ from atlas.inference.cache import ResponseCache, cache_key
 from atlas.inference.client import JevClient
 from atlas.inference.ledger import Ledger, read_rows, unresolved_pending
 from atlas.inference.questions import build_state, canonical_json, questions_for
+from atlas.inference.ratelimit import TokenBucket
 from atlas.inference.runner_io import (
     answer_rows,
     append_done,
@@ -46,6 +48,8 @@ class RunContext:
     concurrency: int = 8
     budget: str | None = None
     batch_items: int = 200
+    rpm: float | None = None
+    limiter: TokenBucket | None = None
 
     def __post_init__(self):
         if self.run_dir is None:
@@ -54,6 +58,8 @@ class RunContext:
             self.cache_path = paths.CACHE / "jev.sqlite"
         if self.budget is None:
             self.budget = self.guard.name
+        if self.limiter is None and self.rpm:
+            self.limiter = TokenBucket.per_minute(self.rpm)
 
 
 def _utcnow() -> str:
@@ -264,6 +270,8 @@ async def _process(ctx, item, qs, ledger, cache, sem, out, rows, done_ids) -> No
         async def on_attempt(event):
             nonlocal handle
             if event.phase == "before_send":
+                if ctx.limiter is not None:
+                    await ctx.limiter.acquire()
                 handle = await ctx.guard.reserve(est)
                 ledger.append(
                     {

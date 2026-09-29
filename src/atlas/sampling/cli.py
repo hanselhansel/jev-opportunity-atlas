@@ -169,6 +169,12 @@ def _v2_design_inputs(args) -> dict:
     sizes = {str(u): int(n) for u, n in zip(uniq, counts)}
     cfg = tomllib.loads((paths.CONFIGS / "sampling_v2.toml").read_text())
     p, c, levels = yield_alloc.pilot_inputs(frame, args.pilot_run, cfg)
+    c = yield_alloc.scale_costs(c, args.cost_scale)
+    cost_scale_source = (
+        f"pilot:{args.pilot_run}-packed tokens/comment ÷ single"
+        if args.cost_scale != 1.0
+        else None
+    )
     usd_per_token, price_version = yield_alloc.price_per_token()
     budget_tokens = yield_alloc.usd_to_tokens(args.budget_usd)
     alloc = yield_alloc.allocate_by_yield(
@@ -186,6 +192,8 @@ def _v2_design_inputs(args) -> dict:
         "price_version": price_version,
         "budget_tokens": budget_tokens,
         "alloc": alloc,
+        "cost_scale": args.cost_scale,
+        "cost_scale_source": cost_scale_source,
     }
 
 
@@ -217,6 +225,8 @@ def _allocate_v2(args) -> None:
                 "largest_weight": yield_alloc.largest_weight(
                     d["alloc"], d["sizes"]
                 ),
+                "cost_scale": d["cost_scale"],
+                "cost_scale_source": d["cost_scale_source"],
             },
             sort_keys=True,
         )
@@ -241,6 +251,8 @@ def _design_v2(args) -> None:
         "design_version": "v2",
         "pilot_run": args.pilot_run,
         "budget_usd": args.budget_usd,
+        "cost_scale": d["cost_scale"],
+        "cost_scale_source": d["cost_scale_source"],
     }
     design = design_v2.design_block(
         floor_rate=d["cfg"]["floor_rate"],
@@ -277,6 +289,13 @@ def _register_v2(cmds) -> None:
     )
     a.add_argument("--pilot-run", required=True, help="Pilot run id")
     a.add_argument("--budget-usd", type=float, required=True)
+    a.add_argument(
+        "--cost-scale",
+        type=float,
+        default=1.0,
+        help="multiply every pilot c_h before allocating, "
+        "e.g. packed/single tokens per comment",
+    )
     a.set_defaults(func=_allocate_v2)
 
     d = cmds.add_parser(
@@ -288,4 +307,11 @@ def _register_v2(cmds) -> None:
     d.add_argument("--pilot-run", required=True, help="Pilot run id")
     d.add_argument("--budget-usd", type=float, required=True)
     d.add_argument("--sample-id", required=True)
+    d.add_argument(
+        "--cost-scale",
+        type=float,
+        default=1.0,
+        help="multiply every pilot c_h before allocating, "
+        "e.g. packed/single tokens per comment",
+    )
     d.set_defaults(func=_design_v2)
