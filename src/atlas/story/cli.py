@@ -17,6 +17,17 @@ from atlas import paths
 
 SECTIONS: dict[str, object] = {}
 
+
+def _terms_section(args, story_path) -> None:
+    """`--with terms`: S4 distinctive terms. Lazy import keeps the CLI
+    cheap for lanes that never run this section."""
+    from atlas.story import terms
+
+    terms.story_section(args, story_path)
+
+
+SECTIONS["terms"] = _terms_section
+
 DEFAULTS = {
     "facet_sample": "main-facets-20260930x",
     "facets_run": "main-facets-20260930",
@@ -26,6 +37,8 @@ DEFAULTS = {
     "robust_screen": "runs/robust-screen-compare.json",
     "robust_assign": "runs/robust-assign-compare.json",
     "run_phases": "configs/run_phases.toml",
+    "para1_run": "robust-assign-para1",
+    "para2_run": "robust-assign-para2",
 }
 
 
@@ -107,6 +120,49 @@ def _data(args) -> None:
     print(f"story data: wrote {out}")
 
 
+def _signals(args, out: Path) -> None:
+    """S2 sections: per-card signals, breadth, concentration, spec ranks."""
+    from atlas.story import breadth, concentration, frame, io, signals
+    from atlas.story import spec_ranks as spec_mod
+
+    doc = json.loads(out.read_text()) if out.exists() else {}
+    cards = doc.get("cards")
+    if not cards:
+        raise SystemExit(
+            "signals needs the core 'cards' section; run story data first"
+        )
+    snapshot = args.snapshot or _default_snapshot()
+    fr = frame.load_frame(
+        args.facet_sample,
+        args.facets_run,
+        args.assign_run,
+        snapshot,
+        cardset=args.cardset,
+        version=args.version,
+    )
+    sig = signals.card_signals(fr, R=args.R, seed=args.seed)
+    br = breadth.card_breadth(fr, R=args.R, seed=args.seed)
+    conc = concentration.card_concentration(fr, seed=args.seed)
+    for c in cards:
+        s = sig.get(c["id"]) or {}
+        c["coping"] = s.get("coping")
+        c["costs"] = s.get("costs")
+        c["quality"] = s.get("quality")
+        c["breadth"] = br.get(c["id"])
+        c["concentration"] = conc.get(c["id"])
+    io.merge_section(out, "cards", cards)
+    io.merge_section(
+        out,
+        "spec_ranks",
+        spec_mod.spec_ranks(
+            fr, {"para1": args.para1_run, "para2": args.para2_run}
+        ),
+    )
+
+
+SECTIONS["signals"] = _signals
+
+
 def _check(args) -> None:
     from atlas.story.check import check_story
 
@@ -136,6 +192,8 @@ def register(sub) -> None:
     d.add_argument("--robust-screen", default=DEFAULTS["robust_screen"])
     d.add_argument("--robust-assign", default=DEFAULTS["robust_assign"])
     d.add_argument("--run-phases", default=DEFAULTS["run_phases"])
+    d.add_argument("--para1-run", default=DEFAULTS["para1_run"])
+    d.add_argument("--para2-run", default=DEFAULTS["para2_run"])
     d.add_argument("--R", type=int, default=1000)
     d.add_argument("--seed", type=int, default=0)
     d.add_argument(
