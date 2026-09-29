@@ -34,7 +34,7 @@ BASE, STORY = 9_000_000_000, 9_500_000_000
 TV = "t9"
 SNAPSHOT, SAMPLE = "snap-syn", "facet-syn"
 SCREEN_RUN, FACETS_RUN, ASSIGN_RUN = "screen-syn", "facets-syn", "assign-syn"
-AUDIT_RUN, BENCH_RUN = "audit-syn", "bench-syn"
+AUDIT_RUN, BENCH_RUN, PLANTED_RUN = "audit-syn", "bench-syn", "planted-syn"
 N_POS, N_P12, N_NEG = 230, 10, 20
 DOMAINS = ("software_development", "infrastructure_ops", "health_medical")
 ROLES = ("software_engineer", "manager", "founder_executive", "unclear")
@@ -69,6 +69,7 @@ RUN_PHASES = """[runs]
 "assign-syn/replies" = "replies"
 "audit-syn" = "checks"
 "bench-syn" = "checks"
+"planted-syn" = "checks"
 """
 
 ROBUST_SCREEN = {
@@ -229,7 +230,8 @@ def build_world(root: Path, monkeypatch) -> dict:
     (cfg / "questions").mkdir()
     (cfg / "cards" / f"syn.{TV}.yaml").write_text(CARDSET_YAML)
     (cfg / "cards" / f"syn.{TV}.labels.yaml").write_text(LABELS_YAML)
-    for f in ("questions/facets.v2.json", "tools.v1.yaml"):
+    for f in ("questions/facets.v2.json", "tools.v1.yaml",
+              "cards/planted.v1.yaml"):
         shutil.copy(REPO / "configs" / f, cfg / f)
     (cfg / "run_phases.toml").write_text(RUN_PHASES)
 
@@ -479,6 +481,52 @@ def build_world(root: Path, monkeypatch) -> dict:
         json.dumps(ROBUST_SCREEN)
     )
     (paths.RUNS / "robust-assign-compare.json").write_text(json.dumps(ROBUST_ASSIGN))
+
+    # A planted run: every planted comment lands on its card, decoys get none.
+    import yaml
+
+    planted_cfg = yaml.safe_load(
+        (cfg / "cards" / "planted.v1.yaml").read_text()
+    )
+    pgroup = {
+        c["card_id"]: c["group_id"] for c in planted_cfg["cards"]
+    }
+    prows = [
+        {
+            "run_id": PLANTED_RUN,
+            "comment_id": c["comment_id"],
+            "taxonomy_version": f"{TV}+planted-v1",
+            "group_id": pgroup[c["card_id"]],
+            "group_p": 0.9,
+            "group_confidence": 0.9,
+            "card_id": c["card_id"],
+            "card_p": 0.9,
+            "card_confidence": 0.9,
+            "verified_p": 0.9,
+        }
+        for c in planted_cfg["planted"]
+    ] + [
+        {
+            "run_id": PLANTED_RUN,
+            "comment_id": d["comment_id"],
+            "taxonomy_version": f"{TV}+planted-v1",
+            "group_id": "none",
+            "group_p": 0.9,
+            "group_confidence": 0.9,
+            "card_id": "none",
+            "card_p": None,
+            "card_confidence": 0.9,
+            "verified_p": 0.9,
+        }
+        for d in planted_cfg["decoys"]
+    ]
+    planted = paths.run_dir(PLANTED_RUN)
+    planted.mkdir(parents=True)
+    pq.write_table(
+        pa.Table.from_pylist(prows, schema=contracts.ASSIGNMENTS),
+        planted / f"assignments-{TV}+planted-v1.parquet",
+    )
+    _ledger(planted, PLANTED_RUN, f"assign-g@{TV}", 6, rng)
     return {
         "ids": ids,
         "pos": [r["comment_id"] for r in pos],
