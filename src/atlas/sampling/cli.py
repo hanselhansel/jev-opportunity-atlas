@@ -136,6 +136,7 @@ def register(sub) -> None:
     s.set_defaults(func=_show)
 
     _register_v2(cmds)
+    _register_pooled(cmds)
 
 
 def _v2_design_inputs(args) -> dict:
@@ -315,3 +316,75 @@ def _register_v2(cmds) -> None:
         "e.g. packed/single tokens per comment",
     )
     d.set_defaults(func=_design_v2)
+
+
+def _draw_pooled(args) -> None:
+    import tomllib
+
+    from atlas import paths
+    from atlas.sampling import pooled
+
+    cfg = tomllib.loads((paths.CONFIGS / "sampling_v2.toml").read_text())
+    out = pooled.draw_pooled(
+        snapshot_id=args.snapshot or _default_snapshot(),
+        pilot_run=args.pilot_run,
+        budget_usd=args.budget_usd,
+        cost_scale=args.cost_scale,
+        cutoff=args.cutoff,
+        seed=args.seed,
+        sample_id=args.sample_id,
+        floor_rate=cfg["floor_rate"],
+        min_n=cfg["min_n"],
+        min_pilot_n=cfg["min_pilot_n"],
+    )
+    alloc = out["alloc"]
+    n = sum(alloc.values())
+    h1 = sum(v for k, v in alloc.items() if "|H1|" in k)
+    print(
+        f"n={n:,}  H1={h1:,}  H2={n - h1:,}  "
+        f"expected positives (>= {args.cutoff}) = "
+        f"{out['expected_positives']:,.0f}"
+    )
+    print(
+        f"expected tokens {out['expected_tokens']:,.0f} of "
+        f"{out['budget_tokens']:,}; largest weight {out['largest_weight']:.1f}"
+    )
+    if not out["reused"]:
+        _copy_sidecar(args.sample_id)
+    print(
+        json.dumps(
+            {
+                "written": str(paths.sample_path(args.sample_id)),
+                "rows": out["rows"],
+                "reused": out["reused"],
+            }
+        )
+    )
+
+
+def _register_pooled(cmds) -> None:
+    d = cmds.add_parser(
+        "draw-pooled",
+        help="Main breadth draw: pilot inputs pooled across half-years",
+    )
+    d.add_argument(
+        "--snapshot", default=None, help="Default: configs/acquisition.toml"
+    )
+    d.add_argument("--pilot-run", required=True, help="Pilot run id")
+    d.add_argument("--budget-usd", type=float, required=True)
+    d.add_argument(
+        "--cost-scale",
+        type=float,
+        required=True,
+        help="multiply every pilot c_h before allocating, "
+        "e.g. packed/single tokens per comment (main run used 0.424)",
+    )
+    d.add_argument(
+        "--cutoff",
+        type=float,
+        default=0.7,
+        help="firsthand_problem noul counts as positive at or above this",
+    )
+    d.add_argument("--seed", type=int, required=True)
+    d.add_argument("--sample-id", required=True)
+    d.set_defaults(func=_draw_pooled)

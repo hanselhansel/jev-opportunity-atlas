@@ -83,6 +83,20 @@ def register(sub) -> None:
     est_p.add_argument("--calibrate-with", dest="calibrate_with", default=None)
     est_p.set_defaults(func=_cmd_estimate)
 
+    m = commands.add_parser(
+        "measure",
+        help="measured input tokens per set on 3 synthetic comments (paid)",
+    )
+    m.add_argument(
+        "--sets", default="screen@1,facets@1",
+        help="comma-separated name@version question sets",
+    )
+    m.add_argument("--budget", default="smoke")
+    m.add_argument(
+        "--yes", action="store_true", help="Actually dispatch"
+    )
+    m.set_defaults(func=_cmd_measure)
+
     bal_p = commands.add_parser("balance", help="credit balance log")
     bal_sub = bal_p.add_subparsers(dest="balance_command", required=True)
     bal_rec = bal_sub.add_parser(
@@ -189,6 +203,12 @@ def _cmd_estimate(args) -> None:
         out["est_usd"] / remaining if remaining and remaining > 0 else None
     )
     print(json.dumps(out, indent=1))
+
+
+def _cmd_measure(args) -> None:
+    from atlas.inference.measure import measure_tokens
+
+    measure_tokens(args.sets, budget=args.budget, yes=args.yes)
 
 
 def _cmd_balance_record(args) -> None:
