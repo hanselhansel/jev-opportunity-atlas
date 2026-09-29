@@ -168,3 +168,20 @@ def test_charts_from_built_site_data(tmp_path, monkeypatch):
     assert len(written) == 5
     for p in written:
         assert png_size(p) == (1600, 900)
+
+
+def test_x_charts_cli_writes_pngs(tmp_path, monkeypatch, capsys):
+    from atlas import cli as atlas_cli
+
+    build_world(tmp_path / "repo", monkeypatch)
+    data = tmp_path / "site-real"
+    build(data)
+    out = tmp_path / "x" / "2026-09-29"
+    args = atlas_cli.build_parser().parse_args(
+        ["x", "charts", "--data", str(data), "--out", str(out)])
+    args.func(args)
+    pngs = sorted(out.glob("*.png"))
+    assert [p.name for p in pngs] == ["01-bars.png", "02-heat.png", "03-change.png",
+                                     "04-cost.png", "05-quality.png"]
+    assert all(png_size(p) == (1600, 900) for p in pngs)
+    assert len(capsys.readouterr().out.strip().splitlines()) == 5

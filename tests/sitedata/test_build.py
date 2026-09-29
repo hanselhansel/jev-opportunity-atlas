@@ -219,3 +219,19 @@ def test_card_text_not_in_the_cardset_fails_the_gate(world, tmp_path):
     t = t.set_column(i, "title", pa.array(["not an approved card"] * t.num_rows))
     pq.write_table(t, out / "findings.parquet")
     assert any("findings.parquet:title" in p for p in site_text_problems(out))
+
+
+def test_site_data_cli_writes_real_tables(world, tmp_path, capsys):
+    from atlas import cli as atlas_cli
+
+    out = tmp_path / "data-real"
+    args = atlas_cli.build_parser().parse_args(
+        ["site", "data", "--out", str(out), "--snapshot", "snap-syn",
+         "--screen-run", "screen-syn", "--facets-run", "facets-syn",
+         "--assign-run", "assign-syn", "--taxonomy", TV,
+         "--label-set", "calibration", "--benchmark-run", "bench-syn",
+         "--n-boot", "50"])
+    args.func(args)
+    meta = {r["key"]: r["value"] for r in read(out, "meta")}
+    assert meta["mode"] == "real" and meta["label_sets"] == "calibration"
+    assert json.loads(capsys.readouterr().out)["findings"] > 0
