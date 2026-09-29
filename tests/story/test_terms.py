@@ -1,8 +1,13 @@
 """S4 distinctive terms: the gate that keeps raw text out of story.json."""
 
+import json
+
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 from atlas.story import terms as terms_mod
+from tests.story import world
 
 COLS = ["comment_id", "group", "author", "placed", "phase"]
 FILLER = "shared filler words here"
@@ -114,3 +119,104 @@ def test_rare_term_dropped():
     )
     g01_terms = {t["term"] for t in result["g01"]}
     assert "rareterm" in g01_terms
+
+
+def test_planted_term_ranks_first():
+    """A term injected only into g01 comments ranks first for g01."""
+    rows, pain = _background()
+    p_rows, p_pain = _docs(
+        9_000_700_000,
+        "g01",
+        30,
+        [f"pa{i:02d}" for i in range(15)],
+        lambda i: f"{FILLER.split()[i % 4]} quixoticterm {FILLER}",
+    )
+    result = terms_mod.group_terms(_frame(rows + p_rows), pain | p_pain)
+    assert result["g01"][0]["term"] == "quixoticterm"
+
+
+def test_output_has_no_raw_sentence():
+    """No emitted term is longer than a two-word phrase."""
+    rows, pain = _background()
+    p_rows, p_pain = _docs(
+        9_000_800_000,
+        "g01",
+        30,
+        [f"pa{i:02d}" for i in range(15)],
+        lambda i: (
+            "quixoticterm quixoticterm quixoticterm and the exact "
+            "wording of a longer planted sentence survives"
+        ),
+    )
+    result = terms_mod.group_terms(_frame(rows + p_rows), pain | p_pain)
+    for terms in result.values():
+        for item in terms:
+            assert len(item["term"].split()) <= 2
+
+
+DATA_ARGS = [
+    "--snapshot",
+    world.SNAPSHOT,
+    "--facet-sample",
+    world.SAMPLE,
+    "--facets-run",
+    world.FACETS_RUN,
+    "--assign-run",
+    world.ASSIGN_RUN,
+    "--cardset",
+    "syn",
+    "--version",
+    world.TV,
+    "--audit-run",
+    world.AUDIT_RUN,
+    "--benchmark-run",
+    world.BENCH_RUN,
+    "--robust-screen",
+    "runs/robust-screen-compare.json",
+    "--robust-assign",
+    "runs/robust-assign-compare.json",
+    "--run-phases",
+    "configs/run_phases.toml",
+    "--R",
+    "200",
+    "--seed",
+    "0",
+]
+
+
+def test_with_terms_writes_section(tmp_path, monkeypatch, capsys):
+    """`story data --with terms` merges a gated terms section that passes
+    `story check`."""
+    world.build_world(tmp_path, monkeypatch)
+    from atlas import paths
+    from atlas.story import cli, frame
+
+    fr = frame.load_frame(
+        world.SAMPLE,
+        world.FACETS_RUN,
+        world.ASSIGN_RUN,
+        world.SNAPSHOT,
+        cardset="syn",
+        version=world.TV,
+    )
+    pain_rows = [
+        {
+            "comment_id": int(r.comment_id),
+            "pain_sentence": (
+                f"alphaterm {FILLER}" if r.group == "g01" else f"betaterm {FILLER}"
+            ),
+        }
+        for r in fr[fr["placed"]].itertuples()
+    ]
+    pq.write_table(
+        pa.Table.from_pylist(pain_rows),
+        paths.run_dir(world.ASSIGN_RUN) / "pain.parquet",
+    )
+    out = tmp_path / "story.json"
+    cli.main(["story", "data", "--out", str(out), *DATA_ARGS, "--with", "terms"])
+    doc = json.loads(out.read_text())
+    assert doc["terms"]["g01"][0]["term"] == "alphaterm"
+    assert doc["terms"]["g02"][0]["term"] == "betaterm"
+    capsys.readouterr()
+    cli.main(["story", "check", str(out)])
+    assert "story: ok" in capsys.readouterr().out
