@@ -27,6 +27,7 @@ this repo, and no key is ever written to a file.
 | Main sample (used) | `main-20260930b` | free | - |
 | Main screen | `main-screen-20260930` | screen | $8.00 |
 | Facet sample and run | `main-facets-20260930` | facets | $2.50 |
+| Facet sample, 2nd wave | `main-facets-20260930b` | facets | (same cap) |
 | Card assignment | `main-cards-*` | assign | $2.50 |
 | Merge, verify, planted | `main-merge-*`, `main-verify-*`, `main-planted-*` | merge_verify | $0.60 |
 | Synthetic benchmark | `bench-*` | discovery | $1.00 |
@@ -154,6 +155,33 @@ Every row keeps `w1` and `p2`; final weight is `w1 / p2`. `draw` prints
 `drew N (P pos, M neg)`; `estimate` prints the probe-extrapolated cost JSON.
 `run` sends `facets@2` in chunks at 1,000 rpm, prints one `chunk i: {...}`
 summary per chunk, and resumes after an interrupt.
+
+### 6b. Second wave (free draw; paid run resumes in place)
+
+To facet more positives per need card, the phase-2 sample is topped up in
+place. Within a stratum, an SRSWOR of n followed by an SRSWOR of m from the
+remaining units is an SRSWOR of n+m, so the expanded sample stays a valid
+stratified simple random sample and keeps every already-faceted comment.
+
+```bash
+uv run atlas facets expand --screen-run main-screen-20260930 \
+    --base-sample main-facets-20260930 --sample-id main-facets-20260930b \
+    --n-pos <target> --seed 20261001
+uv run atlas facets estimate --sample-id main-facets-20260930b
+uv run atlas facets run --sample-id main-facets-20260930b \
+    --run main-facets-20260930 --yes
+```
+
+`expand` recomputes the `allocate_capped` target per stratum, draws the
+shortfall from each stratum's not-yet-selected positives, and writes the new
+sample plus a `wave` column (1 base, 2 added) and a manifest recording the
+base id, seed, target, and rows added per phase. Every positive's `p2`
+becomes `(n_old_h + m_h) / N_h` so `weight = w1 / p2` stays exact; the
+below-cutoff check rows are copied unchanged. `run` on the same run id reads
+`facets.json`, accepts the expanded sample only because its id set is a
+superset of the pinned one (the pin moves to the new id, the old one is
+kept under `previous_sample_ids`), skips the done set, and dispatches only
+the added comments; any non-superset sample is refused.
 
 ## 7. Cards (budgets `assign` $2.50, `merge_verify` $0.60)
 
