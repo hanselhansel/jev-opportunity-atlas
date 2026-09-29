@@ -10,7 +10,6 @@ import asyncio
 import json
 import math
 import tomllib
-from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -115,26 +114,7 @@ def register(sub) -> None:
     rp.add_argument("--seed", type=int, default=1)
     rp.set_defaults(func=_cmd_residue)
 
-    ip = commands.add_parser(
-        "items", help="build the assign items table from a facets run"
-    )
-    ip.add_argument("--facets-run", required=True)
-    ip.add_argument("--sample", required=True, help="facets sample id")
-    ip.add_argument("--snapshot", required=True)
-    ip.add_argument("--out", required=True, help="items parquet path")
-    ip.set_defaults(func=_cmd_items)
-
-    dp = commands.add_parser(
-        "draft-sample", help="PPS drafting sample for card writing"
-    )
-    dp.add_argument("--items", required=True, help="items parquet path")
-    dp.add_argument("--sample", required=True, help="facets sample id")
-    dp.add_argument("--n", type=int, default=1500)
-    dp.add_argument("--seed", type=int, default=20261001)
-    dp.add_argument("--half", default="explore")
-    dp.add_argument("--phase", default="pos")
-    dp.add_argument("--out", required=True, help="TSV path under data/")
-    dp.set_defaults(func=_cmd_draft_sample)
+    items_mod.register(commands)
 
 
 def _load_configs():
@@ -348,83 +328,6 @@ def _cmd_replies(args) -> None:
     print(
         json.dumps(
             {**out, "problems": len(problem_ids), "items": len(items)},
-            indent=1,
-        )
-    )
-
-
-def _gitignored_roots() -> tuple[Path, ...]:
-    return (
-        paths.DATA.resolve(),
-        paths.RUNS.resolve(),
-        paths.EXPORTS.resolve(),
-    )
-
-
-def _require_gitignored(path: Path) -> Path:
-    """The drafting TSV holds HN text; it may only land under the gitignored
-    data/, runs/, or exports/ roots."""
-    resolved = Path(path).resolve()
-    if not any(
-        resolved.is_relative_to(root) for root in _gitignored_roots()
-    ):
-        raise SystemExit(
-            f"--out {path} must be under data/, runs/, or exports/ "
-            "(gitignored): the TSV holds HN text"
-        )
-    return resolved
-
-
-def _cmd_items(args) -> None:
-    rows, meta = items_mod.build_items(
-        args.facets_run, args.sample, args.snapshot
-    )
-    out = items_mod.write_items(rows, args.out)
-    items_mod.write_meta(meta, out)
-    print(
-        json.dumps(
-            {
-                "path": str(out),
-                "rows": len(rows),
-                "dropped_missing_pain": meta["dropped_missing_pain"],
-            },
-            indent=1,
-        )
-    )
-
-
-def _cmd_draft_sample(args) -> None:
-    out = _require_gitignored(Path(args.out))
-    items = pq.read_table(args.items).to_pylist()
-    sample = {
-        r["comment_id"]: r
-        for r in pq.read_table(paths.sample_path(args.sample)).to_pylist()
-    }
-    rows = []
-    for it in items:
-        s = sample.get(it["comment_id"])
-        if s is None:
-            continue
-        rows.append(
-            {
-                **it,
-                "phase": s.get("phase"),
-                "half": s.get("half"),
-                "weight": s.get("weight"),
-            }
-        )
-    picked = items_mod.draft_sample(
-        rows, args.n, args.seed, half=args.half, phase=args.phase
-    )
-    items_mod.write_draft_tsv(picked, out)
-    print(
-        json.dumps(
-            {
-                "path": str(out),
-                "n": len(picked),
-                "pool": len(rows),
-                "seed": args.seed,
-            },
             indent=1,
         )
     )
