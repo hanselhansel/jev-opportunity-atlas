@@ -35,6 +35,12 @@ EXTRA_FIELDS = {
 # flags these findings columns by name or length; the build instead checks that
 # every value is exactly an approved statement or group label.
 CARD_TEXT_COLUMNS = ("title", "problem_statement", "user_workflow")
+# Tables whose columns may hold approved cardset text (card statements and
+# group labels). The gate checks every value against the cardset in meta.
+APPROVED_TEXT_COLUMNS = {
+    "findings.parquet": CARD_TEXT_COLUMNS,
+    "card_share.parquet": ("label",),
+}
 SOURCE = "Hacker News comments (official API)"
 
 
@@ -197,7 +203,7 @@ def _gate_copy(src: Path, dest: Path) -> Path:
 
 
 def site_text_problems(out_dir) -> list[str]:
-    """Release text-gate problems, except findings card-text columns whose every
+    """Release text-gate problems, except card-text columns whose every
     value is an approved statement or group label of the cardset in meta."""
     from atlas.publication.export import text_gate
 
@@ -215,20 +221,27 @@ def site_text_problems(out_dir) -> list[str]:
         approved = {c.statement for c in cs.all_cards.values()} | set(
             cs.groups.values()
         )
-    findings = pq.read_table(out_dir / "findings.parquet")
-    ok = {
-        col
-        for col in CARD_TEXT_COLUMNS
-        if cs is not None
-        and all(v in approved for v in findings[col].to_pylist() if v is not None)
-    }
+    ok = {}
+    for rel, cols in APPROVED_TEXT_COLUMNS.items():
+        path = out_dir / rel
+        if cs is None or not path.exists():
+            continue
+        t = pq.read_table(path)
+        ok[rel] = {
+            col
+            for col in cols
+            if col in t.column_names
+            and all(
+                v in approved for v in t[col].to_pylist() if v is not None
+            )
+        }
     return [
         p
         for p in problems
         if not (
             len(p.split()) > 2
-            and p.split()[2].partition(":")[0] == "findings.parquet"
-            and p.split()[2].partition(":")[2] in ok
+            and p.split()[2].partition(":")[2]
+            in ok.get(p.split()[2].partition(":")[0], ())
         )
     ]
 
@@ -254,6 +267,7 @@ def build_site_data(
 ) -> dict:
     """Write every site table to ``out_dir``; returns row counts per table."""
     from atlas.cards.rank import load_criteria, load_weights
+    from atlas.sitedata.build_card_share import card_share_rows
     from atlas.sitedata.build_cards import evidence_rows, finding_rows
     from atlas.sitedata.build_share import domain_share_rows
 
@@ -344,6 +358,7 @@ def build_site_data(
         "domain_share": domain_share_rows(
             frame, gold, screen_run, facets_set, n_boot, seed
         ),
+        "card_share": card_share_rows(ctx, cs, n_boot, seed),
         "evidence": evidence_rows(ev_ids, ctx),
         "findings": findings,
         "finding_evidence": finding_evidence,

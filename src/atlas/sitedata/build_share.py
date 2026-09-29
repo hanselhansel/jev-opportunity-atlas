@@ -28,16 +28,15 @@ def _codes(x) -> np.ndarray:
     return np.unique(np.asarray(x, dtype=object).astype(str), return_inverse=True)[1]
 
 
-def boot_ratio(den, nums, w, strata, clusters, n_boot=2000, seed=0, alpha=0.05):
-    """Percentile interval of sum(w*num)/sum(w*den) per column of ``nums``.
+def boot_totals(cols, strata, clusters, n_boot=2000, seed=0) -> np.ndarray:
+    """(n_boot, n_cols) resampled column totals over (stratum, thread) pairs.
 
     Threads are resampled with replacement within strata; the unit is the pair
-    (stratum, thread), as in ``atlas.estimation.ppi``.
+    (stratum, thread), as in ``atlas.estimation.ppi``. One rng drives every
+    column block, so paired quantities (two half-years of one bootstrap) see
+    the same draws.
     """
-    den = np.asarray(den, dtype=float)
-    nums = np.asarray(nums, dtype=float).reshape(den.size, -1)
-    w = np.asarray(w, dtype=float)
-    cols = np.column_stack([w * den, w[:, None] * nums])
+    cols = np.asarray(cols, dtype=float)
     pairs, inv = np.unique(
         np.stack([_codes(strata), _codes(clusters)], axis=1),
         axis=0,
@@ -52,6 +51,16 @@ def boot_ratio(den, nums, w, strata, clusters, n_boot=2000, seed=0, alpha=0.05):
         m = idx.size
         counts = rng.multinomial(m, np.full(m, 1.0 / m), size=n_boot)
         total += counts @ sums[idx]
+    return total
+
+
+def boot_ratio(den, nums, w, strata, clusters, n_boot=2000, seed=0, alpha=0.05):
+    """Percentile interval of sum(w*num)/sum(w*den) per column of ``nums``."""
+    den = np.asarray(den, dtype=float)
+    nums = np.asarray(nums, dtype=float).reshape(den.size, -1)
+    w = np.asarray(w, dtype=float)
+    cols = np.column_stack([w * den, w[:, None] * nums])
+    total = boot_totals(cols, strata, clusters, n_boot, seed)
     with np.errstate(divide="ignore", invalid="ignore"):
         ratios = total[:, 1:] / total[:, [0]]
     lo, hi = np.nanquantile(ratios, [alpha / 2, 1 - alpha / 2], axis=0)
