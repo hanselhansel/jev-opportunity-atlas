@@ -2,7 +2,21 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+
+
+def _transport():
+    """Transport override point for tests; None means real httpx."""
+    return
+
+
+def _load_paraphrases() -> dict:
+    from atlas import paths
+
+    path = paths.CONFIGS / "cards" / "paraphrases.v1.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data["paraphrases"]
 
 
 def _subsample_screen(args) -> None:
@@ -58,3 +72,105 @@ def register(sub) -> None:
     i.add_argument("--seed", type=int, required=True)
     i.add_argument("--out", required=True, help="Output parquet path")
     i.set_defaults(func=_subsample_items)
+
+    a = cmds.add_parser(
+        "assign-paraphrase",
+        help="Run assign with a paraphrased instruction pair",
+    )
+    a.add_argument("--cardset", required=True)
+    a.add_argument("--version", required=True)
+    a.add_argument("--items", required=True, help="Subsampled items parquet")
+    a.add_argument("--run", required=True)
+    a.add_argument("--para", type=int, choices=[1, 2], required=True)
+    a.add_argument("--rpm", type=float, default=1000)
+    a.add_argument("--budget", default="robustness")
+    a.add_argument("--yes", action="store_true")
+    a.set_defaults(func=_assign_paraphrase)
+
+
+def _assign_paraphrase(args) -> None:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    from atlas import paths
+    from atlas.cards.engine import cli as cards_cli
+    from atlas.cards.engine.assign import (
+        assign,
+        card_item,
+        group_item,
+        write_assignments,
+    )
+    from atlas.cards.engine.cardset import load_cardset
+    from atlas.inference import keys
+    from atlas.inference.budget import BudgetGuard
+    from atlas.inference.client import JevClient
+    from atlas.inference.runner import RunContext
+
+    pair = _load_paraphrases()[str(args.para)]
+    budgets, price_row, usd_per_token = cards_cli._load_configs()
+    cap, worst = cards_cli._budget_cap(budgets, args.budget)
+    cs = load_cardset(args.cardset, args.version)
+    rows = pq.read_table(args.items).to_pylist()
+    biggest = max(cs.groups, key=lambda g: len(cs.cards_in(g)))
+    tokens = []
+    for r in rows:
+        tokens.append(
+            cards_cli._est_tokens(
+                group_item(
+                    r["comment_id"], r["pain_sentence"], r["sentences"], cs,
+                    instructions=pair["group_instructions"],
+                )
+            )
+        )
+        tokens.append(
+            cards_cli._est_tokens(
+                card_item(
+                    r["comment_id"], r["pain_sentence"], r["sentences"], cs,
+                    biggest, instructions=pair["card_instructions"],
+                )
+            )
+        )
+    cards_cli._print_estimate(
+        f"assign-para{args.para}", tokens, args.budget, cap, usd_per_token
+    )
+    if not args.yes:
+        return
+    guard = BudgetGuard.for_budget(args.budget, cap, usd_per_token, worst)
+    try:
+        client = JevClient(
+            api_key=keys.get_api_key(),
+            base=keys.base_url(),
+            transport=_transport(),
+        )
+        ctx = RunContext(
+            run_id=args.run,
+            client=client,
+            guard=guard,
+            model=cards_cli.MODEL,
+            price_version=price_row["version"],
+            run_dir=paths.run_dir(args.run),
+            budget=args.budget,
+            rpm=args.rpm,
+        )
+        result = asyncio.run(
+            assign(
+                ctx,
+                rows,
+                cs,
+                question_set_prefix=f"assign-para{args.para}",
+                group_instructions=pair["group_instructions"],
+                card_instructions=pair["card_instructions"],
+            )
+        )
+        run_dir = paths.run_dir(args.run)
+        pain = [
+            {"comment_id": r["comment_id"], "pain_sentence": r["pain_sentence"]}
+            for r in rows
+        ]
+        pq.write_table(
+            pa.Table.from_pylist(pain, schema=cards_cli.PAIN_SCHEMA),
+            str(run_dir / "pain.parquet"),
+        )
+        write_assignments(run_dir, result, cs.version)
+    finally:
+        guard.close()
