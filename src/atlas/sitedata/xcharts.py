@@ -90,6 +90,57 @@ def _style(ax) -> None:
     ax.tick_params(labelsize=_pt(TICK_PX), colors=INK)
 
 
+def _two_lines(text: str) -> str:
+    """Split into two lines at the word boundary closest to the middle."""
+    words = text.split()
+    if len(words) < 2:
+        return text
+    k = min(
+        range(1, len(words)),
+        key=lambda k: abs(
+            len(" ".join(words[:k])) - len(" ".join(words[k:]))
+        ),
+    )
+    return " ".join(words[:k]) + "\n" + " ".join(words[k:])
+
+
+def _fit_title(fig, renderer, raw: str) -> tuple[str, float]:
+    """A title that fits the canvas, and its point size.
+
+    One line at full size first, then a balanced two-line wrap, shrinking
+    in 10% steps to 70%. Past that the font keeps shrinking to 40%, and as
+    a last resort the title wraps to as many lines as it needs — nothing
+    ever overflows the 1600 px canvas.
+    """
+    max_w = W - 2 * MARGIN
+    probe = fig.text(0, 0, raw, fontsize=_pt(TITLE_PX), weight="bold")
+    try:
+        for scale in (1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4):
+            size = _pt(TITLE_PX) * scale
+            probe.set_fontsize(size)
+            probe.set_text(raw)
+            if probe.get_window_extent(renderer).width <= max_w:
+                return raw, size
+            two = _two_lines(raw)
+            if two != raw:
+                probe.set_text(two)
+                if probe.get_window_extent(renderer).width <= max_w:
+                    return two, size
+        size = _pt(TITLE_PX) * 0.4
+        probe.set_fontsize(size)
+        lo, hi_w, best = 10, len(raw), None
+        while lo <= hi_w:
+            mid = (lo + hi_w) // 2
+            probe.set_text(textwrap.fill(raw, mid))
+            if probe.get_window_extent(renderer).width <= max_w:
+                best, lo = probe.get_text(), mid + 1
+            else:
+                hi_w = mid - 1
+        return best or textwrap.fill(raw, 10), size
+    finally:
+        probe.remove()
+
+
 def _fmt(value, fmt: str) -> str:
     if value is None:
         return "n/a"
@@ -266,11 +317,12 @@ def render_x_chart(spec: dict, out_png) -> dict:
     fig = Figure(figsize=(W / DPI, H / DPI), dpi=DPI, facecolor="white")
     canvas = FigureCanvasAgg(fig)
     renderer = canvas.get_renderer()
+    title_txt, title_pt = _fit_title(fig, renderer, spec["title"])
     title = fig.text(
         MARGIN / W,
         1 - MARGIN / H,
-        textwrap.fill(spec["title"], 58),
-        fontsize=_pt(TITLE_PX),
+        title_txt,
+        fontsize=title_pt,
         weight="bold",
         va="top",
         color=INK,
@@ -322,6 +374,9 @@ def render_x_chart(spec: dict, out_png) -> dict:
         **spec,
         "footer": footer,
         "footer_px": FOOTER_PX,
+        "title_px": round(title_pt * DPI / 72, 1),
+        "title_lines": title_txt.count("\n") + 1,
+        "title_bbox": [round(v, 1) for v in tb.extents],
         "footer_bbox": [
             round(box.x0, 1),
             round(box.y0, 1),

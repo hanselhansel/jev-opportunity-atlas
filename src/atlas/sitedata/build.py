@@ -262,6 +262,11 @@ def build_site_data(
     }
     n = {"screened": len(ctx["screen"]), "faceted": len(ev_ids), "gold": len(gold)}
     meta = _meta(args, manifest.get("window") or {}, n)
+    from atlas.sitedata.xspecs import load_x_titles
+
+    _, run_labels = load_x_titles()
+    if run_labels:
+        meta["run_labels"] = json.dumps(run_labels)
     roles = [("screen", screen_run), ("facets", facets_run), ("assign", assign_run)]
     if benchmark_run:
         roles.append(("benchmark", benchmark_run))

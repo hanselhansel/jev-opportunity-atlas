@@ -11,9 +11,13 @@ describe the chart without asserting a result the data may not show.
 
 from __future__ import annotations
 
+import string
+import tomllib
 from pathlib import Path
 
 import pyarrow.parquet as pq
+
+from atlas import paths
 
 POPULATION = "screen_positive"
 FIRSTHAND = "firsthand_account"
@@ -43,8 +47,57 @@ def _short(r) -> str:
     return r.get("short_label") or r["label"]
 
 
+def load_x_titles() -> tuple[dict, dict]:
+    """``(titles, run_labels)`` from ``configs/x_titles.toml``; both empty
+    when the file is absent."""
+    path = paths.CONFIGS / "x_titles.toml"
+    if not path.exists():
+        return {}, {}
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    return dict(data.get("titles") or {}), dict(data.get("run_labels") or {})
+
+
+def _share_fmt(v: float) -> str:
+    """One decimal under 10%, a whole percent otherwise."""
+    return f"{v * 100:.1f}%" if abs(v) * 100 < 10 else f"{v * 100:.0f}%"
+
+
+_PLACEHOLDERS = {
+    "top_share": _share_fmt,
+    "min_share": _share_fmt,
+    "max_share": _share_fmt,
+    "jev_precision": _share_fmt,
+    "random_precision": _share_fmt,
+    "total_usd": lambda v: f"${v:,.2f}",
+    "total_calls": lambda v: f"{int(v):,}",
+}
+
+
+def fill_title(template: str, values: dict) -> str | None:
+    """Fill ``{placeholder}`` fields in a configured title. An unknown
+    placeholder is an error; a known one with no data returns None so the
+    caller keeps the generated title."""
+    fields = {
+        name
+        for _, name, _, _ in string.Formatter().parse(template)
+        if name is not None
+    }
+    fields.discard("")
+    unknown = fields - set(_PLACEHOLDERS)
+    if unknown:
+        raise ValueError(
+            f"unknown x_titles placeholder(s): {sorted(unknown)}"
+        )
+    if any(values.get(f) is None for f in fields):
+        return None
+    return template.format(
+        **{f: _PLACEHOLDERS[f](values[f]) for f in fields}
+    )
+
+
 def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> list[dict]:
     site_dir = Path(site_dir)
+    titles, run_labels = load_x_titles()
     meta = {r["key"]: r["value"] for r in _rows(site_dir, "meta")}
     findings = _rows(site_dir, "findings")
     fe = [r for r in _rows(site_dir, "finding_evidence") if r["role"] == "supporting"]
@@ -249,9 +302,9 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
             "rows": [
                 {
                     "label": (
-                        f"{r['run_id']} (paraphrase)"
+                        f"{run_labels.get(r['run_id'], r['run_id'])} (paraphrase)"
                         if r["run_id"] in para_runs
-                        else f"{r['run_id']} (main)"
+                        else f"{run_labels.get(r['run_id'], r['run_id'])} (main)"
                     ),
                     "value": r["value"],
                     "ci_low": r["lo"],
@@ -350,7 +403,7 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
         "title": "The human audit compares Jev's card precision with a random-card baseline.",
         "data": {"rows": qrows, "xlabel": "precision or accuracy"},
     }
-    return [
+    specs = [
         bars,
         heat,
         group_share,
@@ -360,3 +413,22 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
         cost,
         qual,
     ]
+    shares = [r["value"] for r in prev if r["value"] is not None]
+    values = {
+        "top_share": card_all[0]["share"] if card_all else None,
+        "min_share": min(shares) if shares else None,
+        "max_share": max(shares) if shares else None,
+        "total_usd": usd if runs else None,
+        "total_calls": calls if runs else None,
+        "jev_precision": next(
+            (r["value"] for r in audit if r["system"] == "jev"), None
+        ),
+        "random_precision": next(
+            (r["value"] for r in audit if r["system"] == "random_card"), None
+        ),
+    }
+    for s in specs:
+        template = titles.get(s["name"])
+        if template:
+            s["title"] = fill_title(template, values) or s["title"]
+    return specs
