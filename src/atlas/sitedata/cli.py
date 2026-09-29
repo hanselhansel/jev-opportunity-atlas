@@ -77,6 +77,8 @@ def _data(args) -> None:
         replies_run=args.replies_run,
         robust_screen=args.robust_screen,
         robust_assign=args.robust_assign,
+        run_phases=args.run_phases,
+        audit_runs=args.audit_run,
         top_n=args.top_n,
         n_boot=args.n_boot,
         seed=args.seed,
@@ -126,6 +128,17 @@ def _register_data(ssub) -> None:
     d.add_argument(
         "--robust-assign",
         help="JSON output of `robust compare-assign` (wording robustness)",
+    )
+    d.add_argument(
+        "--run-phases",
+        help="TOML [runs] map of run_id -> phase; the runs table and spend "
+        "totals cover every key (a key a/b reads runs/a/b/ledger.jsonl)",
+    )
+    d.add_argument(
+        "--audit-run",
+        action="append",
+        default=[],
+        help="Run whose eval_*.json reports join the quality table (repeatable)",
     )
     d.add_argument("--facets-set", default="facets@2")
     d.add_argument("--top-n", type=int, default=20)

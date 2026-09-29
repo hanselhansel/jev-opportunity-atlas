@@ -22,7 +22,11 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from atlas import contracts, paths
-from atlas.sitedata.build_quality import quality_rows, runs_rows
+from atlas.sitedata.build_quality import (
+    quality_rows,
+    runs_from_phases,
+    runs_rows,
+)
 from atlas.sitedata.inputs import _gold, _labels, _load, _meta, find_cardset
 from atlas.sitedata.tables import SITE_TABLES
 
@@ -132,6 +136,8 @@ def build_site_data(
     replies_run=None,
     robust_screen=None,
     robust_assign=None,
+    run_phases=None,
+    audit_runs=(),
     top_n=20,
     n_boot=2000,
     seed=0,
@@ -223,6 +229,11 @@ def build_site_data(
         roles.append(("benchmark", benchmark_run))
     if replies_run:
         roles.append(("replies", replies_run))
+    run_rows = runs_from_phases(run_phases) if run_phases else runs_rows(roles)
+    meta["total_calculated_usd"] = str(
+        round(sum(r["calculated_usd"] or 0.0 for r in run_rows), 6)
+    )
+    meta["total_calls"] = str(sum(r["calls"] or 0 for r in run_rows))
     tables = {
         "meta": pa.table({"key": list(meta), "value": list(meta.values())}),
         "coverage": pq.read_table(snap / "coverage.parquet")
@@ -247,8 +258,10 @@ def build_site_data(
         "evidence": evidence_rows(ev_ids, ctx),
         "findings": findings,
         "finding_evidence": finding_evidence,
-        "runs": runs_rows(roles),
-        "quality": quality_rows([r for _, r in roles], label_sets, benchmark_run),
+        "runs": run_rows,
+        "quality": quality_rows(
+            [r for _, r in roles], label_sets, benchmark_run, audit_runs=audit_runs
+        ),
     }
     return _write(Path(out_dir), tables)
 
