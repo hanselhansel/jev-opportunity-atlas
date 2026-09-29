@@ -18,7 +18,8 @@ UNAUDITED = "as classified by Jev; unaudited"
 EXTRA_COLUMNS = {
     "domain_share": ["qualifier"],
     "quality": ["system"],
-    "findings": ["unsolved_rate"],
+    "findings": ["unsolved_rate", "short_label"],
+    "card_share": ["short_label"],
 }
 
 @pytest.fixture

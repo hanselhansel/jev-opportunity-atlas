@@ -8,6 +8,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import numpy as np
+import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
@@ -92,7 +93,9 @@ def test_table_schema_and_row_fields(world, tmp_path):
     out = tmp_path / "site-real"
     build(out)
     got = pq.read_schema(out / "card_share.parquet")
-    assert got.equals(SITE_TABLES["card_share"])
+    base = SITE_TABLES["card_share"]
+    assert pa.schema(list(got)[: len(base)]).equals(base)
+    assert got.names[len(base) :] == ["short_label"]
     rows = _rows(out)
     assert rows
     for r in rows:

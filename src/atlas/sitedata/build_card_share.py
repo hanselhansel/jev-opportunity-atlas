@@ -181,8 +181,12 @@ def _f(x):
     return float(x) if x is not None and math.isfinite(x) else None
 
 
-def card_share_rows(ctx, cs, n_boot=2000, seed=0) -> list[dict]:
-    """One row per (population, level, id, bucket)."""
+def card_share_rows(ctx, cs, n_boot=2000, seed=0, short_labels=None) -> list[dict]:
+    """One row per (population, level, id, bucket).
+
+    ``short_labels`` is ``{"groups": {...}, "cards": {...}}`` from the
+    cardset's labels.yaml; ids without an entry keep the full text.
+    """
     rows = []
     for pop_name, phases in POPULATIONS:
         items = _items(ctx, cs, phases)
@@ -196,6 +200,9 @@ def card_share_rows(ctx, cs, n_boot=2000, seed=0) -> list[dict]:
                 x: (cs.groups[x] if level == "group" else cs.all_cards[x].statement)
                 for x in ids
             }
+            short = (short_labels or {}).get(
+                "groups" if level == "group" else "cards", {}
+            )
             key = "group" if level == "group" else "card"
             blocks = {}
             for b in ("all", "H1", "H2"):
@@ -220,6 +227,7 @@ def card_share_rows(ctx, cs, n_boot=2000, seed=0) -> list[dict]:
                             "level": level,
                             "id": x,
                             "label": labels[x],
+                            "short_label": short.get(x) or labels[x],
                             "population": pop_name,
                             "bucket": b,
                             "share": _f(share[i]),
@@ -236,6 +244,7 @@ def card_share_rows(ctx, cs, n_boot=2000, seed=0) -> list[dict]:
                         "level": level,
                         "id": x,
                         "label": labels[x],
+                        "short_label": short.get(x) or labels[x],
                         "population": pop_name,
                         "bucket": "H2_minus_H1",
                         "share": _f(diff[i]),

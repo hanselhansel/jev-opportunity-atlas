@@ -37,6 +37,12 @@ def _pct(x):
     return None if x is None else x * 100
 
 
+def _short(r) -> str:
+    """Display label for a card_share row: the labels.yaml short_label when
+    the build wrote one, else the full card or group text."""
+    return r.get("short_label") or r["label"]
+
+
 def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> list[dict]:
     site_dir = Path(site_dir)
     meta = {r["key"]: r["value"] for r in _rows(site_dir, "meta")}
@@ -62,7 +68,9 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
     )
     assign_run = meta.get("assign_run") or meta.get("run_id")
     top = sorted(findings, key=lambda f: (-f["n_authors"], f["finding_id"]))[:top_n]
-    label = {f["finding_id"]: f"{f['finding_id']}: {f['title']}" for f in top}
+    label = {
+        f["finding_id"]: f.get("short_label") or f["title"] for f in top
+    }
     members = {
         f["finding_id"]: {
             r["comment_id"] for r in fe if r["finding_id"] == f["finding_id"]
@@ -81,7 +89,13 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
         "title": f"These {len(top)} need cards drew the most distinct authors in the sample.",
         "data": {
             "rows": [
-                {"label": label[f["finding_id"]], "value": f["n_authors"]} for f in top
+                {
+                    "id": f["finding_id"],
+                    "label": label[f["finding_id"]],
+                    "full_label": f["title"],
+                    "value": f["n_authors"],
+                }
+                for f in top
             ],
             "xlabel": "distinct authors (sample counts)",
             "format": "int",
@@ -133,7 +147,8 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
             "rows": [
                 {
                     "id": r["id"],
-                    "label": r["label"],
+                    "label": _short(r),
+                    "full_label": r["label"],
                     "value": r["share"],
                     "ci_low": r["lo"],
                     "ci_high": r["hi"],
@@ -157,7 +172,8 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
             "rows": [
                 {
                     "id": r["id"],
-                    "label": r["label"],
+                    "label": _short(r),
+                    "full_label": r["label"],
                     "value": r["share"],
                     "ci_low": r["lo"],
                     "ci_high": r["hi"],
@@ -193,7 +209,8 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
             "rows": [
                 {
                     "id": r["id"],
-                    "label": r["label"],
+                    "label": _short(r),
+                    "full_label": r["label"],
                     "estimate": _pct(r["share"]),
                     "ci_low": _pct(r["lo"]),
                     "ci_high": _pct(r["hi"]),
