@@ -1,8 +1,9 @@
-"""`atlas release stage`, `atlas release check`, and `atlas claims check`.
+"""`atlas release ...` and `atlas claims check`.
 
 Staging builds exports/<release> locally through the allowlist, the text gate,
-and the secret scan; check re-verifies a staged release in place. Nothing is
-ever uploaded.
+and the secret scan; check re-verifies a staged release in place; pack writes the
+site and full bundles for a manual, reviewed `gh release create`. Restore
+downloads a published release over plain HTTPS. Nothing here uploads.
 """
 
 from __future__ import annotations
@@ -86,6 +87,97 @@ def _release_check(args) -> None:
         raise SystemExit(1)
 
 
+def _release_pack(args) -> None:
+    from atlas import paths
+    from atlas.publication.restore import ReleaseError, add_site_tables, pack_release
+
+    release_dir = paths.EXPORTS / args.release
+    out = Path(args.out) if args.out else paths.EXPORTS / f"{args.release}-assets"
+    try:
+        if args.site_data:
+            add_site_tables(release_dir, Path(args.site_data))
+        index = pack_release(release_dir, out, limit=args.chunk_limit)
+    except ReleaseError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(1) from exc
+    print(json.dumps({"assets_dir": str(out), **index}, indent=2))
+    print(
+        f"upload (manual, reviewed): gh release create {args.release} {out}/*",
+        file=sys.stderr,
+    )
+
+
+def _release_restore(args) -> None:
+    from atlas import paths
+    from atlas.publication.restore import ReleaseError, restore
+
+    dest = Path(args.dest) if args.dest else paths.DATA / "releases"
+    try:
+        report = restore(
+            args.release,
+            dest,
+            bundles=tuple(args.bundle or ["site"]),
+            repo=args.repo,
+            use_gh=args.gh,
+        )
+    except ReleaseError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(1) from exc
+    print(json.dumps(report, indent=2))
+
+
+def _release_rehydrate(args) -> None:
+    from atlas import paths
+    from atlas.publication.rehydrate import rehydrate_release
+
+    summary = rehydrate_release(
+        Path(args.release_dir),
+        paths.DATA / "rehydrated",
+        limit=args.limit,
+        concurrency=args.concurrency,
+    )
+    print(json.dumps(summary, indent=2))
+
+
+def _release_replay(args) -> None:
+    from atlas.publication.replay import replay
+
+    report = replay(
+        Path(args.release_dir), Path(args.site_out) if args.site_out else None
+    )
+    v = report["verify"]
+    if v["ok"]:
+        print(f"verify: ok (schema_version {v['schema_version']})")
+    else:
+        print(
+            f"verify: FAIL bad={v['bad']} missing={v['missing']} "
+            f"extra={v['extra']} schema_version={v['schema_version']}"
+        )
+    for cid, verdict in report["claims"].items():
+        detail = report["claim_errors"].get(cid)
+        print(f"claim {cid}: {verdict}" + (f" ({detail})" if detail else ""))
+    if v["ok"]:
+        print(f"claims: {len(report['claims'])} checked")
+    for problem in report["site_problems"]:
+        print(f"site data: {problem}")
+    if report["site_data"]:
+        print(f"site data: {report['site_data']}")
+    print("replay: ok" if report["ok"] else "replay: FAIL")
+    if not report["ok"]:
+        raise SystemExit(1)
+
+
+def _release_pages(args) -> None:
+    from atlas.publication.pages import PagesError, publish_pages
+
+    try:
+        result = publish_pages(Path(args.dist), dry_run=not args.push)
+    except PagesError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(1) from exc
+    print(json.dumps(result, indent=2))
+
+
 def _claims_check(args) -> None:
     from atlas import paths
     from atlas.publication.claims import check_claims, load_claims
@@ -133,6 +225,60 @@ def register(sub) -> None:
     )
     check.add_argument("--release", required=True, help="Release tag")
     check.set_defaults(func=_release_check)
+    pack = rsub.add_parser(
+        "pack", help="Write site and full bundles plus assets-<tag>.json"
+    )
+    pack.add_argument("--release", required=True, help="Release tag")
+    pack.add_argument(
+        "--site-data", default=None, help="Real site tables to add first"
+    )
+    pack.add_argument(
+        "--out", default=None, help="Assets dir (default: exports/<tag>-assets)"
+    )
+    pack.add_argument("--chunk-limit", type=int, default=1_900_000_000)
+    pack.set_defaults(func=_release_pack)
+    rest = rsub.add_parser(
+        "restore", help="Download, verify, and unpack a published release"
+    )
+    rest.add_argument("--release", required=True, help="Release tag")
+    rest.add_argument("--repo", default="hanselhansel/jev-opportunity-atlas")
+    rest.add_argument(
+        "--dest", default=None, help="Parent dir (default: data/releases)"
+    )
+    rest.add_argument(
+        "--bundle",
+        action="append",
+        choices=("site", "full"),
+        help="Bundle to restore (repeatable; default: site)",
+    )
+    rest.add_argument(
+        "--gh", action="store_true", help="Download with gh instead of HTTPS"
+    )
+    rest.set_defaults(func=_release_restore)
+    rehy = rsub.add_parser(
+        "rehydrate",
+        help="Refetch comment text from the HN API into data/rehydrated/",
+    )
+    rehy.add_argument("--release-dir", required=True, help="Restored release dir")
+    rehy.add_argument("--limit", type=int, default=None, help="First N ids only")
+    rehy.add_argument("--concurrency", type=int, default=32)
+    rehy.set_defaults(func=_release_rehydrate)
+    rep = rsub.add_parser(
+        "replay", help="Verify, check claims, and build site data (no network)"
+    )
+    rep.add_argument("--release-dir", required=True, help="Restored release dir")
+    rep.add_argument(
+        "--site-out", default=None, help="Site data dir (default: <dir>-site-data)"
+    )
+    rep.set_defaults(func=_release_replay)
+    pages = rsub.add_parser(
+        "pages", help="Build the gh-pages commit for a site build (dry run)"
+    )
+    pages.add_argument("--dist", default="site/dist", help="Built site dir")
+    pages.add_argument(
+        "--push", action="store_true", help="Push to gh-pages (main session only)"
+    )
+    pages.set_defaults(func=_release_pages)
 
     claims = sub.add_parser("claims", help="Claims ledger")
     csub = claims.add_subparsers(dest="claims_cmd", required=True)
