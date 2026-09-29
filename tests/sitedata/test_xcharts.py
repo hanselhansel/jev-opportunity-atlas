@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.sitedata.world import build, build_world
+from tests.sitedata.world import build, build_world, read
 
 CAVEATS = ("as classified by Jev", "HN comments only; not market demand")
 COMMON = {
@@ -147,6 +147,18 @@ def test_footer_fields_are_required(key, tmp_path):
         render_x_chart(bad, tmp_path / "b.png")
 
 
+NAMES = [
+    "bars",
+    "heat",
+    "group_share",
+    "card_share_top",
+    "card_change",
+    "wording_range",
+    "cost",
+    "quality",
+]
+
+
 def test_charts_from_built_site_data(tmp_path, monkeypatch):
     from atlas.sitedata.xcharts import render_site_charts, site_chart_specs
 
@@ -154,7 +166,7 @@ def test_charts_from_built_site_data(tmp_path, monkeypatch):
     data = tmp_path / "site-real"
     build(data)
     specs = site_chart_specs(data)
-    assert [s["kind"] for s in specs] == ["bars", "heat", "change", "cost", "quality"]
+    assert [s["name"] for s in specs] == NAMES
     for s in specs:
         assert s["title"].endswith(".") and s["title"][0].isupper()
         assert s["window"] == "2025-09-28 to 2026-09-28"
@@ -165,9 +177,109 @@ def test_charts_from_built_site_data(tmp_path, monkeypatch):
     cost = next(s for s in specs if s["kind"] == "cost")["data"]
     assert cost["calls"] == 120 + 80 + 40 + 20
     written = render_site_charts(data, tmp_path / "x")
-    assert len(written) == 5
+    assert len(written) == len(NAMES)
     for p in written:
         assert png_size(p) == (1600, 900)
+
+
+def test_share_and_change_specs_come_from_card_share(tmp_path, monkeypatch):
+    build_world(tmp_path / "repo", monkeypatch)
+    data = tmp_path / "site-real"
+    screen_json = tmp_path / "cmp-screen.json"
+    screen_json.write_text(
+        json.dumps(
+            {
+                "main_run": "screen-syn",
+                "sample_id": "sub",
+                "cutoff": 0.7,
+                "n_sample": 8,
+                "runs": {
+                    "screen-syn": {
+                        "n": 8,
+                        "prevalence": 0.5,
+                        "ci_low": 0.3,
+                        "ci_high": 0.7,
+                    },
+                    "screen-para": {
+                        "n": 8,
+                        "prevalence": 0.45,
+                        "ci_low": 0.25,
+                        "ci_high": 0.65,
+                        "vs_main": {
+                            "n": 8,
+                            "agreement": 0.9,
+                            "kappa": 0.7,
+                            "spearman": 0.8,
+                        },
+                    },
+                },
+            }
+        )
+    )
+    build(data, robust_screen=str(screen_json))
+    from atlas.sitedata.xcharts import site_chart_specs
+
+    specs = {s["name"]: s for s in site_chart_specs(data)}
+    n_fh = sum(
+        1
+        for r in read(data, "evidence")
+        if r["account_type"] == "firsthand_account"
+    )
+    card = {
+        (r["level"], r["id"], r["bucket"]): r
+        for r in read(data, "card_share")
+        if r["population"] == "screen_positive"
+    }
+    for name in ("group_share", "card_share_top", "card_change"):
+        spec = specs[name]
+        assert spec["qualifier"] == "as classified by Jev; assignment audited"
+        assert f"{n_fh:,}" in spec["denominator"]
+    groups = specs["group_share"]["data"]["rows"]
+    assert [r["label"] for r in groups] == [
+        card[("group", g, "all")]["label"]
+        for g in sorted(
+            ("g01", "g02"),
+            key=lambda g: -card[("group", g, "all")]["share"],
+        )
+    ]
+    for r in groups:
+        x = card[("group", r["id"], "all")]
+        assert r["value"] == x["share"]
+        assert r["ci_low"] == x["lo"] and r["ci_high"] == x["hi"]
+    top = specs["card_share_top"]["data"]["rows"]
+    assert len(top) <= 12
+    diff = specs["card_change"]["data"]["rows"]
+    assert {r["label"] for r in diff} == {r["label"] for r in top}
+    for r in diff:
+        x = card[("card", r["id"], "H2_minus_H1")]
+        assert r["estimate"] == x["share"] * 100
+        assert r["significant"] == (x["p_adj"] is not None and x["p_adj"] < 0.05)
+
+
+def test_wording_range_spec_from_fixture_tables(tmp_path):
+    from atlas.sitedata.fixtures import write_fixtures
+    from atlas.sitedata.xcharts import render_x_chart, site_chart_specs
+
+    write_fixtures(tmp_path / "site", seed=0)
+    specs = {s["name"]: s for s in site_chart_specs(tmp_path / "site")}
+    spec = specs["wording_range"]
+    rows = spec["data"]["rows"]
+    labels = [r["label"] for r in rows]
+    assert any("main" in x for x in labels)
+    assert any("para" in x for x in labels)
+    assert all(r["ci_low"] <= r["value"] <= r["ci_high"] for r in rows)
+    for name, s in specs.items():
+        rec = render_x_chart(s, tmp_path / "x" / f"{name}.png")
+        assert png_size(tmp_path / "x" / f"{name}.png") == (1600, 900)
+        for part in (
+            s["source"],
+            s["window"],
+            s["denominator"],
+            s["lane"],
+            s["run_id"],
+            *CAVEATS,
+        ):
+            assert part in rec["footer"], (name, part)
 
 
 def test_x_charts_cli_writes_pngs(tmp_path, monkeypatch, capsys):
@@ -181,7 +293,8 @@ def test_x_charts_cli_writes_pngs(tmp_path, monkeypatch, capsys):
         ["x", "charts", "--data", str(data), "--out", str(out)])
     args.func(args)
     pngs = sorted(out.glob("*.png"))
-    assert [p.name for p in pngs] == ["01-bars.png", "02-heat.png", "03-change.png",
-                                     "04-cost.png", "05-quality.png"]
+    assert [p.name for p in pngs] == [
+        f"{i + 1:02d}-{name}.png" for i, name in enumerate(NAMES)
+    ]
     assert all(png_size(p) == (1600, 900) for p in pngs)
-    assert len(capsys.readouterr().out.strip().splitlines()) == 5
+    assert len(capsys.readouterr().out.strip().splitlines()) == len(NAMES)
