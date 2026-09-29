@@ -12,12 +12,14 @@ import os
 import subprocess
 import tomllib
 from datetime import UTC, datetime
+from pathlib import Path
 
 
 def _env(args) -> dict:
     env = dict(os.environ)
     if getattr(args, "data", None):
-        env["ATLAS_SITE_DATA"] = args.data
+        # npm runs with cwd=site/, so a relative path must be absolute first.
+        env["ATLAS_SITE_DATA"] = str(Path(args.data).resolve())
     if getattr(args, "production", False):
         env["ATLAS_SITE_MODE"] = "production"
     if getattr(args, "base", None):
