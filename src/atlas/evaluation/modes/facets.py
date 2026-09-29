@@ -1,5 +1,5 @@
-"""Deep-facet audit: the labeler answers the facet questions on a comment,
-blind to Jev's facet answers. Comment text comes from the snapshot."""
+"""Deep-facet audit: the labeler judges the facet questions on a comment,
+blind to the model's facet labels. Comment text comes from the snapshot."""
 
 LABEL_SET = "facet_audit"
 
@@ -19,3 +19,16 @@ NEEDS_TEXT = True
 
 def questions() -> dict[str, tuple[str, ...]]:
     return dict(QUESTIONS)
+
+
+def render(item: dict) -> None:
+    import streamlit as st
+
+    st.subheader(item["story_title"])
+    st.markdown(
+        f"[view item](https://news.ycombinator.com/item?id={item['comment_id']})"
+    )
+    with st.expander("Parent"):
+        st.markdown(item["parent"] or "")
+    st.markdown("#### Comment")
+    st.markdown(item["comment"] or "")
