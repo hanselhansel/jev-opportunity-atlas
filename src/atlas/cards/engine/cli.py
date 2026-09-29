@@ -28,6 +28,7 @@ from atlas.cards.engine.assign import (
     write_assignments,
 )
 from atlas.cards.engine.cardset import load_cardset
+from atlas.cards.engine.combine import PAIN_SCHEMA, combine
 from atlas.cards.engine.induce import (
     check_superset,
     induce,
@@ -55,9 +56,6 @@ from atlas.inference.questions import canonical_json
 from atlas.inference.runner import RunContext
 
 MODEL = "jev-1.13.0"
-PAIN_SCHEMA = pa.schema(
-    [("comment_id", pa.int64()), ("pain_sentence", pa.string())]
-)
 
 
 def _transport():
@@ -134,6 +132,16 @@ def register(sub) -> None:
         help="parquet: comment_id, pain_sentence, sentences",
     )
     ip.set_defaults(func=_cmd_induce)
+
+    cp = commands.add_parser(
+        "combine", help="merge assign runs of one version into a new run"
+    )
+    cp.add_argument(
+        "--runs", required=True, help="comma-separated assign run ids"
+    )
+    cp.add_argument("--version", required=True)
+    cp.add_argument("--run", required=True, help="output run id")
+    cp.set_defaults(func=_cmd_combine)
 
     items_mod.register(commands)
 
@@ -311,6 +319,11 @@ def _cmd_planted(args) -> None:
     finally:
         ctx.guard.close()
     print(json.dumps(planted_score(result.rows, planted), indent=1))
+
+
+def _cmd_combine(args) -> None:
+    run_ids = [r.strip() for r in args.runs.split(",") if r.strip()]
+    print(json.dumps(combine(run_ids, args.version, args.run), indent=1))
 
 
 def _cmd_residue(args) -> None:
