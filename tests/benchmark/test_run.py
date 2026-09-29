@@ -4,23 +4,20 @@ over a tiny synthetic cases file (never the real cases.v1.yaml)."""
 import collections
 import json
 import re
-import shutil
-from pathlib import Path
 
 import pyarrow.parquet as pq
 import pytest
-import yaml
 
 from atlas import paths
 from atlas.cards.engine.assign import load_assignments, read_answers
 from atlas.pilot import packed
+from tests.benchmark.test_support import bench_configs
 from tests.pilot.test_support import (  # noqa: F401
     make_transport,
     mock_env,
     pilot_repo,
 )
 
-ROOT = Path(__file__).resolve().parents[2]
 RUN_ID = "bench-1"
 
 CASES = {
@@ -113,17 +110,7 @@ N_CARD = 2  # cases 5 and 6 carry a card expectation
 @pytest.fixture
 def bench_repo(pilot_repo):  # noqa: F811
     """pilot_repo plus the real pilot.t1 cardset and the tiny cases file."""
-    configs = paths.CONFIGS
-    (configs / "cards").mkdir(exist_ok=True)
-    shutil.copy(
-        ROOT / "configs" / "cards" / "pilot.t1.yaml",
-        configs / "cards" / "pilot.t1.yaml",
-    )
-    (configs / "benchmark").mkdir(exist_ok=True)
-    (configs / "benchmark" / "cases.v1.yaml").write_text(
-        yaml.safe_dump(CASES), encoding="utf-8"
-    )
-    return pilot_repo
+    return bench_configs(pilot_repo, CASES)
 
 
 _SLOT_QID = re.compile(r"^c\d+_")
