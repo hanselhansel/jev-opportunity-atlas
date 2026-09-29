@@ -1,0 +1,163 @@
+{
+  "name": "facets",
+  "version": 2,
+  "state_fields": [
+    "sentences",
+    "parent"
+  ],
+  "questions": {
+    "account_type": {
+      "type": "choice",
+      "instructions": "What kind of text is `sentences`?",
+      "criteria": {
+        "firsthand_account": "own experience",
+        "secondhand_report": "someone else's experience",
+        "general_opinion": "view without personal account",
+        "product_pitch": "promotes own product",
+        "joke_or_sarcasm": "not literal",
+        "question_or_request": "asks for help or advice",
+        "other": null
+      }
+    },
+    "pain_sentence": {
+      "type": "choice",
+      "instructions": "Which sentence best states the author's problem?",
+      "criteria": "SENTENCE_IDS"
+    },
+    "domain": {
+      "type": "choice",
+      "instructions": "Main subject area of the problem in `sentences`?",
+      "criteria": {
+        "software_development": "code, languages, frameworks, dev tools",
+        "infrastructure_ops": "cloud, servers, deploys, IT",
+        "data_ml_ai": "data, analytics, ML, AI tools",
+        "security_privacy": "security, auth, privacy, fraud",
+        "product_design": "product, UX, design",
+        "business_operations": "running a company, internal tools, vendors",
+        "finance_payments": "payments, accounting, banking, taxes",
+        "sales_marketing": "sales, marketing, ads, SEO",
+        "work_careers": "hiring, jobs, management, productivity",
+        "legal_government": "law, regulation, compliance, government",
+        "hardware_electronics": "hardware, electronics, manufacturing",
+        "consumer_tech": "consumer apps, devices, platforms",
+        "health_medical": "health, medicine, care",
+        "education_learning": "school, learning, teaching",
+        "science_research": "research, academia",
+        "media_publishing": "news, writing, video, creators",
+        "home_life": "housing, family, transport, daily life",
+        "other": null,
+        "mixed": null,
+        "unclear": null
+      }
+    },
+    "user_role": {
+      "type": "choice",
+      "instructions": "The author's role in the situation in `sentences`?",
+      "criteria": {
+        "software_engineer": null,
+        "data_ml_practitioner": null,
+        "ops_sre_it": null,
+        "founder_executive": null,
+        "product_or_designer": null,
+        "manager": null,
+        "researcher_academic": null,
+        "student": null,
+        "freelancer_consultant": null,
+        "end_user_consumer": null,
+        "other": null,
+        "unclear": null
+      }
+    },
+    "jurisdiction": {
+      "type": "choice",
+      "instructions": "Which country or legal regime does `sentences` explicitly name for this problem?",
+      "criteria": {
+        "none": "no place named",
+        "us": null,
+        "eu": null,
+        "uk": null,
+        "india": null,
+        "canada": null,
+        "australia": null,
+        "china": null,
+        "other": null
+      }
+    },
+    "timing": {
+      "type": "choice",
+      "instructions": "When is the problem in `sentences`?",
+      "criteria": {
+        "current": "now or recent",
+        "historical": "past and over",
+        "hypothetical": "has not happened",
+        "unclear": null
+      }
+    },
+    "workaround": {
+      "type": "noul",
+      "instructions": "Does `sentences` describe a workaround, hack, or manual process the author uses for this problem?"
+    },
+    "cost_time": {
+      "type": "noul",
+      "instructions": "Does `sentences` say the problem costs the author time?"
+    },
+    "cost_money": {
+      "type": "noul",
+      "instructions": "Does `sentences` say the problem costs the author money?"
+    },
+    "cost_reliability": {
+      "type": "noul",
+      "instructions": "Does `sentences` say the problem causes failures, outages, or bugs?"
+    },
+    "cost_customers": {
+      "type": "noul",
+      "instructions": "Does `sentences` say the problem affects the author's customers or users?"
+    },
+    "paid": {
+      "type": "noul",
+      "instructions": "Does `sentences` say the author pays for something to deal with this problem?"
+    },
+    "switched": {
+      "type": "noul",
+      "instructions": "Does `sentences` say the author switched tools or vendors because of this problem?"
+    },
+    "tried_alternatives": {
+      "type": "noul",
+      "instructions": "Does `sentences` say the author tried other tools or approaches for this problem?"
+    },
+    "abandoned": {
+      "type": "noul",
+      "instructions": "Does `sentences` say the author gave up on a tool because of this problem?"
+    },
+    "resolution": {
+      "type": "choice",
+      "instructions": "Using `sentences` and `parent` only, is the author's problem solved?",
+      "criteria": {
+        "resolved": null,
+        "unresolved": null,
+        "unclear": null
+      }
+    },
+    "severity": {
+      "type": "score",
+      "instructions": "How severe is the problem for the author?",
+      "criteria": [
+        "minor annoyance",
+        "real cost or friction",
+        "blocks work or loses money",
+        "critical: outage, data loss, or business risk"
+      ]
+    },
+    "specificity": {
+      "type": "score",
+      "instructions": "How specific is the problem description?",
+      "criteria": [
+        "vague",
+        "named problem",
+        "named problem with tool or task",
+        "with a concrete detail such as a number, error, or example"
+      ]
+    }
+  },
+  "parent_limit": 600
+}
