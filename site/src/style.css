@@ -1,0 +1,333 @@
+@import url("observablehq:default.css");
+@import url("observablehq:theme-air.css");
+@import url("observablehq:theme-near-midnight.css") (prefers-color-scheme: dark);
+
+/* Design tokens for the atlas site. Light theme by default, dark under
+   prefers-color-scheme. All text colors aim for >= 4.5:1 contrast on their
+   background. At most 6 categorical colors are used in charts. */
+
+:root {
+  --atlas-bg: #ffffff;
+  --atlas-fg: #1b1d21;
+  --atlas-muted: #4d545c;
+  --atlas-border: #d7dbe0;
+  --atlas-card-bg: #f6f7f9;
+  --atlas-accent: #17607d;
+  --atlas-accent-fg: #ffffff;
+
+  --badge-measured: #1c6b45;
+  --badge-calculated: #17607d;
+  --badge-estimated: #7a5410;
+  --badge-unknown: #595f66;
+
+  --fiction-bg: #fdf3d7;
+  --fiction-fg: #6b4e00;
+  --fiction-border: #c9a227;
+
+  --mark-bg: #ffe58a;
+  --mark-fg: #1b1d21;
+
+  --cat-1: #17607d;
+  --cat-2: #1c6b45;
+  --cat-3: #7a5410;
+  --cat-4: #7d3c98;
+  --cat-5: #a03434;
+  --cat-6: #4d545c;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+
+  --fs-small: 0.8125rem;
+  --fs-body: 1rem;
+  --fs-title: 1.05rem;
+
+  --theme-foreground-muted: var(--atlas-muted);
+  --theme-foreground-faint: var(--atlas-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --atlas-bg: #15171b;
+    --atlas-fg: #e6e8eb;
+    --atlas-muted: #a7adb5;
+    --atlas-border: #3a3f46;
+    --atlas-card-bg: #1d2026;
+    --atlas-accent: #6db7d6;
+    --atlas-accent-fg: #101318;
+
+    --badge-measured: #5bbf8a;
+    --badge-calculated: #6db7d6;
+    --badge-estimated: #d9a94e;
+    --badge-unknown: #9aa1a9;
+
+    --fiction-bg: #3a3013;
+    --fiction-fg: #f0d489;
+    --fiction-border: #8a7326;
+
+    --mark-bg: #6b5a12;
+    --mark-fg: #f5f0dd;
+
+    --cat-1: #6db7d6;
+    --cat-2: #5bbf8a;
+    --cat-3: #d9a94e;
+    --cat-4: #b08ad0;
+    --cat-5: #d97b7b;
+    --cat-6: #9aa1a9;
+  }
+}
+
+/* Full-width, sticky, non-dismissible mode banner. */
+.site-banner {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-align: center;
+}
+
+.site-banner.fiction {
+  background: var(--fiction-bg);
+  color: var(--fiction-fg);
+  border-bottom: 1px solid var(--fiction-border);
+  letter-spacing: 0.04em;
+}
+
+.site-banner.provenance {
+  background: var(--atlas-card-bg);
+  color: var(--atlas-muted);
+  border-bottom: 1px solid var(--atlas-border);
+  font-weight: 400;
+}
+
+/* Provenance badges: distinct shape + color, readable in both themes. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.05em 0.55em;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+.badge-measured { color: var(--badge-measured); }
+.badge-calculated { color: var(--badge-calculated); }
+.badge-estimated { color: var(--badge-estimated); border-style: dashed; }
+.badge-unknown { color: var(--badge-unknown); }
+
+/* Chart furniture (drawn inside the svg). */
+.atlas-chart-svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  color: var(--atlas-fg);
+}
+
+.atlas-chart-svg .chart-title {
+  fill: var(--atlas-fg);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.atlas-chart-svg .chart-subtitle,
+.atlas-chart-svg .chart-footer {
+  fill: var(--atlas-muted);
+  font-size: 11px;
+}
+
+.atlas-chart-svg .chart-fiction {
+  fill: var(--fiction-fg);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.atlas-chart-svg .hatch-line {
+  stroke: var(--atlas-muted);
+  stroke-width: 1.2;
+}
+
+.atlas-chart {
+  margin: var(--space-4) 0;
+}
+
+.atlas-chart details {
+  margin-top: var(--space-2);
+  font-size: var(--fs-small);
+}
+
+/* Finding cards; candidates are outlined, never filled. */
+.finding-card {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--atlas-border);
+  border-radius: 8px;
+  background: var(--atlas-card-bg);
+  color: var(--atlas-fg);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-3) 0;
+}
+
+.finding-card.candidate {
+  background: transparent;
+  border: 1.5px dashed var(--atlas-accent);
+}
+
+.finding-card .finding-status {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--atlas-muted);
+}
+
+.finding-card .finding-meta {
+  color: var(--atlas-muted);
+  font-size: var(--fs-small);
+}
+
+/* Hatched fill for too-few-to-estimate bars. */
+.too-few {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    var(--atlas-muted) 4px,
+    var(--atlas-muted) 5px
+  );
+}
+
+.too-few-label {
+  color: var(--atlas-muted);
+  font-style: italic;
+  font-size: var(--fs-small);
+}
+
+/* Comment card and sentence highlight on the evidence page. */
+.comment-card {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--atlas-border);
+  border-radius: 8px;
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-3) 0;
+  background: var(--atlas-card-bg);
+  color: var(--atlas-fg);
+}
+
+.comment-card mark {
+  background: var(--mark-bg);
+  color: var(--mark-fg);
+  padding: 0 0.15em;
+}
+
+.skeleton {
+  color: var(--atlas-muted);
+  font-style: italic;
+}
+
+.state-error {
+  color: var(--atlas-fg);
+  border: 1px solid var(--badge-unknown);
+  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
+}
+
+.breadcrumbs {
+  font-size: var(--fs-small);
+  color: var(--atlas-muted);
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+.breadcrumbs a {
+  color: var(--atlas-accent);
+}
+
+/* Filter controls. */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  margin: var(--space-3) 0;
+}
+
+.weights-panel label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-small);
+  color: var(--atlas-muted);
+}
+
+/* Responsive table: stacked cards below 640 px. */
+.responsive-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+
+.responsive-table th,
+.responsive-table td {
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--atlas-border);
+}
+
+.responsive-table td {
+  overflow-wrap: anywhere;
+}
+
+.responsive-table tr.selectable {
+  cursor: pointer;
+}
+
+.responsive-table tr.selectable:hover,
+.responsive-table tr.selectable:focus {
+  background: var(--atlas-card-bg);
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .responsive-table thead {
+    display: none;
+  }
+
+  .responsive-table tr {
+    display: block;
+    border: 1px solid var(--atlas-border);
+    border-radius: 6px;
+    margin-bottom: var(--space-3);
+    padding: var(--space-2);
+  }
+
+  .responsive-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    min-width: 0;
+    border-bottom: none;
+  }
+
+  .responsive-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--atlas-muted);
+  }
+
+  .weights-panel form {
+    max-width: 100%;
+  }
+}
