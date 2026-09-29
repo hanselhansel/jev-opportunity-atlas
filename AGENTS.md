@@ -57,6 +57,7 @@ the same plan.
 | `site data`, `x charts` | L20 |
 | `release pack`, `release restore`, `release rehydrate`, `release replay`, `release pages` | L21 |
 | `robust subsample-screen`, `robust subsample-items`, `robust assign-paraphrase`, `robust compare-screen`, `robust compare-assign` | L25 |
+| `builders draw`, `builders run` | S6 |
 | `sample draw-pooled` | L22 |
 | `facets draw`, `facets estimate`, `facets run` | L22 |
 | `facets expand` | L27 |
