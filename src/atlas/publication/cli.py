@@ -1,8 +1,9 @@
-"""`atlas release stage`, `atlas release check`, and `atlas claims check`.
+"""`atlas release ...` and `atlas claims check`.
 
 Staging builds exports/<release> locally through the allowlist, the text gate,
-and the secret scan; check re-verifies a staged release in place. Nothing is
-ever uploaded.
+and the secret scan; check re-verifies a staged release in place; pack writes the
+site and full bundles for a manual, reviewed `gh release create`. Restore
+downloads a published release over plain HTTPS. Nothing here uploads.
 """
 
 from __future__ import annotations
@@ -86,6 +87,45 @@ def _release_check(args) -> None:
         raise SystemExit(1)
 
 
+def _release_pack(args) -> None:
+    from atlas import paths
+    from atlas.publication.restore import ReleaseError, add_site_tables, pack_release
+
+    release_dir = paths.EXPORTS / args.release
+    out = Path(args.out) if args.out else paths.EXPORTS / f"{args.release}-assets"
+    try:
+        if args.site_data:
+            add_site_tables(release_dir, Path(args.site_data))
+        index = pack_release(release_dir, out, limit=args.chunk_limit)
+    except ReleaseError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(1) from exc
+    print(json.dumps({"assets_dir": str(out), **index}, indent=2))
+    print(
+        f"upload (manual, reviewed): gh release create {args.release} {out}/*",
+        file=sys.stderr,
+    )
+
+
+def _release_restore(args) -> None:
+    from atlas import paths
+    from atlas.publication.restore import ReleaseError, restore
+
+    dest = Path(args.dest) if args.dest else paths.DATA / "releases"
+    try:
+        report = restore(
+            args.release,
+            dest,
+            bundles=tuple(args.bundle or ["site"]),
+            repo=args.repo,
+            use_gh=args.gh,
+        )
+    except ReleaseError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(1) from exc
+    print(json.dumps(report, indent=2))
+
+
 def _claims_check(args) -> None:
     from atlas import paths
     from atlas.publication.claims import check_claims, load_claims
@@ -133,6 +173,36 @@ def register(sub) -> None:
     )
     check.add_argument("--release", required=True, help="Release tag")
     check.set_defaults(func=_release_check)
+    pack = rsub.add_parser(
+        "pack", help="Write site and full bundles plus assets-<tag>.json"
+    )
+    pack.add_argument("--release", required=True, help="Release tag")
+    pack.add_argument(
+        "--site-data", default=None, help="Real site tables to add first"
+    )
+    pack.add_argument(
+        "--out", default=None, help="Assets dir (default: exports/<tag>-assets)"
+    )
+    pack.add_argument("--chunk-limit", type=int, default=1_900_000_000)
+    pack.set_defaults(func=_release_pack)
+    rest = rsub.add_parser(
+        "restore", help="Download, verify, and unpack a published release"
+    )
+    rest.add_argument("--release", required=True, help="Release tag")
+    rest.add_argument("--repo", default="hanselhansel/jev-opportunity-atlas")
+    rest.add_argument(
+        "--dest", default=None, help="Parent dir (default: data/releases)"
+    )
+    rest.add_argument(
+        "--bundle",
+        action="append",
+        choices=("site", "full"),
+        help="Bundle to restore (repeatable; default: site)",
+    )
+    rest.add_argument(
+        "--gh", action="store_true", help="Download with gh instead of HTTPS"
+    )
+    rest.set_defaults(func=_release_restore)
 
     claims = sub.add_parser("claims", help="Claims ledger")
     csub = claims.add_subparsers(dest="claims_cmd", required=True)
