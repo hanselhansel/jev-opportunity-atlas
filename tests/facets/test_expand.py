@@ -12,10 +12,22 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from atlas import paths
+from atlas import cli, paths
 from atlas.facets import expand, phase2
-from tests.facets.test_phase2 import A, B, C, _write_screen_table
-from tests.pilot.test_support import SNAPSHOT_ID, pilot_repo  # noqa: F401
+from tests.facets.test_phase2 import (
+    A,
+    B,
+    C,
+    _snapshot_ids,
+    _write_facets_sample,
+    _write_screen_table,
+)
+from tests.pilot.test_support import (  # noqa: F401
+    SNAPSHOT_ID,
+    make_transport,
+    mock_env,
+    pilot_repo,
+)
 
 _CUTOFF = 0.7
 
@@ -176,4 +188,68 @@ def test_expand_phase2_wrong_screen_run_refused(pilot_repo):  # noqa: F811
         )
 
 
-# --- Task 27.2 tests (CLI, run resume pin) are added with that task ---
+def test_facets_expand_cli(pilot_repo, capsys):  # noqa: F811
+    _base_sample()
+    parser = cli.build_parser()
+    args = parser.parse_args(
+        [
+            "facets",
+            "expand",
+            "--screen-run",
+            "scr-1",
+            "--base-sample",
+            "fac-x",
+            "--sample-id",
+            "fac-y",
+            "--n-pos",
+            "40",
+            "--seed",
+            "11",
+        ]
+    )
+    args.func(args)
+    out = capsys.readouterr().out
+    assert "fac-y" in out
+    tbl = pq.read_table(paths.sample_path("fac-y"))
+    assert tbl.num_rows == 46  # 40 pos + 6 neg
+
+
+def test_run_phase2_expanded_sample_dispatches_only_new(
+    pilot_repo, monkeypatch, capsys  # noqa: F811
+):
+    ids = _snapshot_ids(10)
+    _write_facets_sample("fac-x", ids[:6])
+    _write_facets_sample("fac-y", ids)
+    seen = []
+    mock_env(monkeypatch, make_transport(seen=seen))
+    phase2.run_phase2("fac-x", "fac-run", yes=True)
+    assert len(seen) == 6
+
+    out = phase2.run_phase2("fac-y", "fac-run", yes=True)
+    assert out["run"]["new_requests"] == 4
+    assert out["run"]["skipped_completed"] == 6
+    assert len(seen) == 10
+    answers = pq.read_table(paths.run_dir("fac-run") / "answers").to_pylist()
+    pairs = [(r["comment_id"], r["question_id"]) for r in answers]
+    assert len(pairs) == len(set(pairs))  # no duplicate answers
+    assert {r["comment_id"] for r in answers} == set(ids)
+    pin = json.loads(
+        (paths.run_dir("fac-run") / "facets.json").read_text()
+    )
+    assert pin["sample_id"] == "fac-y"
+    assert pin["previous_sample_ids"] == ["fac-x"]
+
+
+def test_run_phase2_refuses_non_superset_sample(
+    pilot_repo, monkeypatch, capsys  # noqa: F811
+):
+    ids = _snapshot_ids(10)
+    _write_facets_sample("fac-x", ids[:6])
+    _write_facets_sample("fac-z", ids[2:8])
+    seen = []
+    mock_env(monkeypatch, make_transport(seen=seen))
+    phase2.run_phase2("fac-x", "fac-run", yes=True)
+    assert len(seen) == 6
+    with pytest.raises(SystemExit):
+        phase2.run_phase2("fac-z", "fac-run", yes=True)
+    assert len(seen) == 6  # nothing else dispatched

@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import json
 import math
+import os
 
 import numpy as np
 import pyarrow as pa
@@ -182,6 +183,57 @@ def estimate_phase2(
     }
 
 
+def _write_json(path, obj) -> None:
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(obj, indent=1, sort_keys=True) + "\n")
+    os.replace(tmp, path)
+
+
+def _pin_params(run_dir, sample_id: str, snapshot_id: str, ids) -> dict:
+    """Check ``sample_id`` against the run's pinned sample (``facets.json``).
+
+    The first dispatched run pins the sample it started with. A later run
+    may pass the same sample or one whose comment-id set is a superset of
+    the pinned one (a second-wave expansion); anything else is refused so
+    answers from unrelated samples never mix in one run dir. Returns the
+    params to (re)write on dispatch.
+    """
+    path = run_dir / "facets.json"
+    if not path.exists():
+        return {"sample_id": sample_id, "snapshot_id": snapshot_id}
+    stored = json.loads(path.read_text(encoding="utf-8"))
+    if stored.get("snapshot_id") != snapshot_id:
+        raise SystemExit(
+            f"{path}: snapshot {stored.get('snapshot_id')!r} != "
+            f"{snapshot_id!r}; refusing to mix runs"
+        )
+    pinned = stored["sample_id"]
+    if pinned == sample_id:
+        return stored
+    pinned_path = paths.sample_path(pinned)
+    if not pinned_path.exists():
+        raise SystemExit(
+            f"{path}: pinned sample {pinned!r} is missing; cannot verify "
+            f"that {sample_id!r} extends it"
+        )
+    pinned_ids = set(
+        pq.read_table(pinned_path, columns=["comment_id"])
+        .column("comment_id")
+        .to_pylist()
+    )
+    if not pinned_ids <= set(ids):
+        raise SystemExit(
+            f"{path}: sample {sample_id!r} is not a superset of pinned "
+            f"sample {pinned!r}; refusing to mix samples in one run"
+        )
+    stored["previous_sample_ids"] = [
+        *stored.get("previous_sample_ids", []),
+        pinned,
+    ]
+    stored["sample_id"] = sample_id
+    return stored
+
+
 def _report(n: int, out: dict) -> None:
     print(f"chunk {n}: {out}", flush=True)
 
@@ -247,11 +299,15 @@ def run_phase2(
         .to_pylist()
     )
     qs = load_question_set(*QUESTION_SET)
+    run_dir = paths.run_dir(run_id)
+    params = _pin_params(run_dir, sample_id, meta["snapshot_id"], ids)
     est = estimate_phase2(sample_id, qs=qs)
     stages.print_estimate(est)
     if not yes:
         return {"estimate": est, "dispatched": False}
 
+    run_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(run_dir / "facets.json", params)
     budgets, price_row, per_token = stages.load_configs()
     cap, worst = stages.budget_cap(budgets, budget)
     guard = BudgetGuard.for_budget(budget, cap, per_token, worst)
@@ -267,7 +323,7 @@ def run_phase2(
             guard=guard,
             model=stages.MODEL,
             price_version=price_row["version"],
-            run_dir=paths.run_dir(run_id),
+            run_dir=run_dir,
             concurrency=concurrency,
             budget=budget,
             rpm=rpm,

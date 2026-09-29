@@ -35,6 +35,30 @@ def _draw(args) -> None:
     print(f"drew {tbl.num_rows:,} ({n_pos:,} pos, {n_neg:,} neg)")
 
 
+def _expand(args) -> None:
+    import pyarrow as pa
+    import pyarrow.compute as pc
+
+    from atlas.facets.expand import expand_phase2
+
+    tbl = expand_phase2(
+        args.screen_run,
+        args.base_sample,
+        args.sample_id,
+        n_pos=args.n_pos,
+        seed=args.seed,
+    )
+    n_pos = pc.sum(
+        pc.cast(pc.equal(tbl.column("phase"), "pos"), pa.int8())
+    ).as_py()
+    added = pc.sum(pc.cast(pc.equal(tbl.column("wave"), 2), pa.int8())).as_py()
+    print(
+        f"expanded {args.base_sample} -> {args.sample_id}: "
+        f"{tbl.num_rows:,} rows ({n_pos:,} pos, +{added:,} added, "
+        f"{tbl.num_rows - n_pos:,} neg)"
+    )
+
+
 def _estimate(args) -> None:
     from atlas.facets.phase2 import estimate_phase2
 
@@ -79,6 +103,23 @@ def register(sub) -> None:
         "--snapshot", default=None, help="Default: configs/acquisition.toml"
     )
     d.set_defaults(func=_draw)
+
+    x = cmds.add_parser(
+        "expand", help="Second-wave expansion of a phase-2 sample (free)"
+    )
+    x.add_argument("--screen-run", required=True, help="Screen run id")
+    x.add_argument(
+        "--base-sample", required=True, help="Existing phase-2 sample id"
+    )
+    x.add_argument("--sample-id", required=True, help="New sample id")
+    x.add_argument(
+        "--n-pos",
+        type=int,
+        required=True,
+        help="New positive target (total, not the number to add)",
+    )
+    x.add_argument("--seed", type=int, required=True)
+    x.set_defaults(func=_expand)
 
     e = cmds.add_parser(
         "estimate", help="Probe-based cost estimate for a facet sample"
