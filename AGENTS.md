@@ -56,6 +56,7 @@ the same plan.
 | `screen run`, `screen table` | L17 |
 | `site data`, `x charts` | L20 |
 | `release pack`, `release restore`, `release rehydrate`, `release replay`, `release pages` | L21 |
+| `robust subsample-screen`, `robust subsample-items`, `robust assign-paraphrase`, `robust compare-screen`, `robust compare-assign` | L25 |
 | `timeline mark` | existing |
 
 Common flags: `--snapshot` (default: `snapshot_id` in `configs/acquisition.toml`),

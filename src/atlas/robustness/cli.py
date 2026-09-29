@@ -87,6 +87,69 @@ def register(sub) -> None:
     a.add_argument("--yes", action="store_true")
     a.set_defaults(func=_assign_paraphrase)
 
+    cs = cmds.add_parser(
+        "compare-screen",
+        help="Compare paraphrase screen runs against the main run",
+    )
+    cs.add_argument("--main-run", required=True)
+    cs.add_argument(
+        "--runs", required=True, help="Comma-separated paraphrase run ids"
+    )
+    cs.add_argument("--sample", required=True, help="Robustness subsample id")
+    cs.add_argument("--cutoff", type=float, default=0.7)
+    cs.add_argument("--n-boot", type=int, default=2000)
+    cs.add_argument("--seed", type=int, default=0)
+    cs.add_argument("--out", required=True, help="Output JSON path")
+    cs.set_defaults(func=_compare_screen)
+
+    ca = cmds.add_parser(
+        "compare-assign",
+        help="Compare paraphrase assignment runs against the main run",
+    )
+    ca.add_argument("--main-run", required=True)
+    ca.add_argument(
+        "--runs", required=True, help="Comma-separated paraphrase run ids"
+    )
+    ca.add_argument("--version", required=True, help="Taxonomy version")
+    ca.add_argument("--out", required=True, help="Output JSON path")
+    ca.set_defaults(func=_compare_assign)
+
+
+def _write_out(path, obj) -> None:
+    import os
+    from pathlib import Path
+
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_name(out.name + ".tmp")
+    tmp.write_text(json.dumps(obj, indent=1, sort_keys=True) + "\n")
+    os.replace(tmp, out)
+
+
+def _compare_screen(args) -> None:
+    from atlas.robustness.compare import compare_screen
+
+    runs = [r.strip() for r in args.runs.split(",") if r.strip()]
+    out = compare_screen(
+        args.main_run,
+        runs,
+        args.sample,
+        cutoff=args.cutoff,
+        n_boot=args.n_boot,
+        seed=args.seed,
+    )
+    _write_out(args.out, out)
+    print(json.dumps({"path": str(args.out), "runs": runs}, sort_keys=True))
+
+
+def _compare_assign(args) -> None:
+    from atlas.robustness.compare import compare_assign
+
+    runs = [r.strip() for r in args.runs.split(",") if r.strip()]
+    out = compare_assign(args.main_run, runs, args.version)
+    _write_out(args.out, out)
+    print(json.dumps({"path": str(args.out), "runs": runs}, sort_keys=True))
+
 
 def _assign_paraphrase(args) -> None:
     import pyarrow as pa
