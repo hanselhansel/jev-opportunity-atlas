@@ -5,3 +5,15 @@ input_usd_per_million = 0.042
 output_usd_per_million = 0.0
 checked_at = "2026-09-28"
 source = "https://docs.typesafe.ai/models"
+
+# L31: the bytes/3.2 estimate under-reads billed input tokens. Printed
+# estimates scale by these per-family multipliers; the raw figure stays in
+# the output under the *_raw key. 1.0 leaves the raw estimate unchanged.
+[estimate_calibration]
+assign_card = 1.4
+assign_group = 1.1
+verify = 2.0
+merge = 1.3
+replies = 1.3
+facets = 1.15
+screen = 1.0

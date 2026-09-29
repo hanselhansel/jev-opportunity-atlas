@@ -25,7 +25,8 @@ from atlas import paths
 from atlas.inference import keys, runner_io
 from atlas.inference.budget import BudgetGuard
 from atlas.inference.client import JevClient
-from atlas.inference.runner import RunContext, run_batch
+from atlas.inference.estimate import estimate_multiplier
+from atlas.inference.runner import BudgetStopped, RunContext, run_batch
 from atlas.pilot import packed, stages
 
 RPM_CAP = 1200  # TypeSafe documented requests-per-minute ceiling
@@ -228,6 +229,8 @@ def screen_sample(
     )
     input_tokens = int(mean_tokens * remaining_calls)
     head = stages.budget_headroom(budget)
+    usd_raw = input_tokens * usd_per_token
+    mult = estimate_multiplier("screen")
     est = {
         "question_set": qs.label,
         "comments": n,
@@ -235,7 +238,9 @@ def screen_sample(
         "calls": total_calls,
         "remaining_calls": remaining_calls,
         "input_tokens": input_tokens,
-        "usd": input_tokens * usd_per_token,
+        "usd_raw": usd_raw,
+        "usd": usd_raw * mult,
+        "calibration": {"screen": mult},
         "budget": budget,
         "cap_usd": cap,
         "method": f"bytes/3.2 probe n={len(probe_ids)}",
@@ -274,6 +279,14 @@ def screen_sample(
         )
     finally:
         guard.close()
+    if stopped:
+        done = totals["completed"] + totals["skipped_completed"]
+        BudgetStopped(
+            budget,
+            done,
+            max(0, total_calls - done - totals["failed"]),
+            stopped,
+        ).fail()
     return {
         "estimate": est,
         "dispatched": True,

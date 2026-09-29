@@ -37,8 +37,9 @@ from atlas.cards.engine.verify import verifiable, verify, verify_item
 from atlas.inference import keys
 from atlas.inference.budget import BudgetGuard
 from atlas.inference.client import JevClient
+from atlas.inference.estimate import estimate_multiplier
 from atlas.inference.questions import canonical_json
-from atlas.inference.runner import RunContext
+from atlas.inference.runner import BudgetStopped, RunContext
 
 MODEL = "jev-1.13.0"
 
@@ -104,40 +105,63 @@ def _est_tokens(item: dict) -> int:
     return math.ceil(len(canonical_json(body).encode("utf-8")) / 3.2)
 
 
-def _assign_tokens(rows, cs) -> list[int]:
+def _assign_tokens(rows, cs) -> dict[str, list[int]]:
+    """Estimated tokens per calibration family: group-level calls and
+    card-level calls (an upper bound; level-2 runs only for non-none
+    groups)."""
     biggest = max(cs.groups, key=lambda g: len(cs.cards_in(g)))
-    tokens = []
+    out = {"assign_group": [], "assign_card": []}
     for r in rows:
-        tokens.append(
+        out["assign_group"].append(
             _est_tokens(
                 group_item(r["comment_id"], r["pain_sentence"], r["sentences"], cs)
             )
         )
-        tokens.append(
+        out["assign_card"].append(
             _est_tokens(
                 card_item(
                     r["comment_id"], r["pain_sentence"], r["sentences"], cs, biggest
                 )
             )
         )
-    return tokens
+    return out
 
 
-def _print_estimate(command, tokens, budget, cap, usd_per_token) -> None:
-    total = sum(tokens)
+def _print_estimate(command, family_tokens, budget, cap, usd_per_token) -> None:
+    """Estimate JSON: the raw bytes/3.2 figure beside the calibrated one."""
+    calibration = {
+        family: estimate_multiplier(family) for family in family_tokens
+    }
+    raw = sum(sum(t) for t in family_tokens.values())
+    calibrated = sum(
+        sum(tokens) * calibration[family]
+        for family, tokens in family_tokens.items()
+    )
     print(
         json.dumps(
             {
                 "command": command,
-                "estimated_calls": len(tokens),
-                "estimated_input_tokens": total,
-                "estimated_usd": total * usd_per_token,
+                "estimated_calls": sum(
+                    len(t) for t in family_tokens.values()
+                ),
+                "estimated_input_tokens": raw,
+                "estimated_usd_raw": raw * usd_per_token,
+                "estimated_usd": calibrated * usd_per_token,
+                "calibration": calibration,
                 "budget": budget,
                 "cap_usd": cap,
             },
             indent=1,
         )
     )
+
+
+def _run_or_exit(coro):
+    """Run an engine coroutine; a budget stop prints its line and exits."""
+    try:
+        return asyncio.run(coro)
+    except BudgetStopped as exc:
+        exc.fail()
 
 
 def _run_ctx(args, price_row, cap, worst, usd_per_token) -> RunContext:
@@ -174,7 +198,7 @@ def _cmd_assign(args) -> None:
         return
     ctx = _run_ctx(args, price_row, cap, worst, usd_per_token)
     try:
-        result = asyncio.run(assign(ctx, rows, cs))
+        result = _run_or_exit(assign(ctx, rows, cs))
         run_dir = paths.run_dir(args.run)
         pain = [
             {"comment_id": r["comment_id"], "pain_sentence": r["pain_sentence"]}
@@ -196,14 +220,21 @@ def _cmd_merge(args) -> None:
     result = load_assignments(run_dir, args.version)
     pairs = merge_pairs(cs, result, all_pairs=args.all_pairs)
     tokens = [_est_tokens(merge_item(cs.version, a, b, cs)) for a, b in pairs]
-    _print_estimate("merge", tokens, args.budget, cap, usd_per_token)
+    _print_estimate(
+        "merge", {"merge": tokens}, args.budget, cap, usd_per_token
+    )
     if not args.yes:
         return
     ctx = _run_ctx(args, price_row, cap, worst, usd_per_token)
     try:
-        scored = asyncio.run(score_merges(ctx, pairs, cs))
+        scored = _run_or_exit(score_merges(ctx, pairs, cs))
     finally:
         ctx.guard.close()
+    if len(scored) != len(pairs):
+        raise SystemExit(
+            f"scored {len(scored)} of {len(pairs)} merge pairs; "
+            f"refusing to write merge-{cs.version}.json"
+        )
     proposals = propose_merges(scored)
     out = {"scored": scored, "proposals": proposals}
     (run_dir / f"merge-{cs.version}.json").write_text(
@@ -227,12 +258,14 @@ def _cmd_verify(args) -> None:
         for row in result.rows
         if verifiable(row, pain)
     ]
-    _print_estimate("verify", tokens, args.budget, cap, usd_per_token)
+    _print_estimate(
+        "verify", {"verify": tokens}, args.budget, cap, usd_per_token
+    )
     if not args.yes:
         return
     ctx = _run_ctx(args, price_row, cap, worst, usd_per_token)
     try:
-        rows = asyncio.run(verify(ctx, result, pain, cs))
+        rows = _run_or_exit(verify(ctx, result, pain, cs))
     finally:
         ctx.guard.close()
     write_assignments(run_dir, AssignResult(rows=rows, meta=result.meta), cs.version)

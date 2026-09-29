@@ -20,7 +20,7 @@ import pyarrow.parquet as pq
 
 from atlas import contracts
 from atlas.inference.questions import QuestionSet, canonical_json
-from atlas.inference.runner import run_batch
+from atlas.inference.runner import raise_for_stopped, run_batch
 
 NONE = "none"
 GROUP_NONE_TEXT = "none of these groups fits"
@@ -174,7 +174,7 @@ async def assign(
         cs,
         {"group": {"type": "choice", "instructions": group_instructions}},
     )
-    await run_batch(
+    g_out = await run_batch(
         ctx,
         (
             group_item(
@@ -185,6 +185,7 @@ async def assign(
         ),
         gqs,
     )
+    raise_for_stopped(ctx, g_out, len(rows))
     g_answers = read_answers(ctx.run_dir, gqs.label)
 
     cqs = engine_qs(
@@ -203,7 +204,13 @@ async def assign(
         not in (None, NONE)
     ]
     if level2:
-        await run_batch(ctx, level2, cqs)
+        c_out = await run_batch(ctx, level2, cqs)
+        raise_for_stopped(
+            ctx,
+            c_out,
+            len(level2),
+            prior=g_out["completed"] + g_out["skipped_completed"],
+        )
     c_answers = read_answers(ctx.run_dir, cqs.label)
 
     result = AssignResult()

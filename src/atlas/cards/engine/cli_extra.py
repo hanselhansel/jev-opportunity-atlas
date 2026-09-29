@@ -7,7 +7,6 @@ monkeypatch points (`cli._transport`, `cli.RunContext`) keep working.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import shutil
 
@@ -110,7 +109,7 @@ def _cmd_planted(args) -> None:
         return
     ctx = cli._run_ctx(args, price_row, cap, worst, usd_per_token)
     try:
-        result = asyncio.run(assign(ctx, items, cs))
+        result = cli._run_or_exit(assign(ctx, items, cs))
     finally:
         ctx.guard.close()
     print(json.dumps(planted_score(result.rows, planted), indent=1))
@@ -158,14 +157,17 @@ def _cmd_induce(args) -> None:
         base_result.rows, items_by_cid, new_cs, args.scope
     )
     cli._print_estimate(
-        "induce", [cli._est_tokens(it) for it in level2], args.budget, cap,
+        "induce",
+        {"assign_card": [cli._est_tokens(it) for it in level2]},
+        args.budget,
+        cap,
         usd_per_token,
     )
     if not args.yes:
         return
     ctx = cli._run_ctx(args, price_row, cap, worst, usd_per_token)
     try:
-        result = asyncio.run(
+        result = cli._run_or_exit(
             induce(ctx, base_result, items_by_cid, new_cs, args.scope)
         )
         run_dir = paths.run_dir(args.run)
@@ -202,13 +204,15 @@ def _cmd_replies(args) -> None:
         max_replies=args.max_replies,
     )
     tokens = [replies_run.item_tokens(it) for it in items]
-    cli._print_estimate("replies", tokens, args.budget, cap, usd_per_token)
+    cli._print_estimate(
+        "replies", {"replies": tokens}, args.budget, cap, usd_per_token
+    )
     if not args.yes:
         return
     ctx = cli._run_ctx(args, price_row, cap, worst, usd_per_token)
     ctx.run_dir = run_dir / "replies"
     try:
-        asyncio.run(replies_run.run(ctx, items))
+        cli._run_or_exit(replies_run.run(ctx, items))
     finally:
         ctx.guard.close()
     answers = replies_run.answers_table(ctx.run_dir)

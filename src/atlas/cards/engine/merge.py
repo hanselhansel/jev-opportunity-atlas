@@ -9,7 +9,7 @@ import itertools
 import json
 
 from atlas.cards.engine.assign import engine_qs, read_answers
-from atlas.inference.runner import run_batch
+from atlas.inference.runner import raise_for_stopped, run_batch
 
 MERGE_LEVELS = [
     "different problems",
@@ -78,7 +78,8 @@ async def score_merges(ctx, pairs, cs) -> list[dict]:
     qs = engine_qs("merge", cs, MERGE_TEMPLATE)
     items = [merge_item(cs.version, a, b, cs) for a, b in pairs]
     if items:
-        await run_batch(ctx, items, qs)
+        out = await run_batch(ctx, items, qs)
+        raise_for_stopped(ctx, out, len(items))
     answers = read_answers(ctx.run_dir, qs.label)
     scored = []
     for a, b in pairs:
