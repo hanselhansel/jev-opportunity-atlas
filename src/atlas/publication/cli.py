@@ -167,6 +167,17 @@ def _release_replay(args) -> None:
         raise SystemExit(1)
 
 
+def _release_pages(args) -> None:
+    from atlas.publication.pages import PagesError, publish_pages
+
+    try:
+        result = publish_pages(Path(args.dist), dry_run=not args.push)
+    except PagesError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(1) from exc
+    print(json.dumps(result, indent=2))
+
+
 def _claims_check(args) -> None:
     from atlas import paths
     from atlas.publication.claims import check_claims, load_claims
@@ -260,6 +271,14 @@ def register(sub) -> None:
         "--site-out", default=None, help="Site data dir (default: <dir>-site-data)"
     )
     rep.set_defaults(func=_release_replay)
+    pages = rsub.add_parser(
+        "pages", help="Build the gh-pages commit for a site build (dry run)"
+    )
+    pages.add_argument("--dist", default="site/dist", help="Built site dir")
+    pages.add_argument(
+        "--push", action="store_true", help="Push to gh-pages (main session only)"
+    )
+    pages.set_defaults(func=_release_pages)
 
     claims = sub.add_parser("claims", help="Claims ledger")
     csub = claims.add_subparsers(dest="claims_cmd", required=True)
