@@ -22,6 +22,7 @@ COMMAND_MODULES = (
     "atlas.pilot.cli",
     "atlas.discovery.cli",
     "atlas.cards.engine.cli",
+    "atlas.screen.cli",
     "atlas.timeline",
 )
 
