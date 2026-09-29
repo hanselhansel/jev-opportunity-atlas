@@ -48,6 +48,7 @@ def _transport():
 
 
 def register(sub) -> None:
+    _register_story_section()
     parser = sub.add_parser("solutions", help="named-fix tallies over an assign run")
     commands = parser.add_subparsers(dest="solutions_command", required=True)
 
@@ -331,3 +332,14 @@ def section(args, story_path) -> None:
         if card.get("id") in by_id:
             card["tools"] = by_id[card["id"]]
     io.merge_section(story_path, "cards", story.get("cards", []))
+
+
+def _register_story_section() -> None:
+    try:
+        from atlas.story.cli import SECTIONS
+    except ImportError:
+        return
+    SECTIONS.setdefault("tools", section)
+
+
+_register_story_section()
