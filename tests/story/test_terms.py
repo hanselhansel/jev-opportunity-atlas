@@ -154,6 +154,70 @@ def test_output_has_no_raw_sentence():
             assert len(item["term"].split()) <= 2
 
 
+def test_trailing_period_stripped():
+    """'ai.' and 'ai' count as one term 'ai'; internal . - + survive."""
+    assert terms_mod._norm("ai.") == terms_mod._norm("ai") == "ai"
+    for kept in ("node.js", "c++", "gpt-5"):
+        assert terms_mod._norm(kept) == kept
+    counts = terms_mod._terms_in("tools. tools node.js c++ gpt-5", frozenset())
+    assert counts["tools"] == 2
+    assert "tools." not in counts
+    for kept in ("node.js", "c++", "gpt-5"):
+        assert counts[kept] == 1
+
+
+def test_plural_merges_into_singular():
+    """'agents' folds into 'agent'; the emitted form is the frequent one."""
+    rows, pain = _background()
+    s_rows, s_pain = _docs(
+        9_000_900_000,
+        "g01",
+        30,
+        [f"ga{i:02d}" for i in range(15)],
+        lambda i: "agent broke everything",
+    )
+    p_rows, p_pain = _docs(
+        9_001_000_000,
+        "g01",
+        35,
+        [f"gb{i:02d}" for i in range(18)],
+        lambda i: "agents broke everything",
+    )
+    result = terms_mod.group_terms(
+        _frame(rows + s_rows + p_rows), pain | s_pain | p_pain
+    )
+    emitted = _emitted(result)
+    assert "agent" not in emitted
+    by_term = {t["term"]: t for t in result["g01"]}
+    assert by_term["agents"]["n_comments"] == 65
+    assert by_term["agents"]["n_authors"] == 33
+
+
+def test_filler_dropped():
+    """Denylisted conversational filler never reaches emitted terms."""
+    rows, pain = _background()
+    f_rows, f_pain = _docs(
+        9_001_100_000,
+        "g01",
+        30,
+        [f"fa{i:02d}" for i in range(15)],
+        lambda i: "really know people things probably want need said",
+    )
+    result = terms_mod.group_terms(_frame(rows + f_rows), pain | f_pain)
+    emitted = _emitted(result)
+    filler = {
+        "really",
+        "know",
+        "people",
+        "things",
+        "probably",
+        "want",
+        "need",
+        "said",
+    }
+    assert not any(w in t.split() for t in emitted for w in filler)
+
+
 DATA_ARGS = [
     "--snapshot",
     world.SNAPSHOT,

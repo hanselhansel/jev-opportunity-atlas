@@ -56,13 +56,30 @@ def _load_denylist(path=None) -> frozenset:
     )
 
 
+def _norm(t: str) -> str:
+    """Drop edge punctuation; internal '.', '-', '+' survive.
+
+    Leading '.', '-', '+' and trailing '.', '-' always strip. A lone
+    trailing '+' strips too, but '++' stays part of the name, so
+    'node.js', 'c++' and 'gpt-5' keep their shape.
+    """
+    t = t.lstrip(".-+")
+    while True:
+        t = t.rstrip(".-")
+        if t.endswith("+") and not t.endswith("++"):
+            t = t[:-1]
+        else:
+            return t
+
+
 def _tokens(text: str, stop: frozenset) -> list[str]:
     """Lowercased non-stopword tokens, 3 to 30 chars, ``[a-z]`` start."""
-    return [
-        t
-        for t in _TOKEN.findall(text.lower())
-        if MIN_LEN <= len(t) <= MAX_LEN and t not in stop
-    ]
+    out = []
+    for t in _TOKEN.findall(text.lower()):
+        t = _norm(t)
+        if MIN_LEN <= len(t) <= MAX_LEN and t not in stop:
+            out.append(t)
+    return out
 
 
 def _terms_in(text: str, stop: frozenset) -> Counter:
@@ -81,6 +98,23 @@ def _lexical_ok(term: str, denylist: frozenset) -> bool:
         or _HANDLE.search(term)
         or term in denylist
     )
+
+
+def _plural_canon(vocab) -> dict:
+    """plural term -> its singular, when the singular is also in vocab.
+
+    Only the last word decides ('ai agents' folds into 'ai agent'), and
+    only when it is longer than 4 chars and ends in 's' but not 'ss':
+    'agents' merges; 'apps', 'this' and 'class' stay.
+    """
+    out = {}
+    for t in vocab:
+        last = t.rsplit(" ", 1)[-1]
+        if len(last) <= 4 or not last.endswith("s") or last.endswith("ss"):
+            continue
+        if t[:-1] in vocab:
+            out[t] = t[:-1]
+    return out
 
 
 def group_terms(
@@ -133,31 +167,54 @@ def group_terms(
     if not corpus_total:
         return {g: [] for g in gcount}
 
+    canon = _plural_canon(corpus)
+    forms: dict[str, Counter] = {}
+    mcorpus = Counter()
+    for t, c in corpus.items():
+        k = canon.get(t, t)
+        mcorpus[k] += c
+        forms.setdefault(k, Counter())[t] += c
+    display = {
+        k: min(fc, key=lambda w: (-fc[w], w)) for k, fc in forms.items()
+    }
+    mgcount = {g: Counter() for g in gcount}
+    mgdocs = {g: Counter() for g in gcount}
+    mgauth = {g: {} for g in gcount}
+    for gid, counts in gcount.items():
+        for t, c in counts.items():
+            mgcount[gid][canon.get(t, t)] += c
+        for t, c in gdocs[gid].items():
+            mgdocs[gid][canon.get(t, t)] += c
+        for t, s in gauth[gid].items():
+            mgauth[gid].setdefault(canon.get(t, t), set()).update(s)
+
     candidates = []
-    for gid, docs in gdocs.items():
+    for gid, docs in mgdocs.items():
         n = gtotal[gid]
         if not n:
             continue
         for term, ndocs in docs.items():
+            words = {w for f in forms[term] for w in f.split()}
             if (
                 ndocs < k_comments
-                or len(gauth.get(gid, {}).get(term, ())) < k_authors
-                or term in authors
-                or not _lexical_ok(term, deny)
+                or len(mgauth[gid].get(term, ())) < k_authors
+                or words & authors
+                or words & deny
+                or not _lexical_ok(display[term], deny)
             ):
                 continue
-            cw = corpus[term]
+            cw = mcorpus[term]
             alpha = PRIOR_TOTAL * cw / corpus_total
-            y_rest = cw - gcount[gid][term]
+            y_rest = cw - mgcount[gid][term]
             n_rest = corpus_total - n
-            den_g = n + PRIOR_TOTAL - gcount[gid][term] - alpha
+            den_g = n + PRIOR_TOTAL - mgcount[gid][term] - alpha
             den_r = n_rest + PRIOR_TOTAL - y_rest - alpha
             if den_g <= 0 or den_r <= 0:
                 continue
-            delta = math.log((gcount[gid][term] + alpha) / den_g) - math.log(
+            delta = math.log((mgcount[gid][term] + alpha) / den_g) - math.log(
                 (y_rest + alpha) / den_r
             )
-            var = 1.0 / (gcount[gid][term] + alpha) + 1.0 / (y_rest + alpha)
+            var = 1.0 / (mgcount[gid][term] + alpha) + 1.0 / (y_rest + alpha)
             z = delta / math.sqrt(var)
             p = math.erfc(abs(z) / math.sqrt(2.0))
             candidates.append((gid, term, z, delta, var, p))
@@ -179,12 +236,12 @@ def group_terms(
         sigma = math.sqrt(var)
         per_group[gid].append(
             {
-                "term": term,
+                "term": display[term],
                 "z": float(z),
                 "lo95": float(delta - 1.96 * sigma),
                 "hi95": float(delta + 1.96 * sigma),
-                "n_comments": int(gdocs[gid][term]),
-                "n_authors": len(gauth[gid].get(term, ())),
+                "n_comments": int(mgdocs[gid][term]),
+                "n_authors": len(mgauth[gid].get(term, ())),
             }
         )
     for gid, rows in per_group.items():
