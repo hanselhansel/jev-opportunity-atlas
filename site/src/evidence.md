@@ -41,6 +41,9 @@ const cardShare = FileAttachment("data/card_share.parquet").parquet().then(
   (t) => ({rows: rowsOf(t), error: null}),
   (error) => ({rows: [], error})
 );
+```
+
+```js
 const cardLabel = Object.fromEntries(
   cardShare.rows
     .filter((r) => r.level === "card" && r.bucket === "all")
