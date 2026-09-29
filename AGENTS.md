@@ -63,6 +63,7 @@ the same plan.
 | `facets expand` | L27 |
 | `pilot packed-cal` | L22 |
 | `jev measure` | L22 |
+| `story data`, `story check` | S1 |
 | `cards items`, `cards draft-sample`, `cards replies` | L23 |
 | `cards induce` | L26 |
 | `cards combine` | L28 |
