@@ -12,13 +12,45 @@ describe the chart without asserting a result the data may not show.
 
 from __future__ import annotations
 
-import string
-import tomllib
 from pathlib import Path
 
 import pyarrow.parquet as pq
 
-from atlas import paths
+from atlas.sitedata.xspecs_panels import (
+    _cost_spec,
+    _quality_spec,
+    _wording_spec,
+)
+from atlas.sitedata.xspecs_select import (
+    _by_share,
+    _pct,
+    _short,
+    select_change_rows,
+)
+from atlas.sitedata.xspecs_titles import (
+    _PLACEHOLDERS,
+    _share_fmt,
+    fill_title,
+    load_x_titles,
+)
+
+__all__ = [
+    "FIRSTHAND",
+    "POPULATION",
+    "_PLACEHOLDERS",
+    "_by_share",
+    "_cost_spec",
+    "_pct",
+    "_quality_spec",
+    "_rows",
+    "_share_fmt",
+    "_short",
+    "_wording_spec",
+    "fill_title",
+    "load_x_titles",
+    "select_change_rows",
+    "site_chart_specs",
+]
 
 POPULATION = "screen_positive"
 FIRSTHAND = "firsthand_account"
@@ -29,109 +61,6 @@ def _rows(site_dir: Path, name: str) -> list[dict]:
     if not path.exists():
         return []
     return pq.read_table(path).to_pylist()
-
-
-def _by_share(rows, bucket="all"):
-    return sorted(
-        (r for r in rows if r["bucket"] == bucket),
-        key=lambda r: (-(r["share"] or 0.0), r["id"]),
-    )
-
-
-def _pct(x):
-    return None if x is None else x * 100
-
-
-def _short(r) -> str:
-    """Display label for a card_share row: the labels.yaml short_label when
-    the build wrote one, else the full card or group text."""
-    return r.get("short_label") or r["label"]
-
-
-def select_change_rows(diff_rows, min_sig=4, per_side=8) -> list[dict]:
-    """The card rows for the change chart: those that moved (``p_adj <
-    0.05``), up to ``per_side`` risers and fallers each, sorted by change.
-    When fewer than ``min_sig`` qualify, the largest absolute changes fill
-    in as non-significant rows, drawn muted with "no clear change".
-    """
-    sig = [
-        r
-        for r in diff_rows
-        if r["share"] is not None
-        and r["p_adj"] is not None
-        and r["p_adj"] < 0.05
-    ]
-    risers = sorted(
-        (r for r in sig if r["share"] > 0),
-        key=lambda r: (-r["share"], r["id"]),
-    )[:per_side]
-    fallers = sorted(
-        (r for r in sig if r["share"] < 0),
-        key=lambda r: (r["share"], r["id"]),
-    )[:per_side]
-    picked = {r["id"]: r for r in risers + fallers}
-    if len(picked) < min_sig:
-        rest = sorted(
-            (
-                r
-                for r in diff_rows
-                if r["share"] is not None and r["id"] not in picked
-            ),
-            key=lambda r: (-abs(r["share"]), r["id"]),
-        )
-        for r in rest[: min_sig - len(picked)]:
-            picked[r["id"]] = r
-    return sorted(
-        picked.values(), key=lambda r: (-(r["share"] or 0.0), r["id"])
-    )
-
-
-def load_x_titles() -> tuple[dict, dict]:
-    """``(titles, run_labels)`` from ``configs/x_titles.toml``; both empty
-    when the file is absent."""
-    path = paths.CONFIGS / "x_titles.toml"
-    if not path.exists():
-        return {}, {}
-    data = tomllib.loads(path.read_text(encoding="utf-8"))
-    return dict(data.get("titles") or {}), dict(data.get("run_labels") or {})
-
-
-def _share_fmt(v: float) -> str:
-    """One decimal under 10%, a whole percent otherwise."""
-    return f"{v * 100:.1f}%" if abs(v) * 100 < 10 else f"{v * 100:.0f}%"
-
-
-_PLACEHOLDERS = {
-    "top_share": _share_fmt,
-    "min_share": _share_fmt,
-    "max_share": _share_fmt,
-    "jev_precision": _share_fmt,
-    "random_precision": _share_fmt,
-    "total_usd": lambda v: f"${v:,.2f}",
-    "total_calls": lambda v: f"{int(v):,}",
-}
-
-
-def fill_title(template: str, values: dict) -> str | None:
-    """Fill ``{placeholder}`` fields in a configured title. An unknown
-    placeholder is an error; a known one with no data returns None so the
-    caller keeps the generated title."""
-    fields = {
-        name
-        for _, name, _, _ in string.Formatter().parse(template)
-        if name is not None
-    }
-    fields.discard("")
-    unknown = fields - set(_PLACEHOLDERS)
-    if unknown:
-        raise ValueError(
-            f"unknown x_titles placeholder(s): {sorted(unknown)}"
-        )
-    if any(values.get(f) is None for f in fields):
-        return None
-    return template.format(
-        **{f: _PLACEHOLDERS[f](values[f]) for f in fields}
-    )
 
 
 def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> list[dict]:
@@ -311,133 +240,9 @@ def site_chart_specs(site_dir, top_n=10, top_cards=12, n_boot=1000, seed=0) -> l
         },
     }
 
-    prev = [
-        r
-        for r in robustness
-        if r["check"] == "screen_wording" and r["metric"] == "prevalence"
-    ]
-    para_runs = {
-        r["run_id"]
-        for r in robustness
-        if r["metric"] in ("agreement", "kappa", "spearman")
-    }
-    wording_range = {
-        **common,
-        "kind": "bars",
-        "name": "wording_range",
-        "run_id": "+".join(r["run_id"] for r in prev) or "none",
-        "denominator": (
-            f"{prev[0]['n']:,} comments in the paraphrase subsample"
-            if prev and prev[0].get("n")
-            else "comments in the paraphrase subsample"
-        ),
-        "n": prev[0]["n"] if prev else 0,
-        "title": "The headline prevalence moves this much when the question is reworded.",
-        "data": {
-            "rows": [
-                {
-                    "label": (
-                        f"{run_labels.get(r['run_id'], r['run_id'])} (paraphrase)"
-                        if r["run_id"] in para_runs
-                        else f"{run_labels.get(r['run_id'], r['run_id'])} (main)"
-                    ),
-                    "value": r["value"],
-                    "ci_low": r["lo"],
-                    "ci_high": r["hi"],
-                }
-                for r in prev
-            ],
-            "xlabel": "prevalence of firsthand problems at the screen cutoff",
-            "format": "pct",
-        },
-    }
-
-    calls = sum(r["calls"] or 0 for r in runs)
-    usd = sum(r["calculated_usd"] or 0.0 for r in runs)
-    biggest = max(runs, key=lambda r: r["calls"] or 0, default={})
-    by_phase: dict[str, dict] = {}
-    for r in runs:
-        phase = r["phase"] or "unknown"
-        b = by_phase.setdefault(
-            phase,
-            {
-                "phase": phase,
-                "calculated_usd": 0.0,
-                "calls": 0,
-                "runs": 0,
-                "wall_s": 0.0,
-            },
-        )
-        b["calculated_usd"] += r["calculated_usd"] or 0.0
-        b["calls"] += r["calls"] or 0
-        b["runs"] += 1
-        b["wall_s"] += r["wall_s"] or 0.0
-    phases = sorted(
-        by_phase.values(), key=lambda b: (-b["calculated_usd"], b["phase"])
-    )
-    cost = {
-        **common,
-        "kind": "cost",
-        "name": "cost",
-        "run_id": (
-            f"{len(runs)} runs across {len(phases)} phases" if runs else "none"
-        ),
-        "denominator": "Jev calls across all runs",
-        "n": calls,
-        "title": f"The runs behind this atlas cost ${usd:,.2f} of Jev credit over {calls:,} calls.",
-        "data": {
-            "calculated_usd": usd,
-            "calls": calls,
-            "p50_ms": biggest.get("p50_ms"),
-            "wall_s": sum(r["wall_s"] or 0.0 for r in runs),
-            "phases": phases,
-        },
-    }
-
-    names = {
-        "jev": "Jev card assignment (human audit)",
-        "random_card": "Random card (baseline)",
-    }
-    audit = [
-        r
-        for r in quality
-        if r["label_set"] == "assignment_audit"
-        and r["metric"] == "precision_strict"
-        and r["system"] in names
-    ]
-    audit.sort(key=lambda r: list(names).index(r["system"]))
-    bench = [r for r in quality if r["label_set"] == "synthetic"]
-    qrows = [
-        {
-            "label": names[r["system"]],
-            "value": r["value"],
-            "ci_low": r["ci_low"],
-            "ci_high": r["ci_high"],
-        }
-        for r in audit
-    ]
-    qrows += [
-        {
-            "label": (
-                f"{r['question_id'].replace('_', ' ')} "
-                f"{r['metric'].replace('_', ' ')} (synthetic cases)"
-            ),
-            "value": r["value"],
-            "synthetic": True,
-        }
-        for r in bench
-    ]
-    jev_n = next((r["n"] for r in audit if r["system"] == "jev"), None)
-    qual = {
-        **common,
-        "kind": "quality",
-        "name": "quality",
-        "run_id": assign_run,
-        "denominator": "audited card assignments" if jev_n else "benchmark cases",
-        "n": jev_n or sum(r["n"] or 0 for r in bench),
-        "title": "The human audit compares Jev's card precision with a random-card baseline.",
-        "data": {"rows": qrows, "xlabel": "precision or accuracy"},
-    }
+    wording_range, prev = _wording_spec(common, robustness, run_labels)
+    cost, usd, calls = _cost_spec(common, runs)
+    qual, audit = _quality_spec(common, quality, assign_run)
     specs = [
         bars,
         heat,
