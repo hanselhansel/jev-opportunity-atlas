@@ -167,6 +167,8 @@ def _answer(run_id, cid, qs, qid, qtype, noul=None, choice=None, score=None):
 
 
 def _rows() -> tuple[list[dict], list[dict]]:
+    # Weights mimic w1/p2: the pos draw is light, the neg check slice heavy.
+    # The weighted firsthand/placed funnel counts then sit below ``screened``.
     pos = [
         {
             "comment_id": BASE + i,
@@ -174,7 +176,7 @@ def _rows() -> tuple[list[dict], list[dict]]:
             "stratum": f"s{i % 3}",
             "period": f"P{i % 11 + 1:02d}",
             "author": f"u{i % 97}",
-            "weight": 10.0 + (i % 5),
+            "weight": 0.4 + (i % 5) * 0.1,
             "wave": 1 if i % 17 else 2,
         }
         for i in range(N_POS)
@@ -186,7 +188,7 @@ def _rows() -> tuple[list[dict], list[dict]]:
             "stratum": f"s{i % 3}",
             "period": "P12",
             "author": f"u{200 + i}",
-            "weight": 10.0,
+            "weight": 0.4,
             "wave": 1,
         }
         for i in range(N_P12)
@@ -198,7 +200,7 @@ def _rows() -> tuple[list[dict], list[dict]]:
             "stratum": f"s{(i + 1) % 3}",
             "period": f"P{i % 10 + 1:02d}",
             "author": f"u{300 + i}",
-            "weight": 50.0 + (i % 7),
+            "weight": 3.0 + (i % 7) * 0.5,
             "wave": 1,
         }
         for i in range(N_NEG)
@@ -354,7 +356,7 @@ def build_world(root: Path, monkeypatch) -> dict:
 
     is_fh = {}
     for i, r in enumerate(pos):
-        is_fh[r["comment_id"]] = i % 13 != 0
+        is_fh[r["comment_id"]] = i % 13 != 0 or i >= N_POS
     answers = []
     for i, r in enumerate(pos + neg):
         c = r["comment_id"]
@@ -402,7 +404,9 @@ def build_world(root: Path, monkeypatch) -> dict:
     assign_rows = []
     for i, r in enumerate(pos):
         c = r["comment_id"]
-        if i % 9 == 0:
+        if i >= N_POS:
+            group, card, card_p = "g01", "c01", 0.9
+        elif i % 9 == 0:
             group, card, card_p = "none", None, None
         elif by_id[c]["story_id"] == STORY + 7:
             group, card, card_p = "g02", "c04", 0.9
