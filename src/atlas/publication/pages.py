@@ -66,10 +66,31 @@ def _tip(repo: Path, branch: str, remote: str) -> str | None:
     return None
 
 
+def _site_data_problems(data_dir: Path) -> list[str]:
+    """Text gate on the built site's data, honoring approved card text.
+
+    Framework writes hashed names (findings.576b33fc.parquet); copy them back to
+    plain names so ``site_text_problems`` can apply its approved-card exemption.
+    """
+    import re
+    import shutil
+    import tempfile
+
+    from atlas.sitedata.build import site_text_problems
+
+    with tempfile.TemporaryDirectory() as tmp:
+        for f in sorted(data_dir.glob("*.parquet")):
+            plain = re.sub(r"\.[0-9a-f]{8}\.parquet$", ".parquet", f.name)
+            shutil.copy(f, Path(tmp) / plain)
+        if (Path(tmp) / "findings.parquet").exists():
+            return site_text_problems(tmp)
+        from atlas.publication.allowlist import text_gate
+
+        return text_gate(Path(tmp))  # no findings, so no card text to exempt
+
+
 def _check_data(dist: Path) -> None:
     import pyarrow.parquet as pq
-
-    from atlas.publication.allowlist import text_gate
 
     metas = sorted((dist / "_file" / "data").glob("meta*.parquet"))
     if not metas:
@@ -81,7 +102,7 @@ def _check_data(dist: Path) -> None:
         mode = dict(zip(t.get("key", []), t.get("value", []))).get("mode")
         if mode != "real":
             raise PagesError(f"pages need meta.mode == real, found {mode!r}")
-    problems = text_gate(dist / "_file")
+    problems = _site_data_problems(dist / "_file" / "data")
     if problems:
         raise PagesError("text gate blocked the build:\n" + "\n".join(problems))
 

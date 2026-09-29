@@ -184,8 +184,9 @@ def _gate_parquet(p: Path, rel: str, check_lengths: bool) -> list[str]:
                     zero_copy_only=False
                 )
                 lengths.append(arr)
-        if lengths:
-            values = np.concatenate([a for a in lengths if a.size])
+        nonempty = [a for a in lengths if a.size]
+        if nonempty:
+            values = np.concatenate(nonempty)
             if values.size:
                 m = float(np.median(values))
                 if m > MAX_MEDIAN_LEN:

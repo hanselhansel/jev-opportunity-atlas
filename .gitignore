@@ -29,6 +29,7 @@ __pycache__/
 site/dist/
 **/.observablehq/cache/
 site/fixtures/
+site/data-real/
 node_modules/
 
 .DS_Store
