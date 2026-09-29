@@ -52,6 +52,7 @@ the same plan.
 | `site build`, `site preview` | L6 |
 | `pilot draw`, `pilot screen`, `pilot facets`, `pilot packed`, `pilot injected`, `pilot gold`, `pilot report` | L7 |
 | `discover search` | L8 |
+| `benchmark run`, `benchmark report` | L18 |
 | `screen run`, `screen table` | L17 |
 | `timeline mark` | existing |
 
