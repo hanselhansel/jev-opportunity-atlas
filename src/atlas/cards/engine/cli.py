@@ -66,6 +66,8 @@ def register(sub) -> None:
         p.add_argument("--version", required=True)
         p.add_argument("--run", required=True)
         p.add_argument("--budget", default=budget)
+        p.add_argument("--rpm", type=float, default=1000)
+        p.add_argument("--concurrency", type=int, default=8)
         p.add_argument("--yes", action="store_true")
 
     ap = commands.add_parser("assign", help="assign comments to need cards")
@@ -188,6 +190,8 @@ def _run_ctx(args, price_row, cap, worst, usd_per_token) -> RunContext:
             price_version=price_row["version"],
             run_dir=paths.run_dir(args.run),
             budget=args.budget,
+            rpm=args.rpm,
+            concurrency=args.concurrency,
         )
     except BaseException:
         guard.close()
