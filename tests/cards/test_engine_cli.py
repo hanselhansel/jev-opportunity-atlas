@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import tomllib
 from pathlib import Path
 
 import pyarrow as pa
@@ -111,7 +112,8 @@ def test_assign_dry_run_prints_estimate_only(tmp_path, monkeypatch, capsys):
     assert out["estimated_calls"] == 6  # level 1 + level-2 upper bound
     assert out["estimated_input_tokens"] > 0
     assert out["estimated_usd"] > 0 and out["budget"] == "assign"
-    assert out["cap_usd"] == 2.50
+    budgets = tomllib.loads((paths.CONFIGS / "budgets.toml").read_text())
+    assert out["cap_usd"] == budgets["assign"]
     assert not (tmp_path / "runs").exists() or not list(
         (tmp_path / "runs").rglob("*.parquet")
     )
