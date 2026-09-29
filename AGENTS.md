@@ -66,6 +66,7 @@ the same plan.
 | `cards items`, `cards draft-sample`, `cards replies` | L23 |
 | `cards induce` | L26 |
 | `cards combine` | L28 |
+| `solutions run` | S5 |
 | `timeline mark` | existing |
 
 Common flags: `--snapshot` (default: `snapshot_id` in `configs/acquisition.toml`),
