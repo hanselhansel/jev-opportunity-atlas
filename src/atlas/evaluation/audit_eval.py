@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from atlas.evaluation import audit_queues
+from atlas.evaluation import audit_queues, exclusions
 from atlas.evaluation.metrics import binary_metrics, choice_confusion
 from atlas.evaluation.queue import load_queue, queue_path, read_answers
-from atlas.evaluation.store import LabelStore, labels_path, repeats_path
+from atlas.evaluation.store import labels_path, repeats_path
 
 TARGET = 0.75
 WEIGHTING = "1/rate[band]"
@@ -88,8 +88,8 @@ def evaluate_assignment_audit(run_id: str, n_boot: int = 2000,
     queue, report = _common("assignment_audit", run_id)
     band_of, rates = _bands(queue)
     unseen = queue.get("hidden", {})
-    primary = LabelStore(labels_path()).latest("assignment_audit")
-    repeats = LabelStore(repeats_path()).latest("assignment_audit")
+    primary, excluded = exclusions.latest(labels_path(), "assignment_audit")
+    repeats = exclusions.latest(repeats_path(), "assignment_audit")[0]
     labels = {
         cid: row["value"]
         for (cid, q), row in primary.items()
@@ -133,6 +133,7 @@ def evaluate_assignment_audit(run_id: str, n_boot: int = 2000,
         for k in ("lenient", "strict")
     }
     report["agreement"] = {"fits": _agreement(primary, repeats, "fits")}
+    report.update(excluded)
     report["target"] = TARGET
     report["meets_target"] = {
         k: (
@@ -149,8 +150,8 @@ def evaluate_facet_audit(run_id: str, n_boot: int = 2000,
                          seed: int = 0) -> dict:
     queue, report = _common("facet_audit", run_id)
     band_of, rates = _bands(queue)
-    primary = LabelStore(labels_path()).latest("facet_audit")
-    repeats = LabelStore(repeats_path()).latest("facet_audit")
+    primary, excluded = exclusions.latest(labels_path(), "facet_audit")
+    repeats = exclusions.latest(repeats_path(), "facet_audit")[0]
 
     facets: dict[str, dict] = {}
     for qid in audit_queues.FACET_QUESTIONS:
@@ -210,4 +211,5 @@ def evaluate_facet_audit(run_id: str, n_boot: int = 2000,
         q: _agreement(primary, repeats, q)
         for q in (*audit_queues.FACET_QUESTIONS, "resolution")
     }
+    report.update(excluded)
     return report

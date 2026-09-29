@@ -15,7 +15,7 @@ import numpy as np
 import pyarrow.parquet as pq
 
 from atlas import paths
-from atlas.evaluation import modes
+from atlas.evaluation import exclusions, modes
 from atlas.evaluation.queue import (
     DEFAULT_BAND_SIZES,
     DEFAULT_BANDS,
@@ -28,7 +28,7 @@ from atlas.evaluation.queue import (
     save_queue,
     top_up,
 )
-from atlas.evaluation.store import LabelStore, labels_path, repeats_path
+from atlas.evaluation.store import labels_path, repeats_path
 
 
 def _rubric_status() -> str:
@@ -268,7 +268,7 @@ def evaluate(label_set: str, run_id: str, question: str = "firsthand_problem",
     band_of = {cid: name for name, b in queue.get("bands", {}).items() for cid in b["ids"]}
     rates = queue.get("rates", {})
     design_w, story_of = _design(queue.get("sample_id"))
-    primary = LabelStore(labels_path()).latest(label_set)
+    primary, excluded = exclusions.latest(labels_path(), label_set)
     labels = {cid: row["value"] for (cid, q), row in primary.items() if q == question}
     answers = read_answers(run_id, question)
     joined = sorted(c for c in labels if answers.get(c, {}).get("noul") is not None)
@@ -301,6 +301,7 @@ def evaluate(label_set: str, run_id: str, question: str = "firsthand_problem",
         "metrics": metrics.binary_metrics(y, score, threshold, **boot),
         "reliability_bins": metrics.reliability_bins(y, score, weights=w),
     }
+    report.update(excluded)
     snapshot = snapshot_id or queue.get("snapshot_id") or _default_snapshot()
     try:
         texts = _load_texts(snapshot, rows)
@@ -308,7 +309,7 @@ def evaluate(label_set: str, run_id: str, question: str = "firsthand_problem",
         report["baseline"] = {"name": "keyword_v1", **metrics.binary_metrics(y, kw, 0.5, **boot)}
     except ImportError as exc:
         report["baseline"] = {"name": "keyword_v1", "skipped": f"item loader unavailable: {exc}"}
-    repeats = LabelStore(repeats_path()).latest(label_set)
+    repeats = exclusions.latest(repeats_path(), label_set)[0]
     report["intra_rater"] = {q: _agreement(primary, repeats, q)
                              for q in ("firsthand_problem", "account_type")}
     report["choices"] = {}
