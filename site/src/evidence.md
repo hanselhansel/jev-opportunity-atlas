@@ -37,6 +37,18 @@ const evidence = FileAttachment("data/evidence.parquet").parquet().then(
 ```
 
 ```js
+const cardShare = FileAttachment("data/card_share.parquet").parquet().then(
+  (t) => ({rows: rowsOf(t), error: null}),
+  (error) => ({rows: [], error})
+);
+const cardLabel = Object.fromEntries(
+  cardShare.rows
+    .filter((r) => r.level === "card" && r.bucket === "all")
+    .map((r) => [r.id, r.short_label ?? r.label])
+);
+```
+
+```js
 const domains = [...new Set(evidence.rows.map((r) => r.domain))].sort();
 const domainInput = Inputs.select(["", ...domains], {
   label: "Domain",
@@ -158,7 +170,11 @@ if (evidence.error) {
     responsiveTable(scored.slice(0, 200), [
       {key: "comment_id", label: "comment"},
       {key: "domain"},
-      {key: "subtopic"},
+      {
+        key: "subtopic",
+        format: (v) => cardLabel[v] ?? v ?? "",
+        title: (v) => v,
+      },
       {key: "period"},
       {key: "score", label: "strength", format: (v) => v.toFixed(2)},
       {key: "evidence_strength", label: "stored", format: (v) => Number(v).toFixed(2)},
