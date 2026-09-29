@@ -17,7 +17,7 @@ from tests.sitedata.world import CARDS, DOMAINS, TV, build, build_world, read
 UNAUDITED = "as classified by Jev; unaudited"
 EXTRA_COLUMNS = {
     "domain_share": ["qualifier"],
-    "quality": ["system"],
+    "quality": ["system", "run_id"],
     "findings": ["unsolved_rate", "short_label"],
     "card_share": ["short_label"],
 }

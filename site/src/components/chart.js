@@ -46,6 +46,7 @@ export function chart({
   rows,
   columns,
   qualifier,
+  run,
 }) {
   const fixture = meta?.mode === "fixture";
   const inner = Plot.plot(plot);
@@ -88,7 +89,7 @@ export function chart({
       {x: 0, y: fy + 14, class: "chart-footer"},
       `source: ${meta?.source ?? "?"} · window ${meta?.window_start ?? "?"} – ` +
         `${meta?.window_end ?? "?"} · lane ${lane ?? "?"} · n=${n ?? "?"} · ` +
-        `run ${meta?.run_id ?? "?"}`
+        `run ${run ?? meta?.run_id ?? "?"}`
     ),
     text(
       {x: 0, y: fy + 30, class: "chart-footer"},

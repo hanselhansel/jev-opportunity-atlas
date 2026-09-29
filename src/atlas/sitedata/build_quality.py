@@ -94,7 +94,7 @@ def runs_from_phases(toml_path) -> list[dict]:
     return rows
 
 
-def _row(question_id, label_set, metric, value, ci, n, system="jev") -> dict:
+def _row(question_id, label_set, metric, value, ci, n, system="jev", run_id=None) -> dict:
     lo, hi = (ci or [None, None])[:2]
     return {
         "question_id": question_id,
@@ -105,10 +105,11 @@ def _row(question_id, label_set, metric, value, ci, n, system="jev") -> dict:
         "ci_high": hi,
         "n": n,
         "system": system,
+        "run_id": run_id,
     }
 
 
-def _assignment_audit(r: dict) -> list[dict]:
+def _assignment_audit(r: dict, run_id) -> list[dict]:
     out = []
     for key, system in (("jev", "jev"), ("random", "random_card")):
         g = (r.get("groups") or {}).get(key)
@@ -126,12 +127,13 @@ def _assignment_audit(r: dict) -> list[dict]:
                     m.get("ci"),
                     n,
                     system,
+                    run_id,
                 )
             )
     return out
 
 
-def _facet_audit(r: dict) -> list[dict]:
+def _facet_audit(r: dict, run_id) -> list[dict]:
     out = []
     for qid, m in (r.get("facets") or {}).items():
         for metric in ("precision", "recall"):
@@ -143,12 +145,14 @@ def _facet_audit(r: dict) -> list[dict]:
                     m.get(metric),
                     m.get(f"{metric}_ci"),
                     m.get("n"),
+                    "jev",
+                    run_id,
                 )
             )
     return out
 
 
-def _screen_eval(r: dict) -> list[dict]:
+def _screen_eval(r: dict, run_id) -> list[dict]:
     out = []
     q = r.get("question", "firsthand_problem")
     for system, m in (("jev", r.get("metrics")), (None, r.get("baseline"))):
@@ -166,6 +170,7 @@ def _screen_eval(r: dict) -> list[dict]:
                         m.get(f"{metric}_ci"),
                         m.get("n"),
                         name,
+                        run_id,
                     )
                 )
     return out
@@ -184,7 +189,16 @@ def _benchmark(run_id: str) -> list[dict]:
         m = ((s.get("firsthand") or {}).get(mode) or {}).get("0.5")
         if m:
             out.append(
-                _row(qid, "synthetic", "accuracy", m.get("accuracy"), None, m.get("n"))
+                _row(
+                    qid,
+                    "synthetic",
+                    "accuracy",
+                    m.get("accuracy"),
+                    None,
+                    m.get("n"),
+                    "jev",
+                    run_id,
+                )
             )
     at = s.get("account_type")
     if at:
@@ -196,11 +210,22 @@ def _benchmark(run_id: str) -> list[dict]:
                 at.get("accuracy"),
                 None,
                 at.get("n"),
+                "jev",
+                run_id,
             )
         )
     for facet, m in (s.get("facets") or {}).items():
         out.append(
-            _row(facet, "synthetic", "accuracy", m.get("accuracy"), None, m.get("n"))
+            _row(
+                facet,
+                "synthetic",
+                "accuracy",
+                m.get("accuracy"),
+                None,
+                m.get("n"),
+                "jev",
+                run_id,
+            )
         )
     cards = s.get("cards")
     if cards:
@@ -212,18 +237,20 @@ def _benchmark(run_id: str) -> list[dict]:
                 cards.get("top1_accuracy"),
                 None,
                 cards.get("n"),
+                "jev",
+                run_id,
             )
         )
     return out
 
 
-def _eval_rows(report: dict, ls: str) -> list[dict]:
+def _eval_rows(report: dict, ls: str, run_id) -> list[dict]:
     report.setdefault("label_set", ls)
     if ls == "assignment_audit":
-        return _assignment_audit(report)
+        return _assignment_audit(report, run_id)
     if ls == "facet_audit":
-        return _facet_audit(report)
-    return _screen_eval(report)
+        return _facet_audit(report, run_id)
+    return _screen_eval(report, run_id)
 
 
 def quality_rows(run_ids, label_sets, benchmark_run=None, audit_runs=()) -> list[dict]:
@@ -249,7 +276,7 @@ def quality_rows(run_ids, label_sets, benchmark_run=None, audit_runs=()) -> list
                 continue
             seen.add(ls)
             report = json.loads(path.read_text(encoding="utf-8"))
-            out += _eval_rows(report, ls)
+            out += _eval_rows(report, ls, run_id)
     if benchmark_run:
         out += _benchmark(benchmark_run)
     return out

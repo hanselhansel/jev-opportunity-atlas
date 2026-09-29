@@ -89,6 +89,7 @@ function selectChanged(rows) {
 ```js
 const SHARE_COLS = [
   {key: "label", label: "need"},
+  {key: "short_label", label: "short label"},
   {key: "share", format: pct},
   {key: "lo", label: "interval low", format: pct},
   {key: "hi", label: "interval high", format: pct},
@@ -106,7 +107,7 @@ const SHARE_COLS = [
 function findingCard(f) {
   return html`<div class="finding-card ${f.status === "candidate" ? "candidate" : ""}">
     <div class="finding-status">${f.status}</div>
-    <h3 style="margin: 0.2rem 0">${f.title}</h3>
+    <h3 style="margin: 0.2rem 0">${f.short_label ?? f.title}</h3>
     <p>${f.problem_statement}</p>
     <p class="finding-meta">${f.n_comments} comments · ${f.n_threads} threads ·
       periods ${f.first_period}–${f.last_period} (${f.months_present} months) ·
@@ -126,6 +127,7 @@ function shareBarChart(meta, rows, title, denom, marginLeft) {
     n: sumItems(data),
     lane: "breadth",
     meta,
+    run: meta.assign_run,
     qualifier: rows[0]?.qualifier,
     ariaLabel: `${title}; ${data.length} bars with intervals`,
     plot: {
@@ -189,6 +191,7 @@ function changeChart(meta, rows, title, denom, marginLeft) {
     n: sumItems(data),
     lane: "breadth",
     meta,
+    run: meta.assign_run,
     qualifier: rows[0]?.qualifier,
     ariaLabel:
       `${title}; ${changed.length} of ${data.length} rows ` +

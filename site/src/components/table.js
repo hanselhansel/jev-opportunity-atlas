@@ -18,6 +18,10 @@ export function responsiveTable(rows, columns, {onSelect} = {}) {
       const td = tr.insertCell();
       td.setAttribute("data-label", col.label ?? col.key);
       const v = row[col.key];
+      if (col.title) {
+        const t = col.title(v, row);
+        if (t != null && t !== "") td.setAttribute("title", t);
+      }
       td.textContent = col.format ? col.format(v, row) : (v ?? "");
     }
     if (onSelect) {
