@@ -1,0 +1,17 @@
+# Chart titles for X and the site: each states the finding, not the chart type.
+# Written by Claude from the final numbers for Hansel's review. A chart id missing
+# here keeps its generated title. Placeholders in braces are filled from the data.
+[titles]
+bars = "These problems drew the most distinct people on HN."
+heat = "Most top problems live in one domain. AI coding problems span two."
+group_share = "Developer tools, devices, and consumer apps top HN's firsthand complaints."
+card_share_top = "No single problem dominates. The biggest holds {top_share} of all complaints."
+card_change = "AI complaints rose from the first half-year to the second. Classic tooling fell."
+wording_range = "Rewording the screening question moves the headline between {min_share} and {max_share}."
+cost = "The whole atlas cost {total_usd} of Jev credit over {total_calls} calls."
+quality = "In a blind audit, Jev's card fit {jev_precision} of the time. A random card fit {random_precision}."
+
+[run_labels]
+"main-screen-20260930" = "original wording"
+"robust-screen-para1" = "rewording 1"
+"robust-screen-para2" = "rewording 2"
