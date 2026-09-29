@@ -56,6 +56,10 @@ the same plan.
 | `screen run`, `screen table` | L17 |
 | `site data`, `x charts` | L20 |
 | `release pack`, `release restore`, `release rehydrate`, `release replay`, `release pages` | L21 |
+| `sample draw-pooled` | L22 |
+| `facets draw`, `facets estimate`, `facets run` | L22 |
+| `pilot packed-cal` | L22 |
+| `jev measure` | L22 |
 | `cards items`, `cards draft-sample`, `cards replies` | L23 |
 | `timeline mark` | existing |
 
