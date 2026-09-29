@@ -25,10 +25,15 @@ def pair_id(version: str, a: str, b: str) -> int:
     return int(hashlib.sha256(f"{version}:{a}:{b}".encode()).hexdigest()[:15], 16)
 
 
-def merge_pairs(cs, assignments, cross_group_min_overlap=3) -> list[tuple[str, str]]:
+def merge_pairs(
+    cs, assignments, cross_group_min_overlap=3, all_pairs=False
+) -> list[tuple[str, str]]:
     """Every within-group pair of active cards, plus cross-group pairs whose
     two cards appear together in at least `cross_group_min_overlap` comments'
-    card_top2 metadata."""
+    card_top2 metadata. With `all_pairs`, every pair of active cards across
+    all groups (n*(n-1)/2) regardless of evidence."""
+    if all_pairs:
+        return list(itertools.combinations(sorted(cs.cards), 2))
     pairs: set[tuple[str, str]] = set()
     for gid in cs.groups:
         ids = sorted(c.card_id for c in cs.cards_in(gid))

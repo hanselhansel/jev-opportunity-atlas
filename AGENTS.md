@@ -61,6 +61,7 @@ the same plan.
 | `facets draw`, `facets estimate`, `facets run` | L22 |
 | `pilot packed-cal` | L22 |
 | `jev measure` | L22 |
+| `cards items`, `cards draft-sample`, `cards replies` | L23 |
 | `timeline mark` | existing |
 
 Common flags: `--snapshot` (default: `snapshot_id` in `configs/acquisition.toml`),
