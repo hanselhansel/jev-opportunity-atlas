@@ -25,6 +25,7 @@ COMMAND_MODULES = (
     "atlas.screen.cli",
     "atlas.benchmark.cli",
     "atlas.facets.cli",
+    "atlas.robustness.cli",
     "atlas.timeline",
 )
 
