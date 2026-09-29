@@ -94,3 +94,109 @@ equally, and **unclear** when you cannot tell.
 - About 10% of items come back later unannounced, to measure consistency.
 - Median time per item should be 20 to 30 seconds. If an item needs more than a minute,
   choose unsure and move on.
+
+## Audit: facet_audit
+
+You see a comment (plus its parent and story) and answer the facet questions from
+the text alone. You never see Jev's facet labels. Each of the first six questions
+asks whether the comment states that something happened to the author:
+
+- **workaround**: the author describes a workaround, hack, or manual process they use
+  for the problem.
+- **paid**: the author pays for something to deal with the problem.
+- **switched**: the author switched tools or vendors because of the problem.
+- **abandoned**: the author gave up on a tool or the task because of the problem.
+- **cost_time**: the problem costs the author time.
+- **cost_money**: the problem costs the author money.
+
+Pick **yes** only when the comment states the thing happened to the author. Pick
+**no** when the text does not mention it or it happened to someone else. Pick
+**unsure** when the text hints at it but does not say so plainly.
+
+- **resolution**: using the comment and its parent only, is the author's problem
+  solved? **resolved** when the comment says so or describes the fix that worked,
+  **unresolved** when the problem is still open, **unclear** when you cannot tell.
+
+| Example | workaround | paid | resolution |
+|---|---|---|---|
+| "Every Friday I export the report to CSV and fix the dates by hand." | yes | no | unresolved |
+| "We ended up paying for a managed queue just to stop losing jobs." | no | yes | resolved |
+| "My teammate wrote a script for this, works fine." | no | no | resolved |
+
+Borderline rules:
+
+- A workaround someone else describes does not count as the author's.
+- "I would pay for this" is a wish, not **paid**; pick **no**.
+- A problem stated without any mention of how it ended is **unresolved** only when
+  the text makes clear it is still open; otherwise **unclear**.
+
+## Audit: assignment_audit
+
+You see a pain sentence from a comment and one candidate need card. Judge only
+whether the need describes the problem in the comment. The shown need may or may
+not be the model's pick; you are not told which. Do not try to guess which it is.
+
+- **yes**: the need card states the problem in the sentence, at about the same scope.
+- **partly**: the need overlaps the problem but is broader, narrower, or covers only
+  part of it.
+- **no**: the need is about a different problem.
+- **unsure**: the sentence or the card is too vague to judge.
+
+| Pain sentence | Need card | Label | Why |
+|---|---|---|---|
+| "I spend an hour a day reformatting invoices." | "Invoices require manual rework" | yes | Same problem, same scope |
+| "Our cron jobs silently stop after deploys." | "Deploys break scheduled jobs" | yes | Same problem |
+| "I lost a customer over a missing invoice." | "Invoices require manual rework" | partly | Related to invoices, different problem |
+| "The VPN drops my calls twice a day." | "Deploys break scheduled jobs" | no | Different problem |
+
+Borderline rules:
+
+- Judge the need statement, not whether the comment is well written.
+- A card that is a superset of the problem (same issue plus more) is **partly**.
+- When the sentence names a symptom the card does not mention, pick **no** unless
+  the link is direct and stated.
+
+## Audit: merge_audit
+
+You see two need statements, A and B. Judge how they relate. You never see card ids
+or the model's score.
+
+- **same**: a person with problem A has problem B; the statements describe one
+  underlying problem at the same scope.
+- **related**: the problems are distinct but overlap or sit side by side, so
+  comments about one often mention the other.
+- **different**: the statements describe separate problems.
+
+| Need A | Need B | Label | Why |
+|---|---|---|---|
+| "Invoices need manual rework" | "Billing documents require hand edits" | same | One problem, two phrasings |
+| "Deploys break scheduled jobs" | "Scheduled jobs lack monitoring" | related | Same area, different problems |
+| "VPN calls drop daily" | "Invoices need manual rework" | different | Unrelated |
+
+Borderline rules:
+
+- Different wordings of the same problem are **same**, even if one is more general.
+- Sharing a tool or vendor is not enough for **same**; pick **related**.
+- When a relationship might exist but neither statement says so, pick **different**.
+
+## Review: interview
+
+This is a judgment review, not a blind check. You see a top need card with its
+group, its metrics (authors, threads, periods, domains), and up to five example
+pain sentences from comments linked to it. The metrics are shown on purpose.
+Decide whether the card is worth a customer interview.
+
+- **strong**: a distinct, painful problem with enough independent voices to make an
+  interview worth scheduling now.
+- **maybe**: promising, but thin evidence, unclear scope, or weak example sentences.
+- **no**: too narrow, too vague, duplicate of a better card, or not a real problem.
+
+The **why** note is optional, at most 280 characters. Use it to flag duplicates or
+to note which example sold the card.
+
+| Card sketch | Label | Why |
+|---|---|---|
+| Many authors, several threads, concrete examples | strong | Repeated, specific pain |
+| Few authors, vague statement | maybe | Needs more evidence |
+| One thread, metric line dominated by a single source | no | Thin or duplicate |
+

@@ -15,6 +15,7 @@ import numpy as np
 import pyarrow.parquet as pq
 
 from atlas import paths
+from atlas.evaluation import modes
 from atlas.evaluation.queue import (
     DEFAULT_BAND_SIZES,
     DEFAULT_BANDS,
@@ -58,6 +59,57 @@ def _other_queue_ids(skip: Path) -> set[int]:
     return ids
 
 
+AUDIT_LABEL_SETS = tuple(modes.MODES)
+
+
+def _need(args: argparse.Namespace, flag: str) -> None:
+    if getattr(args, flag) is None:
+        print(
+            f"label run --label-set {args.label_set} requires "
+            f"--{flag.replace('_', '-')}",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
+
+def _build_audit_queue(args: argparse.Namespace, snapshot: str) -> dict:
+    from atlas.evaluation import audit_queues
+
+    if args.label_set == "facet_audit":
+        return audit_queues.facet_audit_queue(
+            args.run, args.n or 150, args.seed, snapshot_id=snapshot
+        )
+    for flag in ("cardset", "version"):
+        _need(args, flag)
+    if args.label_set == "assignment_audit":
+        return audit_queues.assignment_audit_queue(
+            args.run, args.version, args.n or 200, args.seed,
+            cardset=args.cardset,
+        )
+    if args.label_set == "merge_audit":
+        merge_path = paths.run_dir(args.run) / f"merge-{args.version}.json"
+        if not merge_path.exists():
+            print(f"no merge results at {merge_path} "
+                  "(run `atlas cards merge` first)", file=sys.stderr)
+            raise SystemExit(1)
+        scored = json.loads(merge_path.read_text(encoding="utf-8"))["scored"]
+        return audit_queues.merge_audit_queue(
+            scored, args.n or 50, args.seed,
+            taxonomy_version=args.version, cardset=args.cardset,
+        )
+    if args.label_set == "interview":
+        _need(args, "metrics")
+        examples = audit_queues.interview_examples(
+            args.run, args.version, args.cardset
+        )
+        return audit_queues.interview_queue(
+            pq.read_table(args.metrics), args.n or 200,
+            taxonomy_version=args.version, cardset=args.cardset,
+            examples=examples, seed=args.seed,
+        )
+    raise ValueError(f"not an audit label set: {args.label_set}")
+
+
 def _summarize(label_set: str, queue: dict) -> str:
     parts = [f"queue {label_set}: {len(queue['ids'])} ids"]
     if queue["bands"]:
@@ -80,8 +132,29 @@ def _label_run(args: argparse.Namespace) -> None:
         )
         raise SystemExit(1)
     snapshot = args.snapshot or _default_snapshot()
-    frame = labeling_frame(args.sample, args.run)
     qpath = queue_path(args.label_set)
+    if args.label_set in AUDIT_LABEL_SETS:
+        if args.top_up:
+            print(f"--top-up is not supported for {args.label_set}",
+                  file=sys.stderr)
+            raise SystemExit(1)
+        if qpath.exists():
+            queue = load_queue(qpath)
+            print(f"reusing queue {qpath} ({len(queue['ids'])} ids)")
+        else:
+            queue = _build_audit_queue(args, snapshot)
+            print(_summarize(args.label_set, queue))
+        if args.no_launch:
+            return
+        _launch(args, qpath, snapshot)
+        return
+    if args.sample is None:
+        print(
+            f"label run --label-set {args.label_set} requires --sample",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+    frame = labeling_frame(args.sample, args.run)
     if qpath.exists():
         queue = load_queue(qpath)
         if args.top_up:
@@ -125,6 +198,10 @@ def _label_run(args: argparse.Namespace) -> None:
         print(_summarize(args.label_set, queue))
     if args.no_launch:
         return
+    _launch(args, qpath, snapshot)
+
+
+def _launch(args: argparse.Namespace, qpath: Path, snapshot: str) -> None:
     app = Path(__file__).resolve().with_name("labeler_app.py")
     env = os.environ | {
         "ATLAS_LABEL_SET": args.label_set,
@@ -251,9 +328,23 @@ def evaluate(label_set: str, run_id: str, question: str = "firsthand_problem",
 
 def _eval_cmd(args: argparse.Namespace) -> None:
     try:
-        report = evaluate(args.label_set, args.run, args.question, args.target_recall,
-                          args.snapshot, args.n_boot, args.seed)
-    except CoverageError as exc:
+        if args.label_set == "assignment_audit":
+            from atlas.evaluation import audit_eval
+
+            report = audit_eval.evaluate_assignment_audit(
+                args.run, args.n_boot, args.seed
+            )
+        elif args.label_set == "facet_audit":
+            from atlas.evaluation import audit_eval
+
+            report = audit_eval.evaluate_facet_audit(
+                args.run, args.n_boot, args.seed
+            )
+        else:
+            report = evaluate(args.label_set, args.run, args.question,
+                              args.target_recall, args.snapshot, args.n_boot,
+                              args.seed)
+    except (CoverageError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         raise SystemExit(1) from None
     out = paths.run_dir(args.run) / f"eval_{args.label_set}.json"
@@ -272,11 +363,16 @@ def register(sub) -> None:
     label_sub = label.add_subparsers(dest="label_command", required=True)
     run = label_sub.add_parser("run", help="build or reuse a queue, then label")
     run.add_argument(
-        "--label-set", required=True, choices=["calibration", "heldout", "edge"]
+        "--label-set",
+        required=True,
+        choices=["calibration", "heldout", "edge", *AUDIT_LABEL_SETS],
     )
-    run.add_argument("--sample", required=True)
+    run.add_argument("--sample", default=None)
     run.add_argument("--run", required=True)
     run.add_argument("--snapshot", default=None)
+    run.add_argument("--cardset", default=None)
+    run.add_argument("--version", default=None)
+    run.add_argument("--metrics", default=None)
     run.add_argument("--n", type=int, default=None)
     run.add_argument("--seed", type=int, default=1)
     run.add_argument("--reviewer", default="hansel")
