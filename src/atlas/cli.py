@@ -24,6 +24,7 @@ COMMAND_MODULES = (
     "atlas.cards.engine.cli",
     "atlas.screen.cli",
     "atlas.benchmark.cli",
+    "atlas.facets.cli",
     "atlas.timeline",
 )
 
