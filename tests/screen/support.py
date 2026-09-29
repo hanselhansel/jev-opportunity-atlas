@@ -13,9 +13,21 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from atlas import contracts, paths
+from atlas.inference import ratelimit
 from tests.pilot.test_support import SNAPSHOT_ID
 
 SAMPLE_N = 1000
+
+
+def mock_runtime(monkeypatch, seen=None):
+    """Mock Jev transport plus a fake limiter clock so rpm pacing is instant."""
+    from tests.pilot.test_support import make_transport, mock_env
+
+    mock_env(monkeypatch, make_transport(seen=seen))
+    clock = FakeClock()
+    monkeypatch.setattr(ratelimit, "_clock", clock.now)
+    monkeypatch.setattr(ratelimit, "_sleep", clock.sleep)
+    return clock
 
 
 class FakeClock:
