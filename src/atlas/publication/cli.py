@@ -139,6 +139,34 @@ def _release_rehydrate(args) -> None:
     print(json.dumps(summary, indent=2))
 
 
+def _release_replay(args) -> None:
+    from atlas.publication.replay import replay
+
+    report = replay(
+        Path(args.release_dir), Path(args.site_out) if args.site_out else None
+    )
+    v = report["verify"]
+    if v["ok"]:
+        print(f"verify: ok (schema_version {v['schema_version']})")
+    else:
+        print(
+            f"verify: FAIL bad={v['bad']} missing={v['missing']} "
+            f"extra={v['extra']} schema_version={v['schema_version']}"
+        )
+    for cid, verdict in report["claims"].items():
+        detail = report["claim_errors"].get(cid)
+        print(f"claim {cid}: {verdict}" + (f" ({detail})" if detail else ""))
+    if v["ok"]:
+        print(f"claims: {len(report['claims'])} checked")
+    for problem in report["site_problems"]:
+        print(f"site data: {problem}")
+    if report["site_data"]:
+        print(f"site data: {report['site_data']}")
+    print("replay: ok" if report["ok"] else "replay: FAIL")
+    if not report["ok"]:
+        raise SystemExit(1)
+
+
 def _claims_check(args) -> None:
     from atlas import paths
     from atlas.publication.claims import check_claims, load_claims
@@ -224,6 +252,14 @@ def register(sub) -> None:
     rehy.add_argument("--limit", type=int, default=None, help="First N ids only")
     rehy.add_argument("--concurrency", type=int, default=32)
     rehy.set_defaults(func=_release_rehydrate)
+    rep = rsub.add_parser(
+        "replay", help="Verify, check claims, and build site data (no network)"
+    )
+    rep.add_argument("--release-dir", required=True, help="Restored release dir")
+    rep.add_argument(
+        "--site-out", default=None, help="Site data dir (default: <dir>-site-data)"
+    )
+    rep.set_defaults(func=_release_replay)
 
     claims = sub.add_parser("claims", help="Claims ledger")
     csub = claims.add_subparsers(dest="claims_cmd", required=True)
