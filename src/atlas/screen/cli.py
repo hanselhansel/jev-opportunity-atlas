@@ -18,7 +18,11 @@ def _run(args) -> None:
         yes=args.yes,
     )
     if result["dispatched"]:
-        print(json.dumps(result["run"], sort_keys=True))
+        print(
+            json.dumps(
+                {**result["run"], "stopped": result["stopped"]}, sort_keys=True
+            )
+        )
 
 
 def _table(args) -> None:

@@ -54,7 +54,9 @@ def _write_map_part(map_dir: Path, index: int, table: pa.Table) -> None:
             )
         return
     map_dir.mkdir(parents=True, exist_ok=True)
-    tmp = part.with_name(part.name + ".tmp")
+    # Dot prefix: pyarrow dataset discovery skips it, so a crash leftover is
+    # never read as a map part.
+    tmp = part.with_name("." + part.name + ".tmp")
     pq.write_table(table, tmp)
     os.replace(tmp, part)
 
