@@ -88,7 +88,9 @@ class _LedgerSpend:
         return self.usd
 
 
-async def _dispatch_chunks(ctx, ids, snapdir, k, chunk, qs, total_calls):
+async def _dispatch_chunks(
+    ctx, ids, snapdir, k, chunk, qs, total_calls, qs_name, qs_version
+):
     """One run_batch per chunk with map parts written first and progress after."""
     from atlas.sources.items import load_items
 
@@ -110,7 +112,9 @@ async def _dispatch_chunks(ctx, ids, snapdir, k, chunk, qs, total_calls):
     for i in range(n_chunks):
         chunk_ids = ids[i * chunk : (i + 1) * chunk]
         items = load_items(snapdir, [int(c) for c in chunk_ids])
-        packed_list, pmap = packed.packed_items(items, k)
+        packed_list, pmap = packed.packed_items(
+            items, k, name=qs_name, version=qs_version
+        )
         _write_map_part(map_dir, i, pmap)
         out = await run_batch(ctx, packed_list, qs)
         for key in totals:
@@ -140,6 +144,16 @@ async def _dispatch_chunks(ctx, ids, snapdir, k, chunk, qs, total_calls):
     return totals, stopped
 
 
+def parse_question_set(question_set: str) -> tuple[str, int]:
+    """Split a `name@version` label into (name, version)."""
+    name, sep, version = question_set.rpartition("@")
+    if not sep or not name or not version.isdigit():
+        raise ValueError(
+            f"question_set {question_set!r} must look like name@version"
+        )
+    return name, int(version)
+
+
 def screen_sample(
     sample_id,
     run_id,
@@ -149,6 +163,7 @@ def screen_sample(
     chunk=5000,
     yes=False,
     concurrency=32,
+    question_set="screen@1",
 ) -> dict:
     """Screen every comment in `sample_id` packed k per call into `run_id`."""
     if chunk % k != 0:
@@ -169,7 +184,8 @@ def screen_sample(
     n = len(ids)
     snapdir = paths.snapshot_dir(snapshot_id)
     run_dir = paths.run_dir(run_id)
-    qs = packed.packed_question_set(k)
+    qs_name, qs_version = parse_question_set(question_set)
+    qs = packed.packed_question_set(k, name=qs_name, version=qs_version)
     total_calls = math.ceil(n / k)
 
     params = {
@@ -178,7 +194,7 @@ def screen_sample(
         "k": k,
         "chunk": chunk,
         "n_comments": n,
-        "question_set": packed.PACKED_LABEL,
+        "question_set": qs.label,
     }
     params_path = run_dir / "screen.json"
     if params_path.exists():
@@ -196,16 +212,16 @@ def screen_sample(
         ids[np.linspace(0, n - 1, min(n, PROBE_MAX)).astype(np.int64)]
     )
     probe_items = load_items(snapdir, [int(c) for c in probe_ids])
-    probe_packed, _ = packed.packed_items(probe_items, k)
+    probe_packed, _ = packed.packed_items(
+        probe_items, k, name=qs_name, version=qs_version
+    )
     mean_tokens = (
         sum(stages.item_tokens(p, qs) for p in probe_packed) / len(probe_packed)
         if probe_packed
         else 0.0
     )
     done = (
-        runner_io.load_done(run_dir, packed.PACKED_LABEL)
-        if run_dir.exists()
-        else set()
+        runner_io.load_done(run_dir, qs.label) if run_dir.exists() else set()
     )
     remaining_calls = sum(
         1 for pid in ids[::k] if int(pid) not in done
@@ -213,7 +229,7 @@ def screen_sample(
     input_tokens = int(mean_tokens * remaining_calls)
     head = stages.budget_headroom(budget)
     est = {
-        "question_set": packed.PACKED_LABEL,
+        "question_set": qs.label,
         "comments": n,
         "k": k,
         "calls": total_calls,
@@ -251,7 +267,10 @@ def screen_sample(
             rpm=rpm,
         )
         totals, stopped = asyncio.run(
-            _dispatch_chunks(ctx, ids, snapdir, k, chunk, qs, total_calls)
+            _dispatch_chunks(
+                ctx, ids, snapdir, k, chunk, qs, total_calls,
+                qs_name, qs_version,
+            )
         )
     finally:
         guard.close()

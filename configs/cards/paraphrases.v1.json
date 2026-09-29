@@ -1,0 +1,14 @@
+{
+  "name": "paraphrases",
+  "version": 1,
+  "paraphrases": {
+    "1": {
+      "group_instructions": "Which need category fits `problem` best? `sentences` holds the full comment for context.",
+      "card_instructions": "Which of these needs does `problem` describe?"
+    },
+    "2": {
+      "group_instructions": "Pick the group that `problem` belongs to, using `sentences` (the whole comment) as context.",
+      "card_instructions": "Which listed need is `problem` an instance of?"
+    }
+  }
+}

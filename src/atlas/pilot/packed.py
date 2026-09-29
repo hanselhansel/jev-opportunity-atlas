@@ -61,14 +61,17 @@ def _slot_question(question: dict, slot: str) -> dict:
     return q
 
 
-def packed_question_set(k: int) -> QuestionSet:
+def packed_question_set(
+    k: int, name: str = "screen", version: int = 1
+) -> QuestionSet:
     """Synthetic set carrying the packed questions; run_batch uses its label
     and sha256 while items supply their own state/questions."""
-    screen = load_question_set("screen", 1)
+    screen = load_question_set(name, version)
+    label = f"packed-{name}@{version}"
     return QuestionSet(
-        name=PACKED_NAME,
-        version=PACKED_VERSION,
-        label=PACKED_LABEL,
+        name=f"packed-{name}",
+        version=version,
+        label=label,
         state_fields=[f"c{j}" for j in range(1, k + 1)],
         questions={
             f"c{j}_firsthand_problem": _slot_question(
@@ -80,9 +83,11 @@ def packed_question_set(k: int) -> QuestionSet:
     )
 
 
-def packed_items(items: list[dict], k: int = 5) -> tuple[list[dict], pa.Table]:
+def packed_items(
+    items: list[dict], k: int = 5, name: str = "screen", version: int = 1
+) -> tuple[list[dict], pa.Table]:
     """Chunk items k at a time into packed items plus a packed_id/slot map."""
-    base = load_question_set("screen", 1).questions["firsthand_problem"]
+    base = load_question_set(name, version).questions["firsthand_problem"]
     packed: list[dict] = []
     map_rows: list[dict] = []
     for i in range(0, len(items), k):

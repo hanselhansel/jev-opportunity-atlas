@@ -16,6 +16,7 @@ def _run(args) -> None:
         rpm=args.rpm,
         chunk=args.chunk,
         yes=args.yes,
+        question_set=args.question_set,
     )
     if result["dispatched"]:
         print(
@@ -56,6 +57,11 @@ def register(sub) -> None:
     r.add_argument("--rpm", type=float, default=1000)
     r.add_argument("--chunk", type=int, default=5000)
     r.add_argument("--budget", default="screen")
+    r.add_argument(
+        "--question-set",
+        default="screen@1",
+        help="Base question set label, e.g. screen@1 or screen_para1@1",
+    )
     r.add_argument("--yes", action="store_true", help="Actually dispatch")
     r.set_defaults(func=_run)
 
