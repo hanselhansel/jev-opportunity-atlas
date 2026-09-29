@@ -260,6 +260,8 @@ def build_site_data(
     cardset=None,
     facet_sample=None,
     replies_run=None,
+    robust_screen=None,
+    robust_assign=None,
     top_n=20,
     n_boot=2000,
     seed=0,
@@ -269,6 +271,7 @@ def build_site_data(
     from atlas.cards.rank import load_criteria, load_weights
     from atlas.sitedata.build_card_share import card_share_rows
     from atlas.sitedata.build_cards import evidence_rows, finding_rows
+    from atlas.sitedata.build_robustness import robustness_rows
     from atlas.sitedata.build_share import domain_share_rows
 
     if facet_sample is None:
@@ -359,6 +362,18 @@ def build_site_data(
             frame, gold, screen_run, facets_set, n_boot, seed
         ),
         "card_share": card_share_rows(ctx, cs, n_boot, seed),
+        "robustness": robustness_rows(
+            screen=(
+                json.loads(Path(robust_screen).read_text(encoding="utf-8"))
+                if robust_screen
+                else None
+            ),
+            assign=(
+                json.loads(Path(robust_assign).read_text(encoding="utf-8"))
+                if robust_assign
+                else None
+            ),
+        ),
         "evidence": evidence_rows(ev_ids, ctx),
         "findings": findings,
         "finding_evidence": finding_evidence,

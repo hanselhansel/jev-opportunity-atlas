@@ -174,6 +174,30 @@ def _card_share(rng: np.random.Generator) -> dict[str, list]:
     return cols
 
 
+def _robustness() -> dict[str, list]:
+    """Fictional wording-robustness rows: main + two paraphrase screen runs,
+    and two paraphrase assign runs."""
+    rows = [
+        ("screen_wording", RUN_ID, "prevalence", 0.42, 0.38, 0.46, 800),
+        ("screen_wording", "fixture-run-para-1", "prevalence", 0.39, 0.35, 0.43, 800),
+        ("screen_wording", "fixture-run-para-1", "agreement", 0.91, None, None, 800),
+        ("screen_wording", "fixture-run-para-1", "kappa", 0.74, None, None, 800),
+        ("screen_wording", "fixture-run-para-1", "spearman", 0.88, None, None, 800),
+        ("screen_wording", "fixture-run-para-2", "prevalence", 0.44, 0.40, 0.48, 800),
+        ("screen_wording", "fixture-run-para-2", "agreement", 0.89, None, None, 800),
+        ("screen_wording", "fixture-run-para-2", "kappa", 0.71, None, None, 800),
+        ("screen_wording", "fixture-run-para-2", "spearman", 0.86, None, None, 800),
+        ("assign_wording", "fixture-run-para-1", "group_agreement", 0.93, None, None, 400),
+        ("assign_wording", "fixture-run-para-1", "card_agreement", 0.87, None, None, 400),
+        ("assign_wording", "fixture-run-para-1", "max_abs_share_diff", 0.03, None, None, 410),
+        ("assign_wording", "fixture-run-para-2", "group_agreement", 0.90, None, None, 400),
+        ("assign_wording", "fixture-run-para-2", "card_agreement", 0.84, None, None, 400),
+        ("assign_wording", "fixture-run-para-2", "max_abs_share_diff", 0.05, None, None, 410),
+    ]
+    keys = ("check", "run_id", "metric", "value", "lo", "hi", "n")
+    return {k: [r[i] for r in rows] for i, k in enumerate(keys)}
+
+
 def _evidence(rng: np.random.Generator) -> dict[str, list]:
     n = N_EVIDENCE
     comment_ids = 9_000_000_000 + rng.choice(500_000_000, size=n, replace=False)
@@ -330,6 +354,7 @@ def fixture_tables(seed: int) -> dict[str, pa.Table]:
         "coverage": _coverage(),
         "domain_share": _domain_share(rng),
         "card_share": _card_share(rng),
+        "robustness": _robustness(),
         "evidence": evidence,
         "findings": _findings(),
         "finding_evidence": _finding_evidence(rng, evidence),

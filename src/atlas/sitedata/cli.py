@@ -75,6 +75,8 @@ def _data(args) -> None:
         cardset=args.cardset,
         facet_sample=args.facet_sample,
         replies_run=args.replies_run,
+        robust_screen=args.robust_screen,
+        robust_assign=args.robust_assign,
         top_n=args.top_n,
         n_boot=args.n_boot,
         seed=args.seed,
@@ -116,6 +118,14 @@ def _register_data(ssub) -> None:
     d.add_argument(
         "--replies-run",
         help="Run id with replies/unsolved_by_problem.parquet for unsolved_rate",
+    )
+    d.add_argument(
+        "--robust-screen",
+        help="JSON output of `robust compare-screen` (wording robustness)",
+    )
+    d.add_argument(
+        "--robust-assign",
+        help="JSON output of `robust compare-assign` (wording robustness)",
     )
     d.add_argument("--facets-set", default="facets@2")
     d.add_argument("--top-n", type=int, default=20)

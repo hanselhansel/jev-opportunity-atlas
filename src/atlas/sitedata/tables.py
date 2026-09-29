@@ -54,6 +54,17 @@ SITE_TABLES: dict[str, pa.Schema] = {
             ("qualifier", pa.string()),
         ]
     ),
+    "robustness": pa.schema(
+        [
+            ("check", pa.string()),
+            ("run_id", pa.string()),
+            ("metric", pa.string()),
+            ("value", pa.float64()),
+            ("lo", pa.float64()),
+            ("hi", pa.float64()),
+            ("n", pa.int64()),
+        ]
+    ),
     "evidence": pa.schema(
         [
             ("comment_id", pa.int64()),
