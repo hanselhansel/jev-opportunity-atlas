@@ -62,6 +62,7 @@ the same plan.
 | `pilot packed-cal` | L22 |
 | `jev measure` | L22 |
 | `cards items`, `cards draft-sample`, `cards replies` | L23 |
+| `cards induce` | L26 |
 | `timeline mark` | existing |
 
 Common flags: `--snapshot` (default: `snapshot_id` in `configs/acquisition.toml`),

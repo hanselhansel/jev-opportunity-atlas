@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import math
+import shutil
 import tomllib
 
 import pyarrow as pa
@@ -27,6 +28,13 @@ from atlas.cards.engine.assign import (
     write_assignments,
 )
 from atlas.cards.engine.cardset import load_cardset
+from atlas.cards.engine.induce import (
+    check_superset,
+    induce,
+    induce_stats,
+    residue_items,
+    write_induce_sidecar,
+)
 from atlas.cards.engine.merge import (
     merge_item,
     merge_pairs,
@@ -113,6 +121,19 @@ def register(sub) -> None:
     rp.add_argument("--k", type=int, default=200)
     rp.add_argument("--seed", type=int, default=1)
     rp.set_defaults(func=_cmd_residue)
+
+    ip = commands.add_parser(
+        "induce", help="reassign card-level residue under a superset cardset"
+    )
+    common(ip, "assign")
+    ip.add_argument("--base-run", required=True)
+    ip.add_argument("--base-version", required=True)
+    ip.add_argument(
+        "--items",
+        required=True,
+        help="parquet: comment_id, pain_sentence, sentences",
+    )
+    ip.set_defaults(func=_cmd_induce)
 
     items_mod.register(commands)
 
@@ -295,6 +316,44 @@ def _cmd_planted(args) -> None:
 def _cmd_residue(args) -> None:
     result = load_assignments(paths.run_dir(args.run), args.version)
     print(json.dumps(residue_sample(result.rows, args.k, args.seed), indent=1))
+
+
+def _cmd_induce(args) -> None:
+    budgets, price_row, usd_per_token = _load_configs()
+    cap, worst = _budget_cap(budgets, args.budget)
+    base_cs = load_cardset(args.cardset, args.base_version)
+    new_cs = load_cardset(args.cardset, args.version)
+    check_superset(base_cs, new_cs)
+    base_run_dir = paths.run_dir(args.base_run)
+    base_result = load_assignments(base_run_dir, args.base_version)
+    items_by_cid = {
+        r["comment_id"]: r for r in pq.read_table(args.items).to_pylist()
+    }
+    level2 = residue_items(base_result.rows, items_by_cid, new_cs)
+    _print_estimate(
+        "induce", [_est_tokens(it) for it in level2], args.budget, cap,
+        usd_per_token,
+    )
+    if not args.yes:
+        return
+    ctx = _run_ctx(args, price_row, cap, worst, usd_per_token)
+    try:
+        result = asyncio.run(induce(ctx, base_result, items_by_cid, new_cs))
+        run_dir = paths.run_dir(args.run)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        src_pain = base_run_dir / "pain.parquet"
+        if not src_pain.exists():
+            raise SystemExit(f"{src_pain} missing: base run is incomplete")
+        shutil.copyfile(src_pain, run_dir / "pain.parquet")
+        write_assignments(run_dir, result, new_cs.version)
+        stats = induce_stats(
+            base_cs, new_cs, base_result.rows, result.rows,
+            args.run, args.base_run,
+        )
+        write_induce_sidecar(run_dir, stats, new_cs.version)
+    finally:
+        ctx.guard.close()
+    print(json.dumps(stats, indent=1))
 
 
 def _cmd_replies(args) -> None:
