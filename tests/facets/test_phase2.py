@@ -2,6 +2,7 @@
 
 import json
 
+import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
@@ -112,6 +113,123 @@ def test_draw_phase2_seed_determinism(pilot_repo):  # noqa: F811
     ids = lambda t: sorted(t.column("comment_id").to_pylist())
     assert ids(t1) == ids(t2)
     assert ids(t1) != ids(t3)
+
+
+def test_allocate_capped_caps_stratum_and_redistributes():
+    """A share above the stratum size caps it; the shortfall moves to the
+    remaining open strata instead of being dropped."""
+    wsum = {A: 400.0, B: 100.0, C: 60.0}
+    sizes = {A: 40, B: 100, C: 100}
+    # n=60 uncapped shares 42.9:10.7:6.4; A caps at 40, B:C split the
+    # remaining 20 proportional to 100:60 -> 12.5, 7.5 -> 12 and 8 (half-even
+    # rounding). A single min(len, share) pass would give B 11, C 6 (total 57).
+    alloc = phase2.allocate_capped(wsum, sizes, 60)
+    assert alloc[A] == 40
+    assert alloc[B] == 12
+    assert alloc[C] == 8
+    assert abs(sum(alloc.values()) - 60) <= len(sizes)
+
+
+def _reference_draw(t, *, n_pos, n_neg, cutoff, seed):
+    """Inline copy of the main session's facets_phase2.py draw() core:
+    proportional-to-weighted-count allocation capped at stratum size with the
+    capped shortfall redistributed to open strata, then per-stratum SRSWOR."""
+    rng = np.random.default_rng(seed)
+    out = []
+    for kind, n_total, keep in (
+        ("pos", n_pos, lambda p: p >= cutoff),
+        ("neg", n_neg, lambda p: p < cutoff),
+    ):
+        rows = [r for r in t if keep(r["firsthand_p"])]
+        by = {}
+        for r in rows:
+            by.setdefault(r["stratum"], []).append(r)
+        wsum = {h: sum(r["weight"] for r in rs) for h, rs in by.items()}
+        alloc, open_h, left = {}, set(by), n_total
+        while left > 0 and open_h:
+            tot = sum(wsum[h] for h in open_h)
+            share = {h: left * wsum[h] / tot for h in open_h}
+            capped = {
+                h for h in open_h if alloc.get(h, 0) + share[h] >= len(by[h])
+            }
+            if capped:
+                for h in capped:
+                    left -= len(by[h]) - alloc.get(h, 0)
+                    alloc[h] = len(by[h])
+                open_h -= capped
+                continue
+            for h in open_h:
+                alloc[h] = alloc.get(h, 0) + share[h]
+            left = 0
+        alloc = {h: max(1, round(a)) for h, a in alloc.items()}
+        for h in sorted(by):
+            rs = sorted(by[h], key=lambda r: r["comment_id"])
+            n2 = min(len(rs), alloc[h])
+            idx = rng.choice(len(rs), n2, replace=False)
+            p2 = n2 / len(rs)
+            for i in sorted(idx):
+                r = rs[i]
+                out.append(
+                    {
+                        "comment_id": r["comment_id"],
+                        "story_id": r["story_id"],
+                        "stratum": r["stratum"],
+                        "half": r["half"],
+                        "phase": kind,
+                        "w1": r["weight"],
+                        "p2": p2,
+                        "weight": r["weight"] / p2,
+                        "firsthand_p": r["firsthand_p"],
+                    }
+                )
+    return out
+
+
+def test_draw_phase2_matches_reference_draw(pilot_repo):  # noqa: F811
+    # n_pos=60 caps stratum A (share 42.9 > 40 rows); n_neg=35 caps the neg
+    # A stratum too (share 14 > 10 rows), so both phases redistribute.
+    t = _write_screen_table()
+    tbl = phase2.draw_phase2(
+        "scr-1",
+        "fac-ref",
+        n_pos=60,
+        n_neg=35,
+        cutoff=0.7,
+        seed=20260931,
+        snapshot_id=SNAPSHOT_ID,
+    )
+    expected = _reference_draw(
+        t, n_pos=60, n_neg=35, cutoff=0.7, seed=20260931
+    )
+    got = tbl.to_pylist()
+    assert [r["comment_id"] for r in got] == [
+        r["comment_id"] for r in expected
+    ]
+    assert [r["p2"] for r in got] == [r["p2"] for r in expected]
+    assert [r["weight"] for r in got] == [r["weight"] for r in expected]
+    assert got == expected
+
+
+def test_draw_phase2_every_stratum_capped_returns_all_rows(
+    pilot_repo,  # noqa: F811
+):
+    # n_total larger than the whole population: every stratum caps at its
+    # size, every row is drawn with p2 == 1.
+    t = _write_screen_table()
+    tbl = phase2.draw_phase2(
+        "scr-1",
+        "fac-all",
+        n_pos=10_000,
+        n_neg=10_000,
+        seed=3,
+        snapshot_id=SNAPSHOT_ID,
+    )
+    rows = tbl.to_pylist()
+    assert len(rows) == len(t)
+    assert {r["comment_id"] for r in rows} == {r["comment_id"] for r in t}
+    for r in rows:
+        assert r["p2"] == 1.0
+        assert r["weight"] == r["w1"]
 
 
 def _write_facets_sample(sample_id, ids, snapshot_id=SNAPSHOT_ID, seed=7):

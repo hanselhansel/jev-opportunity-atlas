@@ -3,7 +3,8 @@
 Phase 2 draws within each v2 stratum of the main screen table
 (`screen_by_comment.parquet`):
 - positives (``firsthand_p >= cutoff``): ``n2_h`` proportional to the
-  stratum's phase-1 weighted count, ``n_pos`` total;
+  stratum's phase-1 weighted count, capped at the stratum's size with the
+  shortfall redistributed to the remaining strata, ``n_pos`` total;
 - a check sample of below-cutoff comments, ``n_neg`` total, allocated the
   same way.
 Every row keeps the phase-1 weight ``w1`` and the phase-2 selection
@@ -45,6 +46,35 @@ RPM_CAP = 1200  # TypeSafe documented requests-per-minute ceiling
 PROBE_MAX = 2000
 
 
+def allocate_capped(
+    wsum: dict[str, float], sizes: dict[str, int], n_total: int
+) -> dict[str, int]:
+    """Allocate ``n_total`` across strata proportional to ``wsum``, each
+    stratum capped at ``sizes``.
+
+    Strata whose share exceeds their size are capped; the shortfall is
+    redistributed to the remaining open strata until the total is met or
+    every stratum is capped. Counts round with ``max(1, round())``.
+    """
+    alloc, open_h, left = {}, set(sizes), n_total
+    while left > 0 and open_h:
+        tot = sum(wsum[h] for h in open_h)
+        share = {h: left * wsum[h] / tot for h in open_h}
+        capped = {
+            h for h in open_h if alloc.get(h, 0) + share[h] >= sizes[h]
+        }
+        if capped:
+            for h in capped:
+                left -= sizes[h] - alloc.get(h, 0)
+                alloc[h] = sizes[h]
+            open_h -= capped
+            continue
+        for h in open_h:
+            alloc[h] = alloc.get(h, 0) + share[h]
+        left = 0
+    return {h: max(1, round(a)) for h, a in alloc.items()}
+
+
 def draw_phase2(
     screen_run: str,
     sample_id: str,
@@ -70,10 +100,12 @@ def draw_phase2(
         for r in rows:
             by.setdefault(r["stratum"], []).append(r)
         wsum = {h: sum(r["weight"] for r in rs) for h, rs in by.items()}
-        tot = sum(wsum.values())
+        alloc = allocate_capped(
+            wsum, {h: len(rs) for h, rs in by.items()}, n_total
+        )
         for h in sorted(by):
             rs = sorted(by[h], key=lambda r: r["comment_id"])
-            n2 = min(len(rs), max(1, round(n_total * wsum[h] / tot)))
+            n2 = min(len(rs), alloc[h])
             idx = rng.choice(len(rs), n2, replace=False)
             p2 = n2 / len(rs)
             for i in sorted(idx):

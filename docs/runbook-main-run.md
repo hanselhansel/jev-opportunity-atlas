@@ -147,7 +147,9 @@ uv run atlas facets run --sample-id main-facets-20260930 \
 
 Draws, within each v2 stratum of the screen table: positives
 (`firsthand_p >= 0.7`), 28,000 total, and a 2,000-comment below-cutoff check
-sample, each stratum's `n2_h` proportional to its phase-1 weighted count.
+sample, each stratum's `n2_h` proportional to its phase-1 weighted count,
+capped at the stratum's size; the shortfall from capped strata is
+redistributed to the remaining open strata until the total is met.
 Every row keeps `w1` and `p2`; final weight is `w1 / p2`. `draw` prints
 `drew N (P pos, M neg)`; `estimate` prints the probe-extrapolated cost JSON.
 `run` sends `facets@2` in chunks at 1,000 rpm, prints one `chunk i: {...}`
