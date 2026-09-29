@@ -45,6 +45,7 @@ export function chart({
   ariaLabel,
   rows,
   columns,
+  qualifier,
 }) {
   const fixture = meta?.mode === "fixture";
   const inner = Plot.plot(plot);
@@ -91,7 +92,8 @@ export function chart({
     ),
     text(
       {x: 0, y: fy + 30, class: "chart-footer"},
-      "as classified by Jev · HN comments only; not market demand"
+      `${qualifier ?? "as classified by Jev"} · ` +
+        "HN comments only; not market demand"
     )
   );
 

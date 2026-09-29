@@ -213,7 +213,7 @@ def _evidence(rng: np.random.Generator) -> dict[str, list]:
         axis=0,
     )
     threads = ["ask_hn", "show_hn", "launch_hn", "story"]
-    accounts = ["regular", "new", "throwaway"]
+    accounts = ["firsthand_account", "secondhand_report", "other"]
     prob_json = [
         json.dumps(
             {"concrete_task": float(c), "behavior_any": float(b), "timing_current": float(t)},
