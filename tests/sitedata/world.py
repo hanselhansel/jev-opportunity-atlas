@@ -177,7 +177,62 @@ def build_world(root: Path, monkeypatch) -> dict:
     (screen / "screen.json").write_text(json.dumps({"sample_id": "sample-syn"}))
     _ledger(screen, "screen-syn", "screen-packed@1", 120, rng)
 
-    faceted = [c for c in ids if fh[c] >= 0.5]
+    # Phase-2 facet sample: pos rows are the screen-positive draw (p2 = 0.5, so
+    # weight = 2 * w1), plus a 24-comment neg check slice (p2 = 0.05, so
+    # weight = 20 * w1). weight = w1 / p2, never the screen weight w1.
+    pos = [c for c in ids if fh[c] >= 0.7]
+    neg = [c for c in ids if fh[c] < 0.5][:24]
+    faceted = pos + neg
+    pos_set = set(pos)
+    p2 = {"pos": 0.5, "neg": 0.05}
+    idx = {c: i for i, c in enumerate(ids)}
+    facet = {}
+    for c in faceted:
+        phase = "pos" if c in pos_set else "neg"
+        w1 = 10.0 + (idx[c] % 2) * 5
+        facet[c] = {
+            "comment_id": c,
+            "story_id": story[c],
+            "stratum": f"s{idx[c] % 2}",
+            "half": contracts.half_of(story[c]),
+            "phase": phase,
+            "w1": w1,
+            "p2": p2[phase],
+            "weight": w1 / p2[phase],
+            "firsthand_p": fh[c],
+        }
+    paths.SAMPLES.mkdir(parents=True, exist_ok=True)
+    pq.write_table(
+        pa.Table.from_pylist(
+            list(facet.values()),
+            schema=pa.schema(
+                [
+                    ("comment_id", pa.int64()),
+                    ("story_id", pa.int64()),
+                    ("stratum", pa.string()),
+                    ("half", pa.string()),
+                    ("phase", pa.string()),
+                    ("w1", pa.float64()),
+                    ("p2", pa.float64()),
+                    ("weight", pa.float64()),
+                    ("firsthand_p", pa.float64()),
+                ]
+            ),
+        ),
+        paths.sample_path("facet-syn"),
+    )
+    # Every 13th pos comment is faceted but not a firsthand account: it must not
+    # count as a firsthand problem anywhere.
+    pos_idx = {c: i for i, c in enumerate(pos)}
+    account = {
+        c: (
+            "secondhand_account"
+            if c in pos_set and pos_idx[c] % 13 == 0
+            else "firsthand_account"
+        )
+        for c in faceted
+    }
+    secondhand = {c for c in pos_set if account[c] != "firsthand_account"}
     domain = {c: DOMAINS[i % 3] for i, c in enumerate(faceted)}
     rows = []
     for i, c in enumerate(faceted):
@@ -198,7 +253,7 @@ def build_world(root: Path, monkeypatch) -> dict:
                 "facets@2",
                 "account_type",
                 "choice",
-                choice="firsthand_account",
+                choice=account[c],
             ),
             _answer(
                 "facets-syn",
@@ -244,9 +299,16 @@ def build_world(root: Path, monkeypatch) -> dict:
     )
     _ledger(facets, "facets-syn", "facets@2", 80, rng)
 
+    # c04 is engineered so every pos comment on story STORY+7 (and only those)
+    # lands on it: one card whose items all sit in a single thread.
     assign_rows = []
     for i, c in enumerate(faceted):
-        card = CARDS[i % 4] if i % 9 else "none"
+        if story[c] == STORY + 7:
+            card = "c04"
+        else:
+            card = CARDS[i % 4] if i % 9 else "none"
+            if card == "c04":
+                card = "c01"
         assign_rows.append(
             {
                 "run_id": "assign-syn",
@@ -354,7 +416,19 @@ def build_world(root: Path, monkeypatch) -> dict:
         ),
         paths.LABELS / "gold_draws.parquet",
     )
-    return {"ids": ids, "faceted": faceted, "domain": domain, "gold": gold}
+    return {
+        "ids": ids,
+        "faceted": pos,
+        "pos": pos,
+        "neg": neg,
+        "facet": facet,
+        "account": account,
+        "secondhand": secondhand,
+        "domain": domain,
+        "gold": gold,
+        "period": period,
+        "story": story,
+    }
 
 
 def build(out: Path, label_sets=("calibration",), **kw):
@@ -369,6 +443,7 @@ def build(out: Path, label_sets=("calibration",), **kw):
         TV,
         list(label_sets),
         benchmark_run="bench-syn",
+        facet_sample="facet-syn",
         n_boot=200,
         built_at="2026-09-29T12:00:00Z",
         **kw,

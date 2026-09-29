@@ -116,6 +116,64 @@ def _domain_share(rng: np.random.Generator) -> dict[str, list]:
     return cols
 
 
+_CARD_GROUPS = [("g1", "Synthetic group one"), ("g2", "Synthetic group two")]
+_CARD_CARDS = [
+    ("c1", "g1", "Synthetic need one"),
+    ("c2", "g1", "Synthetic need two"),
+    ("c3", "g2", "Synthetic need three"),
+    ("c4", "g2", "Synthetic need four"),
+]
+CARD_SHARE_QUALIFIER = "as classified by Jev; assignment audited"
+
+
+def _card_share(rng: np.random.Generator) -> dict[str, list]:
+    cols: dict[str, list] = {k: [] for k in (
+        "level", "id", "label", "population", "bucket", "share", "lo", "hi",
+        "n_items", "n_authors", "p_adj", "qualifier",
+    )}
+
+    def emit(level, x, label, pop, bucket, share, low, high, n_items, n_auth, p_adj):
+        cols["level"].append(level)
+        cols["id"].append(x)
+        cols["label"].append(label)
+        cols["population"].append(pop)
+        cols["bucket"].append(bucket)
+        cols["share"].append(share)
+        cols["lo"].append(low)
+        cols["hi"].append(high)
+        cols["n_items"].append(n_items)
+        cols["n_authors"].append(n_auth)
+        cols["p_adj"].append(p_adj)
+        cols["qualifier"].append(CARD_SHARE_QUALIFIER)
+
+    for pop in ("screen_positive", "all_firsthand"):
+        for level, units in (
+            ("group", [(g, label) for g, label in _CARD_GROUPS]),
+            ("card", [(c, s) for c, _g, s in _CARD_CARDS]),
+        ):
+            base = {
+                x: [float(rng.uniform(0.01, 0.12)) for _ in range(3)]
+                for x, _label in units
+            }
+            for i, b in enumerate(("all", "H1", "H2")):
+                for x, label in units:
+                    share = base[x][i]
+                    emit(
+                        level, x, label, pop, b, share,
+                        max(0.0, share - 0.02), min(1.0, share + 0.02),
+                        int(rng.integers(2, 60)), int(rng.integers(1, 30)), None,
+                    )
+            for x, label in units:
+                diff = base[x][2] - base[x][1]
+                emit(
+                    level, x, label, pop, "H2_minus_H1", diff,
+                    diff - 0.05, diff + 0.05,
+                    int(rng.integers(4, 120)), int(rng.integers(2, 60)),
+                    float(rng.uniform(0, 1)),
+                )
+    return cols
+
+
 def _evidence(rng: np.random.Generator) -> dict[str, list]:
     n = N_EVIDENCE
     comment_ids = 9_000_000_000 + rng.choice(500_000_000, size=n, replace=False)
@@ -271,6 +329,7 @@ def fixture_tables(seed: int) -> dict[str, pa.Table]:
         "meta": _meta(),
         "coverage": _coverage(),
         "domain_share": _domain_share(rng),
+        "card_share": _card_share(rng),
         "evidence": evidence,
         "findings": _findings(),
         "finding_evidence": _finding_evidence(rng, evidence),

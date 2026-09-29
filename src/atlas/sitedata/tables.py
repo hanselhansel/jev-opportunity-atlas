@@ -38,6 +38,22 @@ SITE_TABLES: dict[str, pa.Schema] = {
             ("denominator", pa.string()),
         ]
     ),
+    "card_share": pa.schema(
+        [
+            ("level", pa.string()),
+            ("id", pa.string()),
+            ("label", pa.string()),
+            ("population", pa.string()),
+            ("bucket", pa.string()),
+            ("share", pa.float64()),
+            ("lo", pa.float64()),
+            ("hi", pa.float64()),
+            ("n_items", pa.int64()),
+            ("n_authors", pa.int64()),
+            ("p_adj", pa.float64()),
+            ("qualifier", pa.string()),
+        ]
+    ),
     "evidence": pa.schema(
         [
             ("comment_id", pa.int64()),

@@ -73,6 +73,8 @@ def _data(args) -> None:
         benchmark_run=args.benchmark_run,
         facets_set=args.facets_set,
         cardset=args.cardset,
+        facet_sample=args.facet_sample,
+        replies_run=args.replies_run,
         top_n=args.top_n,
         n_boot=args.n_boot,
         seed=args.seed,
@@ -106,6 +108,15 @@ def _register_data(ssub) -> None:
     )
     d.add_argument("--benchmark-run", help="Synthetic benchmark run id")
     d.add_argument("--cardset", help="Cardset name (default: the only one)")
+    d.add_argument(
+        "--facet-sample",
+        required=True,
+        help="Phase-2 facet sample id (weights w1/p2, pos and neg phases)",
+    )
+    d.add_argument(
+        "--replies-run",
+        help="Run id with replies/unsolved_by_problem.parquet for unsolved_rate",
+    )
     d.add_argument("--facets-set", default="facets@2")
     d.add_argument("--top-n", type=int, default=20)
     d.add_argument("--n-boot", type=int, default=2000)
