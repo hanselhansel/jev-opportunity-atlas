@@ -1,10 +1,18 @@
-"""Task 2: opportunity score — percentile components, presets with
-renormalization over non-null parts, and bootstrap rank quantiles."""
+"""Task 2 + wiring: opportunity score — percentile components, presets with
+renormalization over non-null parts, bootstrap rank quantiles, and the
+``story data --with score`` section end to end."""
+
+import json
 
 import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
+from atlas.cards.replies import UNSOLVED
 from atlas.story import score
+from tests.story import world
+from tests.story.test_check import DATA_ARGS
 
 
 def _card(cid, n=60, share=None, shrunk=None, paid=None, unsolved=None,
@@ -125,3 +133,88 @@ def test_presets_cover_all_components():
     assert presets["growth"]["change"] == 3
     assert presets["paid_pain"]["paid"] == 3
     assert presets["underbuilt"]["launch_ratio"] == 3
+
+
+def test_story_data_with_score_end_to_end(tmp_path, monkeypatch):
+    w = world.build_world(tmp_path, monkeypatch)
+    from atlas import paths
+    from atlas.story import frame
+
+    fr = frame.load_frame(
+        w["sample"], world.FACETS_RUN, world.ASSIGN_RUN, w["snapshot"],
+        cardset="syn", version=world.TV,
+    )
+    c01_ids = fr[
+        (fr["phase"] == "pos") & fr["firsthand"] & (fr["card"] == "c01")
+    ]["comment_id"].tolist()[:35]
+    assert len(c01_ids) >= 30
+
+    run_dir = paths.run_dir(world.ASSIGN_RUN)
+    replies_dir = run_dir / "replies"
+    replies_dir.mkdir(parents=True, exist_ok=True)
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "comment_id": int(c),
+                    "n_replies": 2,
+                    "any_solution_named": False,
+                    "solution_kinds": [],
+                    "author_says_solved": "still_unsolved" if i % 4 else "solved",
+                    "unsolved": True,
+                    "solved_p": 0.0,
+                }
+                for i, c in enumerate(c01_ids)
+            ],
+            schema=UNSOLVED,
+        ),
+        replies_dir / "unsolved_by_problem.parquet",
+    )
+    (run_dir / f"merge-{world.TV}.json").write_text(
+        json.dumps(
+            {
+                "scored": [
+                    {"card_a": "c01", "card_b": "c02", "score": 1, "expected": 1.5},
+                    {"card_a": "c01", "card_b": "c03", "score": 1, "expected": 1.5},
+                    {"card_a": "c02", "card_b": "c03", "score": 1, "expected": 1.5},
+                    {"card_a": "c01", "card_b": "c04", "score": 0, "expected": 0.5},
+                ]
+            }
+        )
+    )
+
+    out = tmp_path / "story.json"
+    from atlas.story import check, cli
+
+    cli.main(["story", "data", "--out", str(out), *DATA_ARGS, "--with", "score"])
+    doc = json.loads(out.read_text())
+
+    cards = {c["id"]: c for c in doc["cards"]}
+    assert cards["c01"]["unsolved"]["unsolved"]["est"] == pytest.approx(1.0)
+    w_by_id = dict(zip(fr["comment_id"], fr["weight"]))
+    want_solved = sum(
+        w_by_id[int(c)] for i, c in enumerate(c01_ids) if i % 4 == 0
+    ) / sum(w_by_id[int(c)] for c in c01_ids)
+    assert cards["c01"]["unsolved"]["author_solved"]["est"] == pytest.approx(
+        want_solved
+    )
+    for cid in ("c02", "c03", "c04"):
+        assert cards[cid]["unsolved"] is None
+    # c01 has replies data but only 49 problems, so it stays out of the
+    # 50-problem scoring pool entirely.
+    comps = cards["c01"]["score"]["components"]
+    assert set(comps) == set(score.COMPONENTS)
+    assert all(v is None for v in comps.values())
+    for cid in ("c02", "c03"):
+        c2 = cards[cid]["score"]["components"]
+        assert c2["share"] is not None and c2["unsolved"] is None
+        assert len(cards[cid]["score"]["rank_quantiles"]) == 20
+    thin = cards["c04"]["score"]
+    assert all(v is None for v in thin["components"].values())
+    assert set(doc["score_presets"]) == {"balanced", "growth", "paid_pain", "underbuilt"}
+    assert doc["bundles"] and set(doc["bundles"][0]["cards"]) == {"c01", "c02", "c03"}
+    assert doc["bundles"][0]["persistence"] == 1.0
+    assert {tuple(sorted((e["a"], e["b"]))) for e in doc["edges"]} == {
+        ("c01", "c02"), ("c01", "c03"), ("c02", "c03"),
+    }
+    assert check.check_story(out) == []

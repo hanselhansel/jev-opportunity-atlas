@@ -283,3 +283,73 @@ def component_reps(fh, rep, card_ids):
         }
         for j, c in enumerate(card_ids)
     }
+
+
+def _default_snapshot() -> str:
+    import tomllib
+
+    from atlas import paths
+
+    cfg = tomllib.loads((paths.CONFIGS / "acquisition.toml").read_text())
+    return cfg["snapshot_id"]
+
+
+def story_section(args, story_path) -> None:
+    """``story data --with score``: merges ``cards[].unsolved``,
+    ``cards[].score``, ``score_presets``, ``bundles``, and ``edges``."""
+    import json
+    from pathlib import Path
+
+    from atlas import paths
+    from atlas.story import boot, bundles, frame, io
+    from atlas.story import unsolved as unsolved_mod
+    from atlas.story.cli import DEFAULTS
+
+    story_path = Path(story_path)
+    story = json.loads(story_path.read_text(encoding="utf-8"))
+    snapshot = getattr(args, "snapshot", None) or _default_snapshot()
+    version = getattr(args, "version", None) or "t3"
+    assign_run = getattr(args, "assign_run", None) or DEFAULTS["assign_run"]
+    fr = frame.load_frame(
+        getattr(args, "facet_sample", None) or DEFAULTS["facet_sample"],
+        getattr(args, "facets_run", None) or DEFAULTS["facets_run"],
+        assign_run,
+        snapshot,
+        cardset=getattr(args, "cardset", None) or "main",
+        version=version,
+    )
+    fh = fr[(fr["phase"] == "pos") & fr["firsthand"]]
+    rep = boot.Replicates(
+        fh, R=getattr(args, "R", 1000), seed=getattr(args, "seed", 0)
+    )
+    run_dir = paths.run_dir(assign_run)
+    cards = story.get("cards") or []
+    per_card = unsolved_mod.card_unsolved(
+        fr, run_dir / "replies" / "unsolved_by_problem.parquet", rep=rep
+    )
+    for c in cards:
+        c["unsolved"] = per_card.get(c["id"])
+    scoreable = [
+        c["id"] for c in cards if (c.get("n_problems") or 0) >= MIN_PROBLEMS
+    ]
+    reps = component_reps(fh, rep, scoreable)
+    cards_score, presets = build_scores(story, reps)
+    for c in cards:
+        c["score"] = cards_score.get(c["id"])
+    io.merge_section(story_path, "cards", cards)
+    io.merge_section(story_path, "score_presets", presets)
+    merge_path = run_dir / f"merge-{version}.json"
+    merge_json = (
+        json.loads(merge_path.read_text(encoding="utf-8"))
+        if merge_path.exists()
+        else {}
+    )
+    bundle_list, edges = bundles.build_bundles(
+        merge_json,
+        story,
+        share_reps={
+            c: reps[c]["share"] for c in scoreable if c in reps
+        },
+    )
+    io.merge_section(story_path, "bundles", bundle_list)
+    io.merge_section(story_path, "edges", edges)

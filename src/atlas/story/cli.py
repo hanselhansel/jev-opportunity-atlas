@@ -164,5 +164,15 @@ def main(argv=None) -> None:
     args.func(args)
 
 
+def _score_section(args, out) -> None:
+    """The S3 lane's ``--with score`` step; the module stays lazy."""
+    from atlas.story import score
+
+    score.story_section(args, out)
+
+
+SECTIONS.setdefault("score", _score_section)
+
+
 if __name__ == "__main__":
     main()
