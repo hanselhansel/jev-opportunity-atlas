@@ -4,6 +4,7 @@ unchanged, new cards added). The group answer is already known, so no
 group-level call may fire."""
 
 import json
+import tomllib
 from pathlib import Path
 
 import pyarrow as pa
@@ -237,7 +238,8 @@ def test_induce_dry_run_prints_estimate_only(tmp_path, monkeypatch, capsys):
     assert out["command"] == "induce"
     assert out["estimated_calls"] == 3  # residue rows only
     assert out["estimated_input_tokens"] > 0 and out["estimated_usd"] > 0
-    assert out["budget"] == "assign" and out["cap_usd"] == 2.50
+    budgets = tomllib.loads((paths.CONFIGS / "budgets.toml").read_text())
+    assert out["budget"] == "assign" and out["cap_usd"] == budgets["assign"]
     assert not (tmp_path / "runs" / "r3").exists()
 
 
