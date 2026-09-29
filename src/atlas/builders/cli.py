@@ -204,10 +204,10 @@ def _complaint_reps(args, card_ids) -> dict:
         getattr(args, "facets_run", None) or "main-facets-20260930",
         getattr(args, "assign_run", None) or "main-cards-final2-t3",
         snapshot,
-        cardset="main",
-        version="t3",
+        cardset=getattr(args, "cardset", None) or "main",
+        version=getattr(args, "version", None) or "t3",
     )
-    fh = fr[fr["firsthand"]]
+    fh = fr[(fr["phase"] == "pos") & fr["firsthand"]]
     if not card_ids or len(fh) == 0:
         return {}
     rep = boot.Replicates(fh, R=shares.R_DEFAULT, seed=shares.SEED)
