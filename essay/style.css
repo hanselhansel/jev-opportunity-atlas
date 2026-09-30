@@ -66,7 +66,19 @@ body {
 .article ul { margin: 0.6em 0; padding-left: 22px; }
 .chart { margin: 18px 0; min-height: 60px; }
 .chart svg { display: block; max-width: 100%; height: auto; }
+.chart canvas { display: block; max-width: 100%; height: auto; }
 .chart .cap { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+
+/* scrollama funnel */
+.scrolly { display: grid; grid-template-columns: 170px 1fr; gap: 16px; align-items: start; }
+.scrolly-steps .step { min-height: 62vh; display: flex; flex-direction: column; justify-content: center; font-size: 14px; }
+.scrolly-steps .step .marker { color: var(--accent); }
+.scrolly-graphic { position: sticky; top: 64px; }
+
+/* small inline legends */
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 6px 0 2px; font-size: 12px; color: var(--muted); }
+.legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.terms-pick { margin: 0 0 8px; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-height: 34px; }
 .loading { color: var(--muted); }
 
 /* glyph */

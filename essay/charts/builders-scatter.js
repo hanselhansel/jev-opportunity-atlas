@@ -1,7 +1,13 @@
 // Builders vs complainers: log-log complaint share vs sampled launch share,
 // y = x diagonal, shaded underbuilt zone, floor rail for zero-launch cards.
+// The 8 most underbuilt cards (n >= 100, lowest builders/complainers ratio)
+// get direct labels with a simple vertical collision pass.
 import { fade } from "../lib/glyph.js";
 import { groupColor } from "../lib/palette.js";
+
+const MIN_N = 100;
+const N_LABELS = 8;
+const LABEL_GAP = 12; // min px between label baselines
 
 export function prepare(story) {
   const points = story.cards.map((c) => {
@@ -12,6 +18,7 @@ export function prepare(story) {
       id: c.id,
       label: c.short,
       group: c.group,
+      n_problems: c.n_problems ?? 0,
       complaintShare: complaint,
       launchShare: launch || 0,
       x: Math.log10(Math.max(complaint, 1e-5)),
@@ -22,8 +29,13 @@ export function prepare(story) {
       fade: fade(c.builders?.ratio || c.share),
     };
   });
+  const labeled = points
+    .filter((p) => p.n_problems >= MIN_N && p.ratio != null)
+    .sort((a, b) => a.ratio - b.ratio)
+    .slice(0, N_LABELS);
   return {
     points,
+    labeled,
     meta: {
       n_sampled: story.builders?.n_sampled ?? 0,
       n_population: story.builders?.n_population ?? 0,
@@ -34,9 +46,9 @@ export function prepare(story) {
 
 export function mount(el, story, api) {
   const d3 = api.d3;
-  const { points, meta } = prepare(story);
+  const { points, labeled, meta } = prepare(story);
   el.innerHTML = "";
-  const W = 700, H = 380, m = { l: 55, r: 20, t: 30, b: 40 };
+  const W = 700, H = 380, m = { l: 45, r: 130, t: 24, b: 40 };
   const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
 
   const xs = points.map((p) => p.x);
@@ -77,11 +89,56 @@ export function mount(el, story, api) {
     .append("title")
     .text((d) => (d.floor ? `${d.label}: ${d.note}` : `${d.label}: pain ${api.fmt.pct(d.complaintShare, 2)}, launches ${api.fmt.pct(d.launchShare, 2)}`));
 
+  // direct labels for the most underbuilt cards, nudged apart vertically.
+  // labels sit right of the point unless that would cross the plot edge.
+  const estW = (s) => s.length * 5.2;
+  const labelIds = new Set(labeled.map((p) => p.id));
+  const toLabel = points
+    .filter((p) => labelIds.has(p.id))
+    .map((p) => {
+      const px = x(p.x), py = p.floor ? floorY - 4 : y(p.y);
+      const right = px + 8 + estW(p.label) <= W - m.r - 2;
+      return { p, px, py, lx: right ? px + 8 : px - 8, anchor: right ? "start" : "end", ly: py + 3 };
+    })
+    .sort((a, b) => a.ly - b.ly);
+  for (let pass = 0; pass < 40; pass++) {
+    let moved = false;
+    for (let i = 1; i < toLabel.length; i++) {
+      const gap = toLabel[i].ly - toLabel[i - 1].ly;
+      if (gap < LABEL_GAP) {
+        const push = (LABEL_GAP - gap) / 2;
+        toLabel[i - 1].ly -= push;
+        toLabel[i].ly += push;
+        moved = true;
+      }
+    }
+    // keep labels inside the plot band, clear of the floor caption
+    for (const l of toLabel) l.ly = Math.min(Math.max(l.ly, m.t + 6), floorY - 4);
+    if (!moved) break;
+  }
+  const labels = svg.selectAll("g.lb").data(toLabel).join("g").attr("class", "lb");
+  labels
+    .append("line")
+    .attr("x1", (d) => d.px + (d.anchor === "start" ? 4 : -4))
+    .attr("y1", (d) => d.py)
+    .attr("x2", (d) => d.lx + (d.anchor === "start" ? -2 : 2))
+    .attr("y2", (d) => d.ly - 3)
+    .attr("stroke", "var(--muted)")
+    .attr("stroke-width", 0.5);
+  labels
+    .append("text")
+    .attr("class", "axis")
+    .attr("x", (d) => d.lx)
+    .attr("y", (d) => d.ly)
+    .attr("text-anchor", (d) => d.anchor)
+    .text((d) => d.p.label);
+
   svg.append("text").attr("class", "axis").attr("x", m.l).attr("y", H - 8).text("Complaint share (log)");
-  svg.append("text").attr("class", "axis").attr("x", 8).attr("y", m.t).attr("transform", `rotate(-90 12 ${m.t})`).text("Launch share (log)");
+  // y-axis title rotated inside the left margin, no clipping
+  svg.append("text").attr("class", "axis").attr("x", 12).attr("y", (H - m.b + m.t) / 2).attr("text-anchor", "middle").attr("transform", `rotate(-90 12 ${(H - m.b + m.t) / 2})`).text("Launch share (log)");
 
   const cap = document.createElement("div");
   cap.className = "cap";
-  cap.textContent = `Show HN sample n = ${api.fmt.n(meta.n_sampled)} of ${api.fmt.n(meta.n_population)}; match rate ${api.fmt.pct(meta.match_rate?.est, 0)}.`;
+  cap.textContent = `Show HN sample n = ${api.fmt.n(meta.n_sampled)} of ${api.fmt.n(meta.n_population)}; match rate ${api.fmt.pct(meta.match_rate?.est, 0)}. Labels: 8 most underbuilt problems.`;
   el.appendChild(cap);
 }

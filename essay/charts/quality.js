@@ -1,5 +1,7 @@
 // Quality panel: 100-unit arrays for the audit, benchmark and planted test,
 // plus wording min-max bars (spread across wordings, not a CI).
+const RUN_NAME = (i) => (i === 0 ? "original wording" : `rewording ${i}`);
+
 export function prepare(story) {
   const q = story.method.quality || {};
   const arrays = [
@@ -9,7 +11,7 @@ export function prepare(story) {
     { key: "planted_recovery", label: "Planted needs recovered", value: q.planted_recovery, baseline: "90% target" },
   ];
   const wording = {
-    screen: (story.method.wording?.screen || []).map((w) => ({ run: w.run, est: w.prevalence?.est, lo: w.prevalence?.lo95, hi: w.prevalence?.hi95 })),
+    screen: (story.method.wording?.screen || []).map((w, i) => ({ run: w.run, label: RUN_NAME(i), est: w.prevalence?.est, lo: w.prevalence?.lo95, hi: w.prevalence?.hi95 })),
     cardAgreement: story.method.wording?.assign?.card_agreement || [],
     groupAgreement: story.method.wording?.assign?.group_agreement || [],
   };
@@ -41,7 +43,7 @@ export function mount(el, story, api) {
   // wording min-max bars
   const bx = 420, bw = 240;
   const rows = [
-    ...wording.screen.map((w) => ({ label: w.run, lo: w.lo, hi: w.hi, est: w.est })),
+    ...wording.screen.map((w) => ({ label: w.label, lo: w.lo, hi: w.hi, est: w.est })),
     { label: "card agreement", lo: Math.min(...wording.cardAgreement), hi: Math.max(...wording.cardAgreement), dots: wording.cardAgreement },
     { label: "group agreement", lo: Math.min(...wording.groupAgreement), hi: Math.max(...wording.groupAgreement), dots: wording.groupAgreement },
   ];

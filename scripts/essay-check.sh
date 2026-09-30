@@ -28,13 +28,15 @@ const html = fs.readFileSync(process.argv[2], "utf8");
 const w = process.argv[3];
 const placeholders = (html.match(/class="chart" data-chart=/g) || []).length;
 const rendered = (html.match(/data-rendered="1"/g) || []).length;
-const m = html.match(/id="check-result"[^>]*data-overflow="([^"]*)"[^>]*data-unrendered="([^"]*)"[^>]*data-errors="([^"]*)"/);
+const m = html.match(/id="check-result"[^>]*data-overflow="([^"]*)"[^>]*data-unrendered="([^"]*)"[^>]*data-errors="([^"]*)"[^>]*data-labeloverlap="([^"]*)"/);
 const overflow = m ? m[1] : "missing";
 const unrendered = m ? m[2] : "?";
 const errors = m ? m[3] : "?";
+const labeloverlap = m ? m[4] : "?";
+const detail = html.match(/data-overlaps="([^"]*)"/)?.[1] || "";
 const svgs = (html.match(/<svg/g) || []).length + (html.match(/<canvas/g) || []).length;
-const ok = placeholders > 0 && rendered === placeholders && overflow === "0" && errors === "0" && svgs >= placeholders;
-console.log(`[${w}px] placeholders=${placeholders} rendered=${rendered} svg/canvas=${svgs} overflow=${overflow} errors=${errors}`);
+const ok = placeholders > 0 && rendered === placeholders && overflow === "0" && errors === "0" && labeloverlap === "0" && svgs >= placeholders;
+console.log(`[${w}px] placeholders=${placeholders} rendered=${rendered} svg/canvas=${svgs} overflow=${overflow} errors=${errors} labeloverlap=${labeloverlap}${detail ? " (" + detail + ")" : ""}`);
 if (!ok) { console.log(`essay-check: FAILED at ${w}px`); process.exit(1); }
 EOF
   rm -f "$OUT"

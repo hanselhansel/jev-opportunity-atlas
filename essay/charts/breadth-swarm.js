@@ -2,6 +2,7 @@
 // problems are omitted. The followed card is outlined.
 import { fade, tooFew } from "../lib/glyph.js";
 import { groupColor } from "../lib/palette.js";
+import { labelFor } from "../lib/labels.js";
 
 const MIN_N = 100;
 
@@ -19,7 +20,7 @@ export function prepare(story) {
       domains: Object.entries(c.breadth.domains || {})
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
-        .map(([k, v]) => `${k} ${Math.round(v * 100)}%`)
+        .map(([k, v]) => `${labelFor(story, "domains", k)} ${Math.round(v * 100)}%`)
         .join(", "),
     }))
     .sort((a, b) => a.entropy - b.entropy);

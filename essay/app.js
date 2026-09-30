@@ -2,7 +2,9 @@
 // mounts one chart module per placeholder, wires sheet + drawer + follow mode.
 import * as d3 from "d3";
 import * as Plot from "@observablehq/plot";
-import { render } from "./lib/md.js";
+import { voronoiTreemap } from "d3-voronoi-treemap";
+import scrollama from "scrollama";
+import { render, titleOf } from "./lib/md.js";
 import { createSheet } from "./lib/sheet.js";
 import * as profile from "./charts/profile.js";
 
@@ -75,6 +77,8 @@ function applyFollow() {
 const api = {
   d3,
   Plot,
+  voronoiTreemap,
+  scrollama,
   fmt,
   reducedMotion,
   sheet,
@@ -100,6 +104,8 @@ async function main() {
 
   const article = document.getElementById("article");
   article.innerHTML = render(md);
+  const h1 = titleOf(md);
+  if (h1) document.title = h1;
 
   // legend popover
   const pop = document.getElementById("legend-pop");
@@ -147,9 +153,38 @@ async function main() {
   check.dataset.overflow = document.documentElement.scrollWidth > document.documentElement.clientWidth ? "1" : "0";
   check.dataset.unrendered = String(slots.length - slots.filter((s) => s.dataset.rendered).length);
   check.dataset.errors = String(errors + (errslot.textContent.trim() ? 1 : 0));
+  const lap = countLabelOverlaps();
+  check.dataset.labeloverlap = String(lap.total);
+  check.dataset.overlaps = Object.entries(lap.byChart).filter(([, n]) => n > 0).map(([k, n]) => `${k}:${n}`).join(",");
   document.body.appendChild(check);
 
   applyFollow();
+}
+
+// Count pairs of SVG text elements whose on-screen boxes overlap inside one
+// chart. essay-check.sh asserts this is 0 at both render widths.
+function countLabelOverlaps() {
+  const byChart = {};
+  let total = 0;
+  for (const chart of document.querySelectorAll(".chart")) {
+    const boxes = [];
+    for (const t of chart.querySelectorAll("svg text")) {
+      const r = t.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) boxes.push(r);
+    }
+    let n = 0;
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i], b = boxes[j];
+        const ow = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const oh = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (ow > 3 && oh > 3) n++;
+      }
+    }
+    byChart[chart.dataset.chart || "?"] = n;
+    total += n;
+  }
+  return { total, byChart };
 }
 
 main().catch((e) => {

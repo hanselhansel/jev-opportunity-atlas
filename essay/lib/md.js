@@ -12,6 +12,14 @@ const inline = (s) => esc(s).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
 
 const CHART_RE = /^<!--\s*chart:([a-z0-9-]+)\s*-->\s*$/;
 
+export function titleOf(md) {
+  for (const line of md.split("\n")) {
+    const m = line.trim().match(/^#\s+(.*)$/);
+    if (m) return m[1].trim();
+  }
+  return null;
+}
+
 export function chartIds(md) {
   const ids = [];
   for (const line of md.split("\n")) {
