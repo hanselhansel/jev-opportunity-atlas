@@ -134,3 +134,36 @@ def test_core_shape(tmp_path, monkeypatch):
         assert {"id", "group", "short", "statement", "share", "h1", "h2",
                 "change", "quarters", "n_problems", "n_authors",
                 "n_threads"} <= set(c)
+
+
+def test_labels_cover_every_story_id(tmp_path, monkeypatch):
+    _, core = _core(tmp_path, monkeypatch)
+    labels = core["labels"]
+    dom_ids = {d["id"] for d in core["domains"]}
+    dom_ids |= set(core["unplaced"]["domains"])
+    role_ids = set(core["unplaced"]["roles"])
+    for by_role in core["roles"]["by_group"].values():
+        role_ids |= set(by_role)
+    assert dom_ids <= set(labels["domains"])
+    assert role_ids <= set(labels["roles"])
+    assert all(
+        isinstance(v, str) and v for v in labels["domains"].values()
+    )
+    assert all(
+        isinstance(v, str) and v for v in labels["roles"].values()
+    )
+
+
+def test_labels_cover_facets_choice_keys(tmp_path, monkeypatch):
+    world.build_world(tmp_path, monkeypatch)
+    from atlas.inference.questions import load_question_set
+    from atlas.story import core
+
+    labels = core.load_story_labels()
+    qs = load_question_set("facets", 2)
+    assert set(labels["domains"]) == set(
+        qs.questions["domain"]["criteria"]
+    )
+    assert set(labels["roles"]) == set(
+        qs.questions["user_role"]["criteria"]
+    )

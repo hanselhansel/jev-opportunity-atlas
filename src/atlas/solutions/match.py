@@ -3,7 +3,9 @@
 Whole-word match on each tool's name and aliases. Terms longer than 3
 characters match case-insensitively; terms of 3 or fewer match only
 case-sensitively, so `Go` matches "Go" but not "go" and `AWS` never lives
-inside "laws". `find_mentions` returns the matched tool *names* (the only
+inside "laws". A tool with `name_case: true` also matches its *name*
+case-sensitively (aliases keep the usual rules), so `Wise` does not match
+the word "wise". `find_mentions` returns the matched tool *names* (the only
 tool words allowed in story.json). For bulk scans, `compile_tools` once and
 pass the Matcher where a tools list is accepted.
 """
@@ -24,25 +26,28 @@ class Tool:
     name: str
     aliases: tuple = ()
     category: str = ""
+    name_case: bool = False
 
-    def terms(self) -> list[str]:
-        """Name plus aliases, in order, with duplicates removed."""
+    def terms(self) -> list[tuple[str, bool]]:
+        """(term, force_case_sensitive) pairs: name plus aliases, in order,
+        with duplicates removed. Only the name honors `name_case`."""
         seen, out = set(), []
         for t in (self.name, *self.aliases):
             if t and t not in seen:
                 seen.add(t)
-                out.append(t)
+                out.append((t, self.name_case and t == self.name))
         return out
 
 
 def load_tools(path) -> list[Tool]:
-    """Read configs/tools.v1.yaml ({name, aliases, category} rows)."""
+    """Read configs/tools.v1.yaml ({name, aliases, category, name_case} rows)."""
     data = yaml.safe_load(Path(path).read_bytes())
     return [
         Tool(
             name=row["name"],
             aliases=tuple(row.get("aliases") or ()),
             category=row.get("category") or "",
+            name_case=bool(row.get("name_case")),
         )
         for row in data["tools"]
     ]
@@ -67,9 +72,10 @@ class Matcher:
     def __init__(self, tools: list[Tool]):
         ci, cs = {}, {}
         for tool in tools:
-            for term in tool.terms():
-                bucket = cs if len(term) <= SHORT else ci
-                key = term if len(term) <= SHORT else term.lower()
+            for term, force_cs in tool.terms():
+                case_sensitive = len(term) <= SHORT or force_cs
+                bucket = cs if case_sensitive else ci
+                key = term if case_sensitive else term.lower()
                 bucket.setdefault(key, set()).add(tool.name)
         self._ci_re = _alternation(ci, re.IGNORECASE)
         self._cs_re = _alternation(cs, 0)
