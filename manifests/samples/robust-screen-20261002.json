@@ -1,0 +1,259 @@
+{
+  "algorithm": "stratified SRSWOR, Hamilton proportional allocation, PCG64",
+  "design_version": "subsample",
+  "frame_snapshot_id": "hn-2025-09-28_2026-09-28-v1",
+  "n": 20000,
+  "parent_sample_id": "main-20260930b",
+  "sample_id": "robust-screen-20261002",
+  "seed": 20261002,
+  "seeds_by_batch": {
+    "1": 20261002
+  },
+  "sha256": "9adc96bfab974ba328570a355ead5b321837a843d12abf4c7b21495e58a09c17",
+  "strata": {
+    "nopain|L0|H1|ask": {
+      "N_h": 12438,
+      "n_h": 8
+    },
+    "nopain|L0|H1|other": {
+      "N_h": 72,
+      "n_h": 1
+    },
+    "nopain|L0|H1|show": {
+      "N_h": 18364,
+      "n_h": 12
+    },
+    "nopain|L0|H1|story": {
+      "N_h": 311482,
+      "n_h": 206
+    },
+    "nopain|L0|H2|ask": {
+      "N_h": 10263,
+      "n_h": 7
+    },
+    "nopain|L0|H2|other": {
+      "N_h": 45,
+      "n_h": 1
+    },
+    "nopain|L0|H2|show": {
+      "N_h": 19531,
+      "n_h": 13
+    },
+    "nopain|L0|H2|story": {
+      "N_h": 343027,
+      "n_h": 227
+    },
+    "nopain|L1|H1|ask": {
+      "N_h": 24446,
+      "n_h": 808
+    },
+    "nopain|L1|H1|other": {
+      "N_h": 88,
+      "n_h": 3
+    },
+    "nopain|L1|H1|show": {
+      "N_h": 33765,
+      "n_h": 22
+    },
+    "nopain|L1|H1|story": {
+      "N_h": 792584,
+      "n_h": 524
+    },
+    "nopain|L1|H2|ask": {
+      "N_h": 21389,
+      "n_h": 707
+    },
+    "nopain|L1|H2|other": {
+      "N_h": 70,
+      "n_h": 2
+    },
+    "nopain|L1|H2|show": {
+      "N_h": 34072,
+      "n_h": 22
+    },
+    "nopain|L1|H2|story": {
+      "N_h": 840082,
+      "n_h": 555
+    },
+    "nopain|L2|H1|ask": {
+      "N_h": 17130,
+      "n_h": 566
+    },
+    "nopain|L2|H1|other": {
+      "N_h": 39,
+      "n_h": 1
+    },
+    "nopain|L2|H1|show": {
+      "N_h": 15647,
+      "n_h": 517
+    },
+    "nopain|L2|H1|story": {
+      "N_h": 408376,
+      "n_h": 3086
+    },
+    "nopain|L2|H2|ask": {
+      "N_h": 13798,
+      "n_h": 456
+    },
+    "nopain|L2|H2|other": {
+      "N_h": 31,
+      "n_h": 1
+    },
+    "nopain|L2|H2|show": {
+      "N_h": 12496,
+      "n_h": 413
+    },
+    "nopain|L2|H2|story": {
+      "N_h": 403874,
+      "n_h": 3052
+    },
+    "nopain|L3|H1|ask": {
+      "N_h": 2280,
+      "n_h": 75
+    },
+    "nopain|L3|H1|other": {
+      "N_h": 2,
+      "n_h": 1
+    },
+    "nopain|L3|H1|show": {
+      "N_h": 1632,
+      "n_h": 54
+    },
+    "nopain|L3|H1|story": {
+      "N_h": 42873,
+      "n_h": 28
+    },
+    "nopain|L3|H2|ask": {
+      "N_h": 1875,
+      "n_h": 62
+    },
+    "nopain|L3|H2|other": {
+      "N_h": 2,
+      "n_h": 1
+    },
+    "nopain|L3|H2|show": {
+      "N_h": 1171,
+      "n_h": 39
+    },
+    "nopain|L3|H2|story": {
+      "N_h": 39809,
+      "n_h": 26
+    },
+    "pain|L0|H1|ask": {
+      "N_h": 93,
+      "n_h": 3
+    },
+    "pain|L0|H1|show": {
+      "N_h": 163,
+      "n_h": 5
+    },
+    "pain|L0|H1|story": {
+      "N_h": 2577,
+      "n_h": 85
+    },
+    "pain|L0|H2|ask": {
+      "N_h": 113,
+      "n_h": 4
+    },
+    "pain|L0|H2|show": {
+      "N_h": 156,
+      "n_h": 5
+    },
+    "pain|L0|H2|story": {
+      "N_h": 2917,
+      "n_h": 96
+    },
+    "pain|L1|H1|ask": {
+      "N_h": 1318,
+      "n_h": 44
+    },
+    "pain|L1|H1|other": {
+      "N_h": 7,
+      "n_h": 1
+    },
+    "pain|L1|H1|show": {
+      "N_h": 1696,
+      "n_h": 56
+    },
+    "pain|L1|H1|story": {
+      "N_h": 38511,
+      "n_h": 1272
+    },
+    "pain|L1|H2|ask": {
+      "N_h": 1161,
+      "n_h": 38
+    },
+    "pain|L1|H2|other": {
+      "N_h": 5,
+      "n_h": 1
+    },
+    "pain|L1|H2|show": {
+      "N_h": 1792,
+      "n_h": 59
+    },
+    "pain|L1|H2|story": {
+      "N_h": 40728,
+      "n_h": 1346
+    },
+    "pain|L2|H1|ask": {
+      "N_h": 2629,
+      "n_h": 87
+    },
+    "pain|L2|H1|other": {
+      "N_h": 10,
+      "n_h": 1
+    },
+    "pain|L2|H1|show": {
+      "N_h": 2535,
+      "n_h": 84
+    },
+    "pain|L2|H1|story": {
+      "N_h": 60111,
+      "n_h": 1986
+    },
+    "pain|L2|H2|ask": {
+      "N_h": 2023,
+      "n_h": 67
+    },
+    "pain|L2|H2|other": {
+      "N_h": 2,
+      "n_h": 1
+    },
+    "pain|L2|H2|show": {
+      "N_h": 1937,
+      "n_h": 64
+    },
+    "pain|L2|H2|story": {
+      "N_h": 59603,
+      "n_h": 1969
+    },
+    "pain|L3|H1|ask": {
+      "N_h": 988,
+      "n_h": 33
+    },
+    "pain|L3|H1|show": {
+      "N_h": 778,
+      "n_h": 26
+    },
+    "pain|L3|H1|story": {
+      "N_h": 17513,
+      "n_h": 579
+    },
+    "pain|L3|H2|ask": {
+      "N_h": 780,
+      "n_h": 26
+    },
+    "pain|L3|H2|other": {
+      "N_h": 2,
+      "n_h": 1
+    },
+    "pain|L3|H2|show": {
+      "N_h": 527,
+      "n_h": 17
+    },
+    "pain|L3|H2|story": {
+      "N_h": 16574,
+      "n_h": 548
+    }
+  }
+}
