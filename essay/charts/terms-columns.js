@@ -7,7 +7,7 @@ import { groupColor } from "../lib/palette.js";
 const CHAR_PX = 7; // approx px per char at the 12px row-label size
 const COL_PAD = 14; // breathing room beside the longest word
 const ROW_H = 24;
-const HEAD_H = 30;
+const HEAD_H = 36; // two 11px header lines end near y=24; keep the first term clear
 
 // Wrap a short label over at most 2 lines of <= maxLen chars, splitting at
 // spaces, hyphens and underscores first, then hard-wrapping.
