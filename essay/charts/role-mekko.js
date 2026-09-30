@@ -6,6 +6,9 @@ import { groupColor, NOT_PLACED } from "../lib/palette.js";
 import { labelFor } from "../lib/labels.js";
 
 const TOP_ROLES = 6;
+// Bottom labels only fit on columns wider than this (viewBox px at W = 700).
+export const LABEL_MIN_PX = 80;
+const VW = 700, EDGE = 10, GAP = 3;
 
 export function prepare(story) {
   // rank roles by share-of-problems aggregated across groups
@@ -39,6 +42,15 @@ export function prepare(story) {
     })
     .sort((a, b) => b.width - a.width);
   columns.push({ id: "__unplaced", label: "not placed", width: story.unplaced?.share?.est ?? 0, known: null, tiles: [{ role: "unplaced", label: "not placed", share: 1, est: null }] });
+  // pixel layout at the fixed 700 viewBox: label only what actually fits
+  const totalW = columns.reduce((a, c) => a + c.width, 0) || 1;
+  let cx = EDGE;
+  for (const c of columns) {
+    c.px = ((VW - 2 * EDGE) * c.width) / totalW - GAP;
+    c.x = cx;
+    c.labeled = c.px > LABEL_MIN_PX;
+    cx += c.px + GAP;
+  }
   return { columns, roles, colorOf };
 }
 
@@ -48,15 +60,14 @@ export function mount(el, story, api) {
   const d3 = api.d3;
   const { columns, roles, colorOf } = prepare(story);
   el.innerHTML = "";
-  const W = 700, H = 330, stripH = 26, gap = 3;
+  const W = 700, H = 330, stripH = 26;
   const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
-  const totalW = columns.reduce((a, c) => a + c.width, 0);
-  const x0 = 10, bodyH = H - stripH - 30;
+  const bodyH = H - stripH - 30;
+  let tapLabel = null;
 
-  let cx = x0;
   for (const c of columns) {
-    const w = ((W - 20) * c.width) / totalW - gap;
-    const g = svg.append("g").attr("transform", `translate(${cx},${stripH})`);
+    const w = c.px;
+    const g = svg.append("g").attr("transform", `translate(${c.x},${stripH})`);
     // disclosure strip: share who state a role
     const k = c.known?.est ?? 0;
     g.append("rect").attr("x", 0).attr("y", -stripH + 4).attr("width", w).attr("height", 10).attr("fill", "var(--line)");
@@ -73,12 +84,22 @@ export function mount(el, story, api) {
         .append("title").text(`${c.label} / ${t.label}: ${api.fmt.pct(t.share, 0)}`);
       ty += th;
     }
-    if (w > 40) {
+    if (c.labeled) {
       g.append("text").attr("class", "cell-label").attr("x", w / 2).attr("y", bodyH + 14).attr("text-anchor", "middle").text(c.label);
     } else {
+      // narrow columns label on hover (title) or tap (transient text below)
       g.append("title").text(c.label);
+      g.style("cursor", "pointer").on("click", () => {
+        tapLabel?.remove();
+        tapLabel = svg.append("text")
+          .attr("class", "cell-label")
+          .attr("x", c.x + w / 2)
+          .attr("y", stripH + bodyH + 14)
+          .attr("text-anchor", "middle")
+          .attr("fill", "var(--accent)")
+          .text(c.label);
+      });
     }
-    cx += w + gap;
   }
 
   // legend: palette order = role rank

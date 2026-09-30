@@ -3,6 +3,23 @@
 import { fade } from "../lib/glyph.js";
 import { groupColor } from "../lib/palette.js";
 
+// Literal hexes: CSS var() strings cannot be interpolated, which is what left
+// the cool half invisible. These read on both themes: #2f6fb5 (the --h0 blue,
+// identical in light and dark) sits >=3:1 against #fbfaf7 and #17191c.
+export const STRIPE_COOL = "#2f6fb5";
+export const STRIPE_MID = "#cfccc2";
+export const STRIPE_HOT = "#b3401e";
+
+const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const mix = (a, b, t) =>
+  "#" + rgb(a).map((x, i) => Math.round(x + (rgb(b)[i] - x) * t).toString(16).padStart(2, "0")).join("");
+
+// Negative log ratio = below the yearly share = cool blue; 0 is neutral.
+export function stripeColor(logRatio, maxAbs) {
+  const t = Math.max(-1, Math.min(1, logRatio / (maxAbs || 1)));
+  return t < 0 ? mix(STRIPE_MID, STRIPE_COOL, -t) : mix(STRIPE_MID, STRIPE_HOT, t);
+}
+
 export function prepare(story) {
   const rows = story.groups
     .map((g) => {
@@ -17,6 +34,7 @@ export function prepare(story) {
     })
     .sort((a, b) => b.change - a.change);
   const maxAbs = Math.max(1e-6, ...rows.flatMap((r) => r.cells.map((c) => Math.abs(c.logRatio))));
+  for (const r of rows) for (const c of r.cells) c.fill = stripeColor(c.logRatio, maxAbs);
   return { rows, maxAbs };
 }
 
@@ -27,7 +45,6 @@ export function mount(el, story, api) {
   const W = 700, rowH = 26, labelW = 110, cellW = (W - labelW - 20) / 4;
   const H = rows.length * rowH + 40;
   const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
-  const color = d3.scaleDiverging(["var(--h0)", "var(--paper)", "var(--accent)"]).domain([-maxAbs, 0, maxAbs]);
 
   const row = svg.selectAll("g.r").data(rows).join("g").attr("transform", (d, i) => `translate(0,${i * rowH + 16})`);
   row.append("text").attr("class", "row-label").attr("x", 0).attr("y", 15).text((d) => d.label).attr("fill", (d) => groupColor(d.id));
@@ -41,7 +58,7 @@ export function mount(el, story, api) {
     .attr("width", cellW - 3)
     .attr("height", rowH - 4)
     .attr("rx", 2)
-    .attr("fill", (c) => color(c.logRatio))
+    .attr("fill", (c) => c.fill)
     .attr("opacity", (c) => c.fade)
     .append("title")
     .text((c) => `${c.q}: ${api.fmt.pct(c.est?.est, 2)} of problems${c.sparse ? " (few rows)" : ""}`);
