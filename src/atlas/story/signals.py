@@ -51,7 +51,7 @@ def _share(rep: Replicates, flag: np.ndarray, den: np.ndarray, n: int):
 def _card_ids(frame, sub_all):
     cs = frame.attrs.get("cardset")
     if cs is not None:
-        return sorted(cs.all_cards)
+        return sorted(cs.cards)
     return sorted(c for c in sub_all["card"].unique() if c is not None)
 
 

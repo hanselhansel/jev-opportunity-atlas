@@ -61,7 +61,7 @@ def _dedup_max(sub, key) -> dict:
     return scores
 
 
-def _para_counts(run_id, version: str) -> dict:
+def _para_counts(run_id, version: str, resolve=None) -> dict:
     """Unweighted card counts in a paraphrase run's assignments file."""
     if not run_id:
         return {}
@@ -73,6 +73,10 @@ def _para_counts(run_id, version: str) -> dict:
         c = r.get("card_id")
         if c in (None, "none"):
             continue
+        if resolve is not None:
+            c = resolve(c)
+            if c is None:
+                continue
         scores[c] = scores.get(c, 0.0) + 1.0
     return scores
 
@@ -85,10 +89,9 @@ def spec_ranks(frame, para_runs: dict | None = None) -> list:
         & frame["card"].notna()
     ]
     cs = frame.attrs.get("cardset")
-    cards = sorted(
-        cs.all_cards if cs is not None else fh["card"].unique()
-    )
+    cards = sorted(cs.cards if cs is not None else fh["card"].unique())
     version = cs.version if cs is not None else None
+    resolve = getattr(cs, "try_resolve", None)
     card_p = fh["card_p"].to_numpy(dtype=float, na_value=np.nan)
     strict = fh[card_p >= CARD_P_ALT]
     scores = {
@@ -101,7 +104,7 @@ def spec_ranks(frame, para_runs: dict | None = None) -> list:
     for alt in ("para1", "para2"):
         rid = (para_runs or {}).get(alt)
         if rid and version:
-            counts = _para_counts(rid, version)
+            counts = _para_counts(rid, version, resolve=resolve)
             if counts:
                 scores[alt] = counts
     main_scores = fh.groupby(fh["card"].astype(object))["weight"].sum().to_dict()

@@ -202,7 +202,18 @@ def _cmd_replies(args) -> None:
         r["comment_id"]: r["pain_sentence"]
         for r in pq.read_table(run_dir / "pain.parquet").to_pylist()
     }
-    problem_ids = replies_run.selected_problems(result.rows, args.top_cards)
+    resolve = None
+    try:
+        from atlas.sitedata.inputs import find_cardset
+
+        resolve = find_cardset(
+            args.version, getattr(args, "cardset", None)
+        ).try_resolve
+    except (OSError, RuntimeError, ValueError):
+        pass
+    problem_ids = replies_run.selected_problems(
+        result.rows, args.top_cards, resolve=resolve
+    )
     items = replies_run.collect_items(
         paths.snapshot_dir(args.snapshot),
         problem_ids,

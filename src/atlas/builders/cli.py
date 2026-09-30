@@ -253,8 +253,16 @@ def story_section(args, story_path) -> None:
     story = json.loads(Path(story_path).read_text(encoding="utf-8"))
     card_ids = [c["id"] for c in story.get("cards", [])]
     story_cards = _complaint_reps(args, card_ids)
+    resolve = None
+    try:
+        resolve = load_cardset(
+            meta.get("cardset") or getattr(args, "cardset", None) or "main",
+            version,
+        ).try_resolve
+    except (OSError, RuntimeError, ValueError):
+        pass
     builders, per_card = shares.builder_shares(
-        assign_rows, sample_table, story_cards
+        assign_rows, sample_table, story_cards, resolve=resolve
     )
     io.merge_section(Path(story_path), "builders", builders)
     if card_ids:

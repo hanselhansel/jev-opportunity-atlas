@@ -93,24 +93,38 @@ def _assign_version(run_dir: Path, requested) -> str:
     return found[0].stem.rsplit("-", 1)[1]
 
 
-def _problem_cards(rows, top_cards, min_card_p=MIN_CARD_P) -> dict:
+def _resolver(version, cardset=None):
+    """cs.try_resolve bound to the cardset, or None when none loads."""
+    try:
+        from atlas.sitedata.inputs import find_cardset
+
+        return find_cardset(version, cardset).try_resolve
+    except (OSError, RuntimeError, ValueError):
+        return None
+
+
+def _problem_cards(rows, top_cards, min_card_p=MIN_CARD_P, resolve=None) -> dict:
     """comment_id -> card_id for qualifying assignments on the top cards."""
-    qual = [
-        r
-        for r in rows
-        if r.get("card_id") not in (None, "none")
-        and (r.get("card_p") or 0.0) >= min_card_p
-    ]
+    qual = []
+    for r in rows:
+        card = r.get("card_id")
+        if card in (None, "none") or (r.get("card_p") or 0.0) < min_card_p:
+            continue
+        if resolve is not None:
+            card = resolve(card)
+            if card is None:
+                continue
+        qual.append((int(r["comment_id"]), card))
     if top_cards is not None:
-        counts = Counter(r["card_id"] for r in qual)
+        counts = Counter(card for _cid, card in qual)
         keep = {
             cid
             for cid, _n in sorted(
                 counts.items(), key=lambda kv: (-kv[1], kv[0])
             )[:top_cards]
         }
-        qual = [r for r in qual if r["card_id"] in keep]
-    return {int(r["comment_id"]): r["card_id"] for r in qual}
+        qual = [pair for pair in qual if pair[1] in keep]
+    return dict(qual)
 
 
 def _snapshot_meta(snapshot_dir, ids) -> dict:
@@ -261,7 +275,10 @@ def _cmd_run(args) -> None:
         r["comment_id"]: r["pain_sentence"]
         for r in pq.read_table(run_dir / "pain.parquet").to_pylist()
     }
-    problem_cards = _problem_cards(result.rows, args.top_cards)
+    resolve = _resolver(version, getattr(args, "cardset", None))
+    problem_cards = _problem_cards(
+        result.rows, args.top_cards, resolve=resolve
+    )
     tools = match.load_tools(args.tools or paths.CONFIGS / "tools.v1.yaml")
     mentions = collect_mentions(
         paths.snapshot_dir(args.snapshot or _default_snapshot()),
@@ -288,7 +305,9 @@ def _cmd_run(args) -> None:
         ctx.guard.close()
     answers = replies_run.answers_table(out_dir)
     confirmed = confirm.confirmed_ids(answers)
-    tools_rows, card_tools = tally.tally(mentions, confirmed, tools)
+    tools_rows, card_tools = tally.tally(
+        mentions, confirmed, tools, resolve=resolve
+    )
     tally.write_mentions(mentions, out_dir / "mentions.parquet")
     meta = {
         "assign_run": args.assign_run,
@@ -323,11 +342,24 @@ def section(args, story_path) -> None:
     """
     from atlas.story import io
 
-    path = paths.run_dir(args.assign_run) / "solutions" / "tallies.json"
-    tallies = json.loads(path.read_text(encoding="utf-8"))
+    out_dir = paths.run_dir(args.assign_run) / "solutions"
+    tallies = json.loads((out_dir / "tallies.json").read_text(encoding="utf-8"))
     io.merge_section(story_path, "tools", tallies["tools"])
     story = json.loads(Path(story_path).read_text(encoding="utf-8"))
-    by_id = tallies.get("cards_tools", {})
+    resolve = _resolver(
+        tallies.get("version"), getattr(args, "cardset", None)
+    )
+    mentions_path = out_dir / "mentions.parquet"
+    if mentions_path.exists():
+        mentions = pq.read_table(mentions_path).to_pylist()
+        confirmed = confirm.confirmed_ids(
+            replies_run.answers_table(out_dir)
+        )
+        by_id = tally.card_tools_tally(mentions, confirmed, resolve=resolve)
+    else:
+        by_id = tally.merge_card_tools(
+            tallies.get("cards_tools", {}), resolve
+        )
     for card in story.get("cards", []):
         if card.get("id") in by_id:
             card["tools"] = by_id[card["id"]]

@@ -189,7 +189,7 @@ def _top_thread_share(fh, group_id: str) -> float:
 
 def _groups_cards(fh, rep_fh, cs, short):
     groups = _entities(fh, rep_fh, "group", sorted(cs.groups), shrink=False)
-    cards = _entities(fh, rep_fh, "card", sorted(cs.all_cards), shrink=True)
+    cards = _entities(fh, rep_fh, "card", sorted(cs.cards), shrink=True)
     card_key = fh["card"].astype(object)
     for row in groups:
         gid = row["id"]
@@ -197,8 +197,8 @@ def _groups_cards(fh, rep_fh, cs, short):
             {
                 "label": cs.groups[gid],
                 "short": short["groups"].get(gid) or cs.groups[gid],
-                "cards": sorted(c for c in cs.all_cards
-                                if cs.all_cards[c].group_id == gid),
+                "cards": sorted(c for c in cs.cards
+                                if cs.cards[c].group_id == gid),
                 "top_thread_share": _top_thread_share(fh, gid),
             }
         )

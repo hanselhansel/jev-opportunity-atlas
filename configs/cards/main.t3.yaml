@@ -8,6 +8,7 @@
 # t1 cards survive with sharper wording; the Hacker News site-mechanics theme is split
 # out of the old c29. Inputs are recorded by comment ID and text hash only in
 # taxonomy/t2/provenance.json. Jev never writes card text. Any edit bumps the version.
+# 2026-09-30 post-hoc: n136 merged_into n014 by Hansel's review (duplicate: local models slow).
 taxonomy_version: t3
 groups:
   g01: {label: "AI coding agents and developer AI tools"}
@@ -33,7 +34,7 @@ cards:
   - {card_id: n006, group_id: g01, statement: "Codebases written largely by AI are hard for people to understand, trust, or maintain", status: approved, author: claude}
   - {card_id: n007, group_id: g01, statement: "Switching between AI coding tools or models loses context, memory, habits, and workflows", status: approved, author: claude}
   - {card_id: n008, group_id: g01, statement: "Reviewing the volume of AI-generated pull requests and changes overwhelms human reviewers", status: approved, author: claude}
-  - {card_id: n136, group_id: g01, statement: "Open or local models run too slowly or need too much memory for coding agents", status: approved, author: claude}
+  - {card_id: n136, group_id: g01, statement: "Open or local models run too slowly or need too much memory for coding agents", status: merged_into:n014, author: claude}
   - {card_id: n137, group_id: g01, statement: "AI coding tools and editor integrations are buggy, poorly integrated, or hard to configure", status: approved, author: claude}
   # g02 AI chatbots, model quality, and AI services
   - {card_id: n009, group_id: g02, statement: "AI chatbots state false facts, sources, or numbers that the user then has to catch", status: approved, author: claude}

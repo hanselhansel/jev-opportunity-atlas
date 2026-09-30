@@ -227,6 +227,10 @@ def _mini_ctx():
             "c01": SimpleNamespace(statement="need one", group_id="g01"),
             "c02": SimpleNamespace(statement="need two", group_id="g01"),
         },
+        cards={
+            "c01": SimpleNamespace(statement="need one", group_id="g01"),
+            "c02": SimpleNamespace(statement="need two", group_id="g01"),
+        },
     )
     facet, answers, comments, assign = {}, {}, {}, {}
     cid = 9_000_000_000
@@ -276,3 +280,28 @@ def test_card_with_one_thread_gets_a_wider_interval():
     assert by[("c01", "all")]["share"] == pytest.approx(by[("c02", "all")]["share"])
     assert w1 > w2
     assert w1 > 0.2
+
+
+def test_card_share_rows_skip_merged_cards():
+    """A merged card keeps its record in the cardset but emits no rows."""
+    active = {
+        "c01": SimpleNamespace(statement="need one", group_id="g01"),
+        "c02": SimpleNamespace(statement="need two", group_id="g01"),
+    }
+    cs = SimpleNamespace(
+        groups={"g01": "G one"},
+        cards=active,
+        all_cards={
+            **active,
+            "c03": SimpleNamespace(statement="dup", group_id="g01"),
+        },
+    )
+    ctx = {
+        "facet": {},
+        "answers": {},
+        "comments": {},
+        "assign": {},
+    }
+    rows = card_share_rows(ctx, cs, n_boot=10, seed=0)
+    card_ids = {r["id"] for r in rows if r["level"] == "card"}
+    assert card_ids == {"c01", "c02"}

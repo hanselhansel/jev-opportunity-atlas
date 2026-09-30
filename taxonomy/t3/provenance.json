@@ -8,6 +8,14 @@
   "main-cards-20260930"
  ],
  "seed": 20261004,
+ "post_hoc": [
+  {
+   "date": "2026-09-30",
+   "edit": "card n136 status set to merged_into:n014",
+   "reason": "Hansel's review: n136 duplicates n014 (local models slow); its problems count under n014 via CardSet.resolve",
+   "author": "Hansel"
+  }
+ ],
  "inputs": [
   {
    "comment_id": 45564210,

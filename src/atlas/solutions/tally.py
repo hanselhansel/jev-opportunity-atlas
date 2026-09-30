@@ -26,7 +26,15 @@ import pyarrow.parquet as pq
 from atlas.sitedata.build_share import boot_totals
 from atlas.solutions.confirm import hit_id
 
-__all__ = ["MENTIONS", "hit_id", "tally", "write_mentions", "write_tallies"]
+__all__ = [
+    "MENTIONS",
+    "card_tools_tally",
+    "hit_id",
+    "merge_card_tools",
+    "tally",
+    "write_mentions",
+    "write_tallies",
+]
 
 SPARSE_THREADS = 10
 N_BOOT = 1000
@@ -113,12 +121,83 @@ def _per_thread(rows):
     return [(s, f, c) for s, f, c in by_thread.values()]
 
 
-def tally(mentions, confirmed, tools, n_boot=N_BOOT, seed=SEED):
+def card_tools_tally(mentions, confirmed, resolve=None):
+    """``card_id -> {"fixes": [...], "blamed": [...]}`` thread tallies.
+
+    ``resolve`` maps merged card ids to their final card before bucketing,
+    so a merged card's mentions land on the card it merged into.
+    """
+    per_card: dict[str, dict] = defaultdict(
+        lambda: {"fixes": defaultdict(set), "blamed": defaultdict(set)}
+    )
+    for m in mentions:
+        card = m["card_id"]
+        if not card:
+            continue
+        if resolve is not None:
+            card = resolve(card)
+            if not card:
+                continue
+        if m["kind"] == "problem":
+            per_card[card]["blamed"][m["tool"]].add(m["story_id"])
+        elif m["hit_id"] in confirmed:
+            per_card[card]["fixes"][m["tool"]].add(m["story_id"])
+    out: dict[str, dict] = {}
+    for card in sorted(per_card):
+        buckets = per_card[card]
+        out[card] = {
+            key: [
+                {"name": name, "threads": len(story_ids)}
+                for name, story_ids in sorted(
+                    buckets[key].items(), key=lambda kv: (-len(kv[1]), kv[0])
+                )
+            ]
+            for key in ("fixes", "blamed")
+        }
+    return out
+
+
+def merge_card_tools(cards_tools, resolve=None):
+    """Stored ``cards_tools`` re-keyed through ``resolve``; threads sum.
+
+    Used when a pre-merge ``tallies.json`` survives without the mentions
+    parquet to re-tally from. Summing can double-count a thread that blamed
+    or fixed the same tool under both sides of a merge; the parquet path in
+    ``section`` stays exact.
+    """
+    if resolve is None:
+        return dict(cards_tools or {})
+    merged: dict[str, dict] = {}
+    for cid, buckets in (cards_tools or {}).items():
+        rid = resolve(cid)
+        if not rid:
+            continue
+        dst = merged.setdefault(rid, {"fixes": {}, "blamed": {}})
+        for kind in ("fixes", "blamed"):
+            for t in (buckets or {}).get(kind) or []:
+                name = t["name"]
+                dst[kind][name] = dst[kind].get(name, 0) + int(t["threads"])
+    return {
+        cid: {
+            kind: [
+                {"name": name, "threads": n}
+                for name, n in sorted(
+                    v[kind].items(), key=lambda kv: (-kv[1], kv[0])
+                )
+            ]
+            for kind in ("fixes", "blamed")
+        }
+        for cid, v in merged.items()
+    }
+
+
+def tally(mentions, confirmed, tools, n_boot=N_BOOT, seed=SEED, resolve=None):
     """(tools_rows, card_tools) matching story.v1 `tools`/`cards[].tools`.
 
     `mentions`: dicts with hit_id, comment_id, problem_id, card_id,
     story_id, stratum, kind, tool. `confirmed`: set of hit_ids Jev
     confirmed. `tools`: list[match.Tool] for the category column.
+    `resolve` maps merged card ids to their final card in card_tools.
     """
     categories = {t.name: t.category for t in tools}
     by_tool: dict[str, list] = defaultdict(list)
@@ -157,31 +236,7 @@ def tally(mentions, confirmed, tools, n_boot=N_BOOT, seed=SEED):
             }
         )
     tools_rows.sort(key=lambda r: (-r["threads"], r["name"]))
-
-    card_tools: dict[str, dict] = {}
-    per_card: dict[str, dict] = defaultdict(
-        lambda: {"fixes": defaultdict(set), "blamed": defaultdict(set)}
-    )
-    for m in mentions:
-        card = m["card_id"]
-        if not card:
-            continue
-        if m["kind"] == "problem":
-            per_card[card]["blamed"][m["tool"]].add(m["story_id"])
-        elif m["hit_id"] in confirmed:
-            per_card[card]["fixes"][m["tool"]].add(m["story_id"])
-    for card in sorted(per_card):
-        buckets = per_card[card]
-        card_tools[card] = {
-            key: [
-                {"name": name, "threads": len(story_ids)}
-                for name, story_ids in sorted(
-                    buckets[key].items(), key=lambda kv: (-len(kv[1]), kv[0])
-                )
-            ]
-            for key in ("fixes", "blamed")
-        }
-    return tools_rows, card_tools
+    return tools_rows, card_tools_tally(mentions, confirmed, resolve=resolve)
 
 
 def write_mentions(mentions, path) -> Path:

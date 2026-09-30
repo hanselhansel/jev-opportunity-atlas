@@ -67,6 +67,13 @@ class CardSet:
             seen.add(cid)
             cid = card.status[len(MERGED_PREFIX):]
 
+    def try_resolve(self, card_id) -> str | None:
+        """``resolve`` for boundaries that take raw assignment output:
+        ``None`` for ids absent from the file, the resolved id otherwise."""
+        if not isinstance(card_id, str) or card_id not in self.all_cards:
+            return None
+        return self.resolve(card_id)
+
     def cards_in(self, group_id: str) -> list[Card]:
         """Active cards in a group, in file order."""
         return [c for c in self.cards.values() if c.group_id == group_id]

@@ -26,11 +26,16 @@ MAX_BUNDLE = 12
 JACCARD_MIN = 0.7
 
 
-def _scored_pairs(merge_json, ids: set) -> dict[tuple[str, str], float]:
-    """Undirected ``{card_a, card_b} -> expected`` for finite scored rows."""
+def _scored_pairs(merge_json, ids: set, resolve=None) -> dict[tuple[str, str], float]:
+    """Undirected ``{card_a, card_b} -> expected`` for finite scored rows.
+
+    ``resolve`` maps merged card ids to their final card; a pair whose ends
+    resolve to the same card drops out through ``a != b``."""
     out = {}
     for s in (merge_json or {}).get("scored") or []:
         a, b, e = s.get("card_a"), s.get("card_b"), s.get("expected")
+        if resolve is not None and isinstance(a, str) and isinstance(b, str):
+            a, b = resolve(a), resolve(b)
         if (
             a in ids
             and b in ids
@@ -99,16 +104,17 @@ def _share_est(members, meta, share_reps):
     return io.est(est, n=n)
 
 
-def build_bundles(merge_json, story, share_reps=None):
+def build_bundles(merge_json, story, share_reps=None, resolve=None):
     """``(bundles, edges)`` from the merge run's scored pairs.
 
     ``share_reps`` maps card id to joint bootstrap replicate shares so a
     bundle's interval comes from summing replicates, not from pooling the
-    member intervals.
+    member intervals. ``resolve`` maps merged card ids in the scored pairs
+    to their final card; pairs whose ends collapse are dropped.
     """
     meta = {c["id"]: c for c in (story or {}).get("cards") or []}
     ids = sorted(meta)
-    scored = _scored_pairs(merge_json, set(ids))
+    scored = _scored_pairs(merge_json, set(ids), resolve=resolve)
     edges = _edges(scored, ids)
     bundles = []
     if len(ids) >= MIN_BUNDLE:

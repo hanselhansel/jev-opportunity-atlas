@@ -27,28 +27,36 @@ MODEL = "jev-1.13.0"
 MIN_CARD_P = 0.5
 
 
-def selected_problems(rows, top_cards=None, min_card_p=MIN_CARD_P) -> list[int]:
+def selected_problems(
+    rows, top_cards=None, min_card_p=MIN_CARD_P, resolve=None
+) -> list[int]:
     """Sorted comment ids assigned a real card at card_p >= min_card_p.
 
     With `top_cards`, first keep the N card ids with the most qualifying
     assignments (ties break on card id), then keep only their comments.
+    `resolve` maps merged card ids to their final card before the top-cards
+    count, so a merged card's problems rank with the card they merged into.
     """
-    qual = [
-        r
-        for r in rows
-        if r.get("card_id") not in (None, "none")
-        and (r.get("card_p") or 0.0) >= min_card_p
-    ]
+    qual = []
+    for r in rows:
+        card = r.get("card_id")
+        if card in (None, "none") or (r.get("card_p") or 0.0) < min_card_p:
+            continue
+        if resolve is not None:
+            card = resolve(card)
+            if card is None:
+                continue
+        qual.append((int(r["comment_id"]), card))
     if top_cards is not None:
-        counts = Counter(r["card_id"] for r in qual)
+        counts = Counter(card for _cid, card in qual)
         keep = {
             cid
             for cid, _n in sorted(
                 counts.items(), key=lambda kv: (-kv[1], kv[0])
             )[:top_cards]
         }
-        qual = [r for r in qual if r["card_id"] in keep]
-    return sorted({int(r["comment_id"]) for r in qual})
+        qual = [pair for pair in qual if pair[1] in keep]
+    return sorted({cid for cid, _card in qual})
 
 
 def collect_items(

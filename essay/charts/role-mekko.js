@@ -2,7 +2,6 @@
 // among problems whose commenter states a role. The top 6 roles by share get
 // palette colors; the rest merge into a grey "other". Legend below.
 import { fade } from "../lib/glyph.js";
-import { groupColor, NOT_PLACED } from "../lib/palette.js";
 import { labelFor } from "../lib/labels.js";
 
 const TOP_ROLES = 6;
@@ -28,6 +27,8 @@ export function prepare(story) {
   ];
   const colorOf = (r) => (top.includes(r) ? top.indexOf(r) : null);
 
+  // placed problems only: column width = group share of placed
+  const placedSum = story.groups.reduce((a, g) => a + (g.share?.est ?? 0), 0) || 1;
   const columns = story.groups
     .map((g) => {
       const mix = story.roles.by_group[g.id] || {};
@@ -37,13 +38,12 @@ export function prepare(story) {
       return {
         id: g.id,
         label: g.short || g.label,
-        width: g.share.est,
+        width: (g.share?.est ?? 0) / placedSum,
         known: story.roles.known_share[g.id] || null,
         tiles: tiles.filter((t) => t.share > 0.001),
       };
     })
     .sort((a, b) => b.width - a.width);
-  columns.push({ id: "__unplaced", label: "not placed", width: story.unplaced?.share?.est ?? 0, known: null, tiles: [{ role: "unplaced", label: "not placed", share: 1, est: null }] });
   // pixel layout at the fixed 700 viewBox: label only what actually fits
   const totalW = columns.reduce((a, c) => a + c.width, 0) || 1;
   let cx = EDGE;
@@ -52,17 +52,18 @@ export function prepare(story) {
     c.x = cx;
     c.labeled = c.px > LABEL_MIN_PX;
     // narrower group columns get a vertical label when their pitch fits one line
-    c.vertical = !c.labeled && c.id !== "__unplaced" && c.px + GAP >= VERTICAL_MIN_PITCH;
+    c.vertical = !c.labeled && c.px + GAP >= VERTICAL_MIN_PITCH;
     cx += c.px + GAP;
   }
-  return { columns, roles, colorOf };
+  const placed = 1 - (story.unplaced?.share?.est ?? 0);
+  return { columns, roles, colorOf, placed };
 }
 
 const ROLE_COLORS = ["var(--h0)", "var(--h1)", "var(--h2)", "var(--h3)", "var(--h4)", "var(--h5)"];
 
 export function mount(el, story, api) {
   const d3 = api.d3;
-  const { columns, roles, colorOf } = prepare(story);
+  const { columns, roles, colorOf, placed } = prepare(story);
   el.innerHTML = "";
   // room under the body for vertical labels of the narrow columns
   const W = 700, stripH = 26, bodyH = 274;
@@ -85,14 +86,12 @@ export function mount(el, story, api) {
       const ri = colorOf(t.role);
       g.append("rect")
         .attr("x", 0).attr("y", ty).attr("width", w).attr("height", Math.max(0, th - 1))
-        .attr("fill", c.id === "__unplaced" ? NOT_PLACED : ri == null ? "var(--grey)" : ROLE_COLORS[ri])
+        .attr("fill", ri == null ? "var(--grey)" : ROLE_COLORS[ri])
         .attr("opacity", t.est ? fade(t.est) : 0.5)
         .append("title").text(`${c.label} / ${t.label}: ${api.fmt.pct(t.share, 0)}`);
       ty += th;
     }
-    if (c.id === "__unplaced") {
-      g.append("text").attr("class", "cell-label").attr("x", w / 2).attr("y", bodyH / 2).attr("text-anchor", "middle").text(c.label);
-    } else if (c.labeled) {
+    if (c.labeled) {
       g.append("text").attr("class", "cell-label").attr("x", w / 2).attr("y", bodyH + 14).attr("text-anchor", "middle").text(c.label);
     } else if (c.vertical) {
       g.append("text").attr("class", "cell-label").attr("transform", `translate(${w / 2 - 3},${bodyH + 6}) rotate(90)`).attr("text-anchor", "start").text(c.label);
@@ -127,6 +126,6 @@ export function mount(el, story, api) {
 
   const cap = document.createElement("div");
   cap.className = "cap";
-  cap.textContent = "Role mix among problems whose commenter states a role. Strip: share who state one. The thinnest columns label on hover.";
+  cap.textContent = `Placed problems only (${api.fmt.pct(placed, 0)} of firsthand problems). Role mix among problems whose commenter states a role. Strip: share who state one. The thinnest columns label on hover.`;
   el.appendChild(cap);
 }

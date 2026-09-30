@@ -71,7 +71,7 @@ def card_concentration(frame, sims: int = 500, seed: int = 0) -> dict:
     cards = sorted(
         fh["card"].unique()
         if frame.attrs.get("cardset") is None
-        else frame.attrs["cardset"].all_cards
+        else frame.attrs["cardset"].cards
     )
     thread_probs = _pop_probs(fh, "story_id") if len(fh) else np.array([])
     fh_a = fh[fh["author"].notna()]

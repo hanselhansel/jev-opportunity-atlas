@@ -148,6 +148,21 @@ def test_selected_problems_threshold_and_top_cards(world):
     assert top == [BASE + 100, BASE + 500]  # c0001 wins with two assignments
 
 
+def test_selected_problems_resolves_merged_cards(world):
+    """A merged card's problems count toward its target for --top-cards."""
+    rows = [
+        _assignment(BASE + 600, "c0001", 0.9),
+        _assignment(BASE + 601, "c0001", 0.9),
+        _assignment(BASE + 602, "c0002", 0.9),
+        _assignment(BASE + 603, "c0003", 0.9),
+        _assignment(BASE + 604, "c0003", 0.9),
+    ]
+    resolve = lambda c: {"c0003": "c0002"}.get(c, c)
+    top = replies_run.selected_problems(rows, top_cards=1, resolve=resolve)
+    # c0002 wins 3-2 only once c0003 resolves into it
+    assert top == [BASE + 602, BASE + 603, BASE + 604]
+
+
 def test_dry_run_prints_estimate_only(world, monkeypatch, capsys):
     monkeypatch.setattr(keys, "get_api_key", lambda: pytest.fail("key read"))
     monkeypatch.setattr(

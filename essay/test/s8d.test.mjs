@@ -118,8 +118,40 @@ test("mekko labels only columns wider than 80px", () => {
   for (const c of columns) {
     assert.equal(c.labeled, c.px > 80, `${c.id} px=${c.px.toFixed(1)} labeled=${c.labeled}`);
   }
-  assert.ok(columns.some((c) => c.labeled), "at least one column is labeled");
-  assert.ok(columns.some((c) => !c.labeled), "fixture should exercise unlabeled columns");
+  const wide = mekko.prepare({
+    groups: [
+      { id: "g01", short: "big", label: "Big", share: { est: 0.9 } },
+      { id: "g02", short: "s", label: "S", share: { est: 0.1 } },
+    ],
+    roles: { by_group: {}, known_share: {} },
+    unplaced: { share: { est: 0 } },
+  });
+  assert.ok(wide.columns.find((c) => c.id === "g01").labeled, "a wide column keeps the horizontal label");
+});
+
+// 6b. role mekko: the "not placed" column is gone; widths are shares of placed
+test("mekko columns are placed groups only", () => {
+  const d = mekko.prepare(fixture);
+  assert.ok(!d.columns.some((c) => c.id === "__unplaced"), "no not-placed column");
+  assert.equal(d.columns.length, fixture.groups.length);
+  const wsum = d.columns.reduce((a, c) => a + c.width, 0);
+  assert.ok(Math.abs(wsum - 1) < 1e-9, `placed widths must sum to 1, got ${wsum}`);
+});
+
+test("mekko widths are each group's share of placed problems", () => {
+  const d = mekko.prepare(fixture);
+  const placed = fixture.groups.reduce((a, g) => a + g.share.est, 0);
+  for (const c of d.columns) {
+    const g = fixture.groups.find((x) => x.id === c.id);
+    assert.ok(Math.abs(c.width - g.share.est / placed) < 1e-9, `${c.id} width ${c.width}`);
+  }
+});
+
+test("mekko carries the placed share for the caption", () => {
+  const d = mekko.prepare(fixture);
+  const placed = 1 - fixture.unplaced.share.est;
+  assert.ok(Math.abs(d.placed - placed) < 1e-9);
+  assert.ok(Math.abs(d.placed - 0.58) < 1e-9);
 });
 
 // 7. terms columns: never truncate, rows of <=5 (desktop) or 2 (phone)
@@ -169,7 +201,6 @@ test("terms tick uses delta, on the interval's scale", () => {
 test("mekko names every column whose pitch fits a vertical label", () => {
   const { columns } = mekko.prepare(fixture);
   for (const c of columns) {
-    if (c.id === "__unplaced") continue;
     if (c.px + 3 >= 13) assert.ok(c.labeled || c.vertical, `${c.id} px=${c.px.toFixed(1)} has no label`);
     assert.ok(!(c.labeled && c.vertical));
   }
