@@ -4,9 +4,10 @@ Runs come from ``configs/run_phases.toml`` through
 ``sitedata.build_quality.runs_from_phases`` so the story reports exactly the
 same ledger-derived spend as the site. Quality evidence is read back from
 the saved artifacts: the assignment audit (Jev vs the random-card control),
-the synthetic benchmark accuracy, planted-need recovery recomputed from the
-planted run's saved assignments, and the robustness comparison JSONs for
-screen prevalence and assignment agreement.
+the synthetic benchmark accuracy, planted-need recovery from the planted
+run's saved result JSON (falling back to a recompute from its saved
+assignments), and the robustness comparison JSONs for screen prevalence and
+assignment agreement.
 """
 
 from __future__ import annotations
@@ -50,7 +51,8 @@ def _benchmark_acc(benchmark_run):
 
 
 def _planted_recovery(phases: dict):
-    """Recovery share recomputed from the planted run's saved assignments."""
+    """Recovery share: the run's saved ``planted-<version>.json`` first,
+    else recomputed from its saved assignments."""
     from atlas.cards.engine.assign import load_assignments
     from atlas.cards.engine.planted import load_planted, planted_score
 
@@ -59,13 +61,24 @@ def _planted_recovery(phases: dict):
         key=lambda r: (not r.startswith("main-"), r),
     )
     for rid in cands:
-        for p in sorted(paths.run_dir(rid).glob("assignments-*.parquet")):
+        run_dir = paths.run_dir(rid)
+        for p in sorted(run_dir.glob("planted-*.json")):
+            ver = p.name[len("planted-") : -len(".json")]
+            if "+planted-" not in ver:
+                continue
+            try:
+                score = json.loads(p.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if isinstance(score, dict) and score.get("recovery") is not None:
+                return score["recovery"]
+        for p in sorted(run_dir.glob("assignments-*.parquet")):
             ver = p.name[len("assignments-") : -len(".parquet")]
             if "+planted-" not in ver:
                 continue
             try:
                 score = planted_score(
-                    load_assignments(paths.run_dir(rid), ver).rows,
+                    load_assignments(run_dir, ver).rows,
                     load_planted(ver.split("+planted-")[-1]),
                 )
             except (OSError, KeyError, ValueError):
