@@ -21,7 +21,7 @@ We answer six questions. Each one tests something a real opportunity needs.
 
 Four findings stand out.
 
-- AI coding complaints jumped from 2.8% to 6.1% in one quarter. They stayed there.
+- AI coding complaints jumped from 2.7% to 5.9% in one quarter. They stayed there.
 - Consumer tech is 6.9% of talk but 17.1% of complaints.
 - 60% of people whose paid products got worse already pay, switch, or quit.
 - Rebuilding small tools draws 8 times more launches than its share of complaints.
@@ -36,7 +36,7 @@ It asked one question first. Does the writer describe a problem they hit themsel
 
 About 6.4% do. That projects to roughly 235,000 firsthand problems across the year.
 
-We then sorted each problem into 150 need cards. 58% fit a card cleanly.
+We then sorted each problem into 149 need cards. 58% fit a card cleanly.
 
 <!-- chart:funnel-units -->
 
@@ -70,7 +70,7 @@ Who complains also differs sharply by group.
 
 <!-- chart:role-mekko -->
 
-Software engineers write 81% of AI coding complaints. End users write 62% of chatbot complaints.
+Software engineers write 81% of AI coding complaints. End users write 60% of chatbot complaints.
 
 Cloud problems split evenly between ops staff and ordinary users.
 
@@ -110,21 +110,25 @@ Six months is enough to see the ground move.
 
 <!-- chart:need-stripes -->
 
-AI coding complaints jumped from 2.8% to 6.1% in one quarter. They stayed there.
+AI coding complaints jumped from 2.7% to 5.9% in one quarter. They stayed there.
 
-The next two quarters held between 5.5% and 5.9%.
+The next two quarters held at 5.5% and 5.3%.
 
-AI chatbot complaints kept climbing all year, from 3.6% to 6.3%.
+AI chatbot complaints kept climbing all year, from 3.7% to 6.6%.
 
 AI rose from 9.0% of problems in the first half to 13.0% in the second.
 
-Developer tools fell from 13.9% to 8.9%. Cloud and ops fell from 5.2% to 2.8%.
+From the first quarter to the last, developer tools fell from 13.9% to 8.9%.
+
+Cloud and ops fell from 5.2% to 2.8%.
 
 <!-- chart:risers-fallers -->
 
 The fastest risers are all AI. Coding costs and usage limits nearly doubled.
 
 Changing AI plans and terms nearly tripled. Models that flatter and pad more than doubled.
+
+Slow or fiddly local models grew 2.7 times.
 
 Desktop Linux gaps and steep languages fell the most.
 
@@ -188,7 +192,7 @@ A few small tools are recommended unusually often. uBlock Origin, uv, and Jujuts
 
 Then we asked where builders actually launch.
 
-We assigned a sample of 8,001 Show HN launches to the same 150 needs.
+We assigned a sample of 8,001 Show HN launches to the same 149 needs.
 
 <!-- chart:builders-scatter -->
 
@@ -222,7 +226,7 @@ With equal weights, five needs lead. Their order is not stable.
 
 Ranks move under resampling. The dots show how far each rank can drift.
 
-Switch to the underbuilt preset. Outages of code hosts and AI services rise to the top.
+Switch to the underbuilt preset. Bad management and buggy car software rise to the top.
 
 That preset leans on the Show HN sample. Read it as a lead.
 
@@ -282,6 +286,7 @@ Other limits matter too.
 - Every label is the classifier's call, audited only on a small sample.
 - The screen misses some firsthand problems below its cutoff.
 - 42% of problems fit no card.
+- We merged one duplicate card, on local models, after seeing results.
 - Shares compare topics. A falling share can mean others grew.
 
 For a builder: trust the needs that survive every check. Then verify them in interviews.
