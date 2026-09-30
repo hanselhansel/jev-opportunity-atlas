@@ -1,7 +1,8 @@
 // Distinctive terms: 13 groups in rows of at most 5 columns on desktop and 2
 // on phones. Column width is derived from the longest term, so a word is never
 // truncated. Header = short group label wrapped to at most 2 lines; each term
-// carries one thin 95% interval bar under the word, tick at z.
+// carries one thin 95% interval bar under the word (log-odds ratio vs other
+// groups), tick at the estimate. Terms are ordered by z.
 import { groupColor } from "../lib/palette.js";
 
 const CHAR_PX = 7; // approx px per char at the 12px row-label size
@@ -44,6 +45,9 @@ export function prepare(story, width = 700, topN = 8) {
       term: t.term,
       label: t.term, // rendered verbatim: never truncate a term
       z: t.z,
+      // lo95/hi95 bound the log-odds ratio (delta); z = delta / sigma is a
+      // different scale, so the tick sits at the interval midpoint, delta.
+      delta: (t.lo95 + t.hi95) / 2,
       lo95: t.lo95,
       hi95: t.hi95,
       n_comments: t.n_comments,
@@ -98,8 +102,8 @@ function drawColumn(svg, g, x0, y0, colW, d3, api) {
     .attr("stroke", "var(--muted)")
     .attr("stroke-width", 1.5);
   t.append("line")
-    .attr("x1", (d) => x(d.z))
-    .attr("x2", (d) => x(d.z))
+    .attr("x1", (d) => x(d.delta))
+    .attr("x2", (d) => x(d.delta))
     .attr("y1", 4)
     .attr("y2", 8)
     .attr("stroke", "var(--ink)")
@@ -122,6 +126,6 @@ export function mount(el, story, api) {
 
   const cap = document.createElement("div");
   cap.className = "cap";
-  cap.textContent = "Top distinctive terms per group. Bar under each word: 95% interval on z, tick at z. Only q < 0.05 terms shown.";
+  cap.textContent = "Top distinctive terms per group, ordered by z. Bar: 95% interval on how much more often the group uses the word (log odds). Only q < 0.05.";
   el.appendChild(cap);
 }
