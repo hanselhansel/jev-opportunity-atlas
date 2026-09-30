@@ -3,50 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HN opportunity atlas</title>
-<link rel="stylesheet" href="./style.css">
-<script type="importmap">
-{
-  "imports": {
-    "d3": "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm",
-    "@observablehq/plot": "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm",
-    "d3-voronoi-treemap": "https://cdn.jsdelivr.net/npm/d3-voronoi-treemap@1.1.2/+esm",
-    "scrollama": "https://cdn.jsdelivr.net/npm/scrollama@3.2.0/+esm"
+<title>HN opportunity atlas has moved</title>
+<link rel="canonical" href="https://byhansel.com/hn-opportunities">
+<meta http-equiv="refresh" content="0; url=https://byhansel.com/hn-opportunities">
+<style>
+  :root {
+    --cream: #f3ead8;
+    --ink: #2c2118;
   }
-}
-</script>
+  html, body {
+    margin: 0;
+    height: 100%;
+  }
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    text-align: center;
+  }
+  main {
+    max-width: 32rem;
+    padding: 2rem;
+  }
+  p {
+    font-size: 1.25rem;
+    line-height: 1.5;
+  }
+  a {
+    color: var(--ink);
+  }
+</style>
 </head>
 <body>
-<header class="top">
-  <div class="top-inner">
-    <span class="brand">HN opportunity atlas</span>
-    <button type="button" id="legend-btn" class="chip">How to read</button>
-    <button type="button" id="map-btn" class="chip">Find your need</button>
-    <span id="follow-chip" class="chip follow hidden"></span>
-  </div>
-</header>
-
-<div id="legend-pop" class="popover hidden" role="note">
-  <p><strong>Reading the bars.</strong> Dot: estimate. Thick bar: 50% interval. Thin bar: 95% interval.</p>
-  <p>Faint marks mean wider intervals. "Too few" hides thin evidence.</p>
-  <p>One test convention: q &lt; 0.05, 95% intervals, resampled by thread.</p>
-</div>
-
-<main id="article" class="article">
-  <p class="loading">Loading&#8230;</p>
+<main>
+<p>This essay now lives at <a href="https://byhansel.com/hn-opportunities">byhansel.com/hn-opportunities</a>.</p>
+<p>You will be redirected there now.</p>
 </main>
-
-<nav id="drawer" class="drawer" aria-label="Need map">
-  <div class="drawer-head">
-    <strong>Find your need</strong>
-    <input id="map-search" type="search" placeholder="Search needs" aria-label="Search needs">
-    <button type="button" id="drawer-close" aria-label="Close">&#215;</button>
-  </div>
-  <div id="mindmap" class="mindmap"></div>
-</nav>
-
-<div id="sheet"></div>
-<div id="errslot" class="errslot" role="alert"></div>
-<script type="module" src="./app.js"></script>
 </body>
 </html>
