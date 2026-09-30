@@ -1,0 +1,61 @@
+{
+  "algorithm": "month-stratified SRSWOR, proportional round allocation",
+  "frame_snapshot_id": "hn-2025-09-28_2026-09-28-v1",
+  "kind": "builders",
+  "n": 8000,
+  "n_drawn": 8001,
+  "population": 46081,
+  "sample_id": "builders-20261006",
+  "seed": 20261006,
+  "sha256": "aa48fccbce34cc2abbecefdfb00c988f53add10171ff8409302290ba8e7325a4",
+  "strata": {
+    "P01": {
+      "N_h": 2284,
+      "n_h": 397
+    },
+    "P02": {
+      "N_h": 2708,
+      "n_h": 470
+    },
+    "P03": {
+      "N_h": 3292,
+      "n_h": 572
+    },
+    "P04": {
+      "N_h": 4514,
+      "n_h": 784
+    },
+    "P05": {
+      "N_h": 6536,
+      "n_h": 1135
+    },
+    "P06": {
+      "N_h": 5501,
+      "n_h": 955
+    },
+    "P07": {
+      "N_h": 3573,
+      "n_h": 620
+    },
+    "P08": {
+      "N_h": 2675,
+      "n_h": 464
+    },
+    "P09": {
+      "N_h": 3349,
+      "n_h": 581
+    },
+    "P10": {
+      "N_h": 4065,
+      "n_h": 706
+    },
+    "P11": {
+      "N_h": 3927,
+      "n_h": 682
+    },
+    "P12": {
+      "N_h": 3657,
+      "n_h": 635
+    }
+  }
+}
