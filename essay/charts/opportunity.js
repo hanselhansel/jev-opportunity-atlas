@@ -5,6 +5,9 @@ import { groupColor } from "../lib/palette.js";
 const COMPONENTS = ["share", "change", "paid", "unsolved", "severity3", "launch_ratio", "reliability", "customers"];
 const MIN_N = 200;
 const TOP = 20;
+const TIED = 5;
+const TIED_HEADER = "Top five (order not stable)";
+const UNSTABLE_DELTA = 5;
 
 function effective(weights) {
   const w = { ...weights };
@@ -43,7 +46,20 @@ export function prepare(story, weights = story.score_presets?.balanced || {}) {
   const restricted = (w.unsolved || 0) > 0;
   let pool = story.cards.filter((c) => c.n_problems >= MIN_N && c.score?.components);
   if (restricted) pool = pool.filter((c) => c.score.components.unsolved != null);
-  const rows = rank(pool, w).slice(0, TOP).map((r, i) => ({ ...r, rank: i + 1 }));
+  const rows = rank(pool, w).slice(0, TOP).map((r, i) => {
+    const med = r.quantiles.length
+      ? [...r.quantiles].sort((a, b) => a - b)[Math.floor(r.quantiles.length / 2)]
+      : null;
+    const tied = i < TIED;
+    const displayed = i + 1;
+    return {
+      ...r,
+      rank: displayed,
+      tied,
+      rankLabel: tied ? null : displayed,
+      unstable: med != null && Math.abs(med - displayed) > UNSTABLE_DELTA,
+    };
+  });
   return { rows, weights: w, notice, restricted, poolSize: pool.length };
 }
 
@@ -103,12 +119,15 @@ export function mount(el, story, api) {
         ? `Only the ${out.poolSize} cards with replies measured are ranked.`
         : `${out.poolSize} cards clear the ${MIN_N}-problem floor.`;
 
-    const W = 700, rowH = 24, H = out.rows.length * rowH + 10;
+    const tiedN = out.rows.filter((r) => r.tied).length;
+    const headH = tiedN ? 18 : 0;
+    const W = 700, rowH = 24, H = out.rows.length * rowH + 10 + headH;
     const svg = d3.select(grid).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
+    if (tiedN) svg.append("text").attr("class", "cell-label").attr("x", 0).attr("y", 8).text(TIED_HEADER);
     const barX = 240, barW = 200, dotsX = barX + barW + 30;
-    const row = svg.selectAll("g.r").data(out.rows).join("g").attr("transform", (d, i) => `translate(0,${i * rowH + 10})`).attr("data-card", (d) => d.id).style("cursor", "pointer").on("click", (e, d) => api.openSheet(d.id));
+    const row = svg.selectAll("g.r").data(out.rows).join("g").attr("transform", (d, i) => `translate(0,${i * rowH + 10 + headH})`).attr("data-card", (d) => d.id).style("cursor", "pointer").on("click", (e, d) => api.openSheet(d.id));
     row.append("rect").attr("class", "hit").attr("x", 0).attr("y", -8).attr("width", W).attr("height", rowH - 4);
-    row.append("text").attr("class", "row-label").attr("x", 0).attr("y", 4).text((d) => `${d.rank}. ${d.label}`).attr("fill", (d) => groupColor(d.group));
+    row.append("text").attr("class", "row-label").attr("x", 0).attr("y", 4).text((d) => d.rankLabel == null ? d.label : `${d.rankLabel}. ${d.label}`).attr("fill", (d) => groupColor(d.group));
     // contribution bar
     let acc = 0;
     const keys = Object.keys(out.weights).filter((k) => out.weights[k] > 0);
@@ -129,7 +148,8 @@ export function mount(el, story, api) {
       d.quantiles.forEach((q, i) => {
         g.append("circle").attr("cx", dotsX + i * 10).attr("cy", 0).attr("r", 2.6).attr("fill", "var(--ink)").attr("opacity", 0.3 + 0.7 * (1 - Math.min(1, q / 60))).append("title").text(`rank ~${q}`);
       });
-      if (d.stable) g.append("text").attr("class", "cell-label").attr("x", dotsX + 205).attr("y", 4).text("stable");
+      const tag = d.unstable ? "unstable" : d.stable ? "stable" : null;
+      if (tag) g.append("text").attr("class", "cell-label").attr("x", dotsX + 205).attr("y", 4).text(tag);
     });
   }
   syncSliders();
