@@ -1,5 +1,8 @@
 # Jev Opportunity Atlas
 
+**The essay now lives at [byhansel.com/hn-opportunities](https://byhansel.com/hn-opportunities).**
+This repo's GitHub Pages site redirects there.
+
 What problems do people on Hacker News keep running into? This project reads one year of
 HN comments (28 Sep 2025 to 28 Sep 2026), uses TypeSafe's Jev model to flag firsthand
 problem reports, and turns the recurring ones into startup hypotheses you can inspect
