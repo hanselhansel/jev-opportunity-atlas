@@ -28,7 +28,8 @@
   * { animation: none !important; transition: none !important; }
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; overflow-x: hidden; }
+/* clip, not hidden: hidden makes body a scroll container and breaks sticky */
+html, body { margin: 0; overflow-x: clip; }
 body {
   background: var(--paper);
   color: var(--ink);
