@@ -123,3 +123,16 @@ def test_dist_secret_fails(tmp_path):
     (essay / "lib" / "md.js").write_text(f'const k = "{canary}";\n')
     with pytest.raises(DistError, match="SECRET"):
         build_dist(tmp_path / "dist", essay)
+
+
+def test_refuses_to_clear_unrelated_dir(tmp_path):
+    from atlas.story.dist import DistError, build_dist
+
+    out = tmp_path / "keep"
+    out.mkdir()
+    (out / "notes.txt").write_text("mine")
+    import pytest
+
+    with pytest.raises(DistError):
+        build_dist(out)
+    assert (out / "notes.txt").read_text() == "mine"

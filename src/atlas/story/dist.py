@@ -88,6 +88,10 @@ def build_dist(out_dir: Path, essay_dir: Path | None = None) -> dict:
     if out.exists():
         if not out.is_dir():
             raise DistError(f"{out} exists and is not a directory")
+        # only clear an empty dir or an earlier dist, never a repo or other tree
+        prior = (out / "index.html").is_file() and (out / "data" / "story.json").is_file()
+        if any(out.iterdir()) and (not prior or (out / ".git").exists()):
+            raise DistError(f"{out} is not empty and is not an earlier essay dist")
         shutil.rmtree(out)
     out.mkdir(parents=True)
     for rel in COPY_FILES:
