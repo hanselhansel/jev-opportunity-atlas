@@ -64,6 +64,7 @@ the same plan.
 | `pilot packed-cal` | L22 |
 | `jev measure` | L22 |
 | `story data`, `story check` | S1 |
+| `story dist`, `release pages --kind essay` | S9 |
 | `cards items`, `cards draft-sample`, `cards replies` | L23 |
 | `cards induce` | L26 |
 | `cards combine` | L28 |

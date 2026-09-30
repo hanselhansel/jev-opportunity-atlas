@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from atlas import paths
@@ -174,6 +175,19 @@ def _check(args) -> None:
     print("story: ok")
 
 
+def _dist(args) -> None:
+    from atlas.story.dist import DistError, build_dist
+
+    try:
+        summary = build_dist(
+            Path(args.out), Path(args.essay) if args.essay else None
+        )
+    except DistError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(1) from exc
+    print(f"story dist: wrote {summary['out']} ({summary['files']} files)")
+
+
 def register(sub) -> None:
     story = sub.add_parser("story", help="Build and check the story.json feed")
     ssub = story.add_subparsers(dest="story_cmd", required=True)
@@ -212,6 +226,16 @@ def register(sub) -> None:
     c = ssub.add_parser("check", help="Gate story.json on the vocabulary rules")
     c.add_argument("path", help="story.json path")
     c.set_defaults(func=_check)
+    dist = ssub.add_parser(
+        "dist", help="Copy the publishable essay tree into --out and gate it"
+    )
+    dist.add_argument(
+        "--out", required=True, help="Output dir (replaced if present)"
+    )
+    dist.add_argument(
+        "--essay", default=None, help="Essay dir (default: <repo>/essay)"
+    )
+    dist.set_defaults(func=_dist)
 
 
 def main(argv=None) -> None:
