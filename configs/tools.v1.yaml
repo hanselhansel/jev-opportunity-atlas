@@ -1,7 +1,8 @@
 # Products and companies matched in problem comments and replies (S5). Curated by
 # Claude on 2026-09-30. Matching is case-insensitive on whole words; aliases of 3
-# characters or fewer match case-sensitively. Names here are the only tool words
-# that may appear in story.json.
+# characters or fewer match case-sensitively. `name_case: true` makes the *name*
+# match case-sensitively too (word-like names such as Wise or Signal); aliases are
+# unaffected. Names here are the only tool words that may appear in story.json.
 version: v1
 tools:
   # ai_model
@@ -44,12 +45,12 @@ tools:
   - {name: Devin, aliases: [devin], category: ai_coding}
   - {name: Replit, aliases: [replit], category: ai_coding}
   - {name: Lovable, aliases: [lovable], category: ai_coding}
-  - {name: Bolt, aliases: [bolt.new], category: ai_coding}
+  - {name: Bolt, aliases: [bolt.new], category: ai_coding, name_case: true}
   - {name: v0, aliases: [v0.dev], category: ai_coding}
-  - {name: Zed, aliases: [zed editor, zed.dev], category: ai_coding}
-  - {name: Amp, aliases: [ampcode], category: ai_coding}
+  - {name: Zed, aliases: [zed editor, zed.dev], category: ai_coding, name_case: true}
+  - {name: Amp, aliases: [ampcode], category: ai_coding, name_case: true}
   - {name: Gemini CLI, aliases: [gemini cli], category: ai_coding}
-  - {name: Kiro, aliases: [kiro], category: ai_coding}
+  - {name: Kiro, aliases: [kiro], category: ai_coding, name_case: true}
   - {name: Antigravity, aliases: [antigravity], category: ai_coding}
   - {name: MCP, aliases: [MCP, model context protocol], category: ai_coding}
   - {name: LangChain, aliases: [langchain], category: ai_coding}
@@ -69,19 +70,19 @@ tools:
   - {name: Android Studio, aliases: [android studio], category: dev_tool}
   - {name: Docker, aliases: [docker], category: dev_tool}
   - {name: Podman, aliases: [podman], category: dev_tool}
-  - {name: Nix, aliases: [nix, nixos], category: dev_tool}
+  - {name: Nix, aliases: [nix, nixos], category: dev_tool, name_case: true}
   - {name: Homebrew, aliases: [homebrew, brew install], category: dev_tool}
   - {name: npm, aliases: [npm], category: dev_tool}
   - {name: pnpm, aliases: [pnpm], category: dev_tool}
-  - {name: Yarn, aliases: [yarn install, yarn berry, yarn pnp], category: dev_tool}
-  - {name: Bun, aliases: [bun.sh, bun install, bun runtime], category: dev_tool}
-  - {name: Deno, aliases: [deno], category: dev_tool}
+  - {name: Yarn, aliases: [yarn install, yarn berry, yarn pnp], category: dev_tool, name_case: true}
+  - {name: Bun, aliases: [bun.sh, bun install, bun runtime], category: dev_tool, name_case: true}
+  - {name: Deno, aliases: [deno], category: dev_tool, name_case: true}
   - {name: Node.js, aliases: [node.js, nodejs], category: dev_tool}
   - {name: uv, aliases: [uv], category: dev_tool}
   - {name: pip, aliases: [pip], category: dev_tool}
-  - {name: Poetry, aliases: [python poetry, poetry install, poetry lock], category: dev_tool}
+  - {name: Poetry, aliases: [python poetry, poetry install, poetry lock], category: dev_tool, name_case: true}
   - {name: Conda, aliases: [conda, anaconda], category: dev_tool}
-  - {name: Cargo, aliases: [cargo build, cargo install, cargo.toml], category: dev_tool}
+  - {name: Cargo, aliases: [cargo build, cargo install, cargo.toml], category: dev_tool, name_case: true}
   - {name: Bazel, aliases: [bazel], category: dev_tool}
   - {name: CMake, aliases: [cmake], category: dev_tool}
   - {name: Gradle, aliases: [gradle], category: dev_tool}
@@ -94,15 +95,15 @@ tools:
   - {name: TypeScript, aliases: [typescript], category: dev_tool}
   - {name: JavaScript, aliases: [javascript], category: dev_tool}
   - {name: Python, aliases: [python], category: dev_tool}
-  - {name: Rust, aliases: [rustlang, rust lang, rustc, rust compiler, in rust], category: dev_tool}
-  - {name: Go, aliases: [golang, go lang, go modules], category: dev_tool}
+  - {name: Rust, aliases: [rustlang, rust lang, rustc, rust compiler, in rust], category: dev_tool, name_case: true}
+  - {name: Go, aliases: [golang, go lang, go modules], category: dev_tool, name_case: true}
   - {name: Zig, aliases: [zig], category: dev_tool}
   - {name: Java, aliases: [java], category: dev_tool}
   - {name: Kotlin, aliases: [kotlin], category: dev_tool}
-  - {name: Swift, aliases: [swiftui, swift language, swift code], category: dev_tool}
+  - {name: Swift, aliases: [swiftui, swift language, swift code], category: dev_tool, name_case: true}
   - {name: C++, aliases: [c++, cpp], category: dev_tool}
   - {name: C#, aliases: [c#, csharp, .net, dotnet], category: dev_tool}
-  - {name: Ruby, aliases: [ruby, rails, ruby on rails], category: dev_tool}
+  - {name: Ruby, aliases: [ruby, rails, ruby on rails], category: dev_tool, name_case: true}
   - {name: PHP, aliases: [PHP, laravel], category: dev_tool}
   - {name: Elixir, aliases: [elixir, phoenix liveview], category: dev_tool}
   - {name: Haskell, aliases: [haskell], category: dev_tool}
@@ -120,28 +121,28 @@ tools:
   - {name: Tauri, aliases: [tauri], category: dev_tool}
   - {name: Django, aliases: [django], category: dev_tool}
   - {name: FastAPI, aliases: [fastapi], category: dev_tool}
-  - {name: Spring, aliases: [spring boot], category: dev_tool}
+  - {name: Spring, aliases: [spring boot], category: dev_tool, name_case: true}
   - {name: Qt, aliases: [Qt], category: dev_tool}
   - {name: GTK, aliases: [GTK, gtk4], category: dev_tool}
-  - {name: Unity, aliases: [unity3d, unity engine], category: dev_tool}
+  - {name: Unity, aliases: [unity3d, unity engine], category: dev_tool, name_case: true}
   - {name: Godot, aliases: [godot], category: dev_tool}
   - {name: Unreal Engine, aliases: [unreal engine, unreal], category: dev_tool}
   - {name: Blender, aliases: [blender], category: dev_tool}
   - {name: Jupyter, aliases: [jupyter, jupyterlab], category: dev_tool}
   - {name: pandas, aliases: [pandas], category: dev_tool}
   - {name: Polars, aliases: [polars], category: dev_tool}
-  - {name: Sentry, aliases: [sentry], category: dev_tool}
+  - {name: Sentry, aliases: [sentry], category: dev_tool, name_case: true}
   - {name: Jenkins, aliases: [jenkins], category: dev_tool}
   - {name: GitHub Actions, aliases: [github actions, gh actions], category: dev_tool}
   - {name: CircleCI, aliases: [circleci], category: dev_tool}
   - {name: Terraform, aliases: [terraform, opentofu], category: dev_tool}
   - {name: Ansible, aliases: [ansible], category: dev_tool}
-  - {name: Postman, aliases: [postman], category: dev_tool}
+  - {name: Postman, aliases: [postman], category: dev_tool, name_case: true}
   - {name: Stack Overflow, aliases: [stack overflow, stackoverflow], category: dev_tool}
   - {name: tmux, aliases: [tmux], category: dev_tool}
   - {name: Ghostty, aliases: [ghostty], category: dev_tool}
   - {name: iTerm2, aliases: [iterm2, iterm], category: dev_tool}
-  - {name: Warp, aliases: [warp terminal], category: dev_tool}
+  - {name: Warp, aliases: [warp terminal], category: dev_tool, name_case: true}
   - {name: WezTerm, aliases: [wezterm], category: dev_tool}
   - {name: zsh, aliases: [zsh, oh-my-zsh], category: dev_tool}
   - {name: Fish shell, aliases: [fish shell], category: dev_tool}
@@ -159,7 +160,7 @@ tools:
   - {name: GraphQL, aliases: [graphql], category: dev_tool}
   - {name: Supabase, aliases: [supabase], category: dev_tool}
   - {name: Firebase, aliases: [firebase], category: dev_tool}
-  - {name: Stripe, aliases: [stripe], category: saas_business}
+  - {name: Stripe, aliases: [stripe], category: saas_business, name_case: true}
   # cloud_infra
   - {name: AWS, aliases: [AWS, amazon web services, EC2, S3, aws lambda], category: cloud_infra}
   - {name: Google Cloud, aliases: [google cloud, GCP, bigquery], category: cloud_infra}
@@ -169,8 +170,8 @@ tools:
   - {name: Netlify, aliases: [netlify], category: cloud_infra}
   - {name: Heroku, aliases: [heroku], category: cloud_infra}
   - {name: Fly.io, aliases: [fly.io], category: cloud_infra}
-  - {name: Railway, aliases: [railway.app, railway.com], category: cloud_infra}
-  - {name: Render, aliases: [render.com], category: cloud_infra}
+  - {name: Railway, aliases: [railway.app, railway.com], category: cloud_infra, name_case: true}
+  - {name: Render, aliases: [render.com], category: cloud_infra, name_case: true}
   - {name: DigitalOcean, aliases: [digitalocean, digital ocean], category: cloud_infra}
   - {name: Hetzner, aliases: [hetzner], category: cloud_infra}
   - {name: OVH, aliases: [OVH, ovhcloud], category: cloud_infra}
@@ -178,7 +179,7 @@ tools:
   - {name: Oracle Cloud, aliases: [oracle cloud, OCI], category: cloud_infra}
   - {name: Kubernetes, aliases: [kubernetes, k8s, k3s], category: cloud_infra}
   - {name: Nginx, aliases: [nginx], category: cloud_infra}
-  - {name: Caddy, aliases: [caddy], category: cloud_infra}
+  - {name: Caddy, aliases: [caddy], category: cloud_infra, name_case: true}
   - {name: Traefik, aliases: [traefik], category: cloud_infra}
   - {name: Let's Encrypt, aliases: [let's encrypt, letsencrypt, certbot], category: cloud_infra}
   - {name: Datadog, aliases: [datadog], category: cloud_infra}
@@ -228,41 +229,41 @@ tools:
   - {name: MacBook, aliases: [macbook, macbook pro, macbook air], category: os_device}
   - {name: Apple Watch, aliases: [apple watch], category: os_device}
   - {name: AirPods, aliases: [airpods], category: os_device}
-  - {name: Pixel, aliases: [google pixel, pixel phone], category: os_device}
+  - {name: Pixel, aliases: [google pixel, pixel phone], category: os_device, name_case: true}
   - {name: Samsung, aliases: [samsung, samsung galaxy], category: os_device}
   - {name: ThinkPad, aliases: [thinkpad, lenovo], category: os_device}
   - {name: Framework laptop, aliases: [framework laptop, framework 13, framework 16], category: os_device}
-  - {name: Dell, aliases: [dell, xps], category: os_device}
+  - {name: Dell, aliases: [dell, xps], category: os_device, name_case: true}
   - {name: Steam Deck, aliases: [steam deck], category: os_device}
-  - {name: Steam, aliases: [steam store, steam library, steamos], category: consumer_app}
-  - {name: Kindle, aliases: [kindle], category: os_device}
-  - {name: Kobo, aliases: [kobo], category: os_device}
+  - {name: Steam, aliases: [steam store, steam library, steamos], category: consumer_app, name_case: true}
+  - {name: Kindle, aliases: [kindle], category: os_device, name_case: true}
+  - {name: Kobo, aliases: [kobo], category: os_device, name_case: true}
   - {name: reMarkable, aliases: [remarkable], category: os_device}
-  - {name: Boox, aliases: [boox], category: os_device}
-  - {name: Garmin, aliases: [garmin], category: os_device}
-  - {name: Tesla, aliases: [tesla], category: os_device}
+  - {name: Boox, aliases: [boox], category: os_device, name_case: true}
+  - {name: Garmin, aliases: [garmin], category: os_device, name_case: true}
+  - {name: Tesla, aliases: [tesla], category: os_device, name_case: true}
   - {name: CarPlay, aliases: [carplay], category: os_device}
   - {name: Android Auto, aliases: [android auto], category: os_device}
-  - {name: Sonos, aliases: [sonos], category: os_device}
-  - {name: Roku, aliases: [roku], category: os_device}
+  - {name: Sonos, aliases: [sonos], category: os_device, name_case: true}
+  - {name: Roku, aliases: [roku], category: os_device, name_case: true}
   - {name: Apple TV, aliases: [apple tv], category: os_device}
   - {name: Chromecast, aliases: [chromecast, google tv], category: os_device}
   - {name: Philips Hue, aliases: [philips hue], category: os_device}
-  - {name: Nest, aliases: [google nest], category: os_device}
-  - {name: Ring, aliases: [ring doorbell], category: os_device}
-  - {name: Anker, aliases: [anker], category: os_device}
+  - {name: Nest, aliases: [google nest], category: os_device, name_case: true}
+  - {name: Ring, aliases: [ring doorbell], category: os_device, name_case: true}
+  - {name: Anker, aliases: [anker], category: os_device, name_case: true}
   - {name: Logitech, aliases: [logitech], category: os_device}
   - {name: USB-C, aliases: [usb-c, usb c, thunderbolt], category: os_device}
   # consumer_app
   - {name: Google Search, aliases: [google search], category: consumer_app}
-  - {name: Kagi, aliases: [kagi], category: consumer_app}
+  - {name: Kagi, aliases: [kagi], category: consumer_app, name_case: true}
   - {name: DuckDuckGo, aliases: [duckduckgo], category: consumer_app}
   - {name: Bing, aliases: [bing], category: consumer_app}
-  - {name: Chrome, aliases: [chrome, chromium], category: consumer_app}
+  - {name: Chrome, aliases: [chrome, chromium], category: consumer_app, name_case: true}
   - {name: Firefox, aliases: [firefox, librewolf], category: consumer_app}
-  - {name: Safari, aliases: [safari], category: consumer_app}
-  - {name: Brave, aliases: [brave browser], category: consumer_app}
-  - {name: Arc, aliases: [arc browser], category: consumer_app}
+  - {name: Safari, aliases: [safari], category: consumer_app, name_case: true}
+  - {name: Brave, aliases: [brave browser], category: consumer_app, name_case: true}
+  - {name: Arc, aliases: [arc browser], category: consumer_app, name_case: true}
   - {name: uBlock Origin, aliases: [ublock origin, ublock], category: consumer_app}
   - {name: YouTube, aliases: [youtube], category: consumer_app}
   - {name: Netflix, aliases: [netflix], category: consumer_app}
@@ -277,17 +278,17 @@ tools:
   - {name: Gmail, aliases: [gmail], category: consumer_app}
   - {name: Outlook, aliases: [outlook, hotmail], category: consumer_app}
   - {name: Fastmail, aliases: [fastmail], category: consumer_app}
-  - {name: Proton, aliases: [protonmail, proton mail, proton drive], category: consumer_app}
+  - {name: Proton, aliases: [protonmail, proton mail, proton drive], category: consumer_app, name_case: true}
   - {name: iCloud, aliases: [icloud], category: consumer_app}
   - {name: Google Drive, aliases: [google drive, google photos], category: consumer_app}
   - {name: Dropbox, aliases: [dropbox], category: consumer_app}
   - {name: OneDrive, aliases: [onedrive], category: consumer_app}
   - {name: WhatsApp, aliases: [whatsapp], category: consumer_app}
-  - {name: Signal, aliases: [signal app, signal messenger], category: consumer_app}
+  - {name: Signal, aliases: [signal app, signal messenger], category: consumer_app, name_case: true}
   - {name: Telegram, aliases: [telegram], category: consumer_app}
   - {name: iMessage, aliases: [imessage], category: consumer_app}
-  - {name: Discord, aliases: [discord], category: consumer_app}
-  - {name: Matrix, aliases: [matrix.org, element app], category: consumer_app}
+  - {name: Discord, aliases: [discord], category: consumer_app, name_case: true}
+  - {name: Matrix, aliases: [matrix.org, element app], category: consumer_app, name_case: true}
   - {name: Reddit, aliases: [reddit, old.reddit], category: consumer_app}
   - {name: X (Twitter), aliases: [twitter, x.com], category: consumer_app}
   - {name: Mastodon, aliases: [mastodon, fediverse], category: consumer_app}
@@ -299,10 +300,10 @@ tools:
   - {name: Hacker News, aliases: [hacker news, HN], category: consumer_app}
   - {name: Wikipedia, aliases: [wikipedia], category: consumer_app}
   - {name: Substack, aliases: [substack], category: consumer_app}
-  - {name: Medium, aliases: [medium.com], category: consumer_app}
+  - {name: Medium, aliases: [medium.com], category: consumer_app, name_case: true}
   - {name: RSS readers, aliases: [rss reader, feedly, netnewswire, miniflux], category: consumer_app}
-  - {name: Obsidian, aliases: [obsidian], category: consumer_app}
-  - {name: Notion, aliases: [notion.so, notion app, in notion], category: consumer_app}
+  - {name: Obsidian, aliases: [obsidian], category: consumer_app, name_case: true}
+  - {name: Notion, aliases: [notion.so, notion app, in notion], category: consumer_app, name_case: true}
   - {name: Evernote, aliases: [evernote], category: consumer_app}
   - {name: Logseq, aliases: [logseq], category: consumer_app}
   - {name: Anki, aliases: [anki], category: consumer_app}
@@ -314,27 +315,27 @@ tools:
   - {name: Lightroom, aliases: [lightroom], category: consumer_app}
   - {name: GIMP, aliases: [gimp], category: consumer_app}
   - {name: Figma, aliases: [figma], category: consumer_app}
-  - {name: Canva, aliases: [canva], category: consumer_app}
+  - {name: Canva, aliases: [canva], category: consumer_app, name_case: true}
   - {name: Fusion 360, aliases: [fusion 360, onshape, freecad, openscad], category: consumer_app}
   - {name: Audacity, aliases: [audacity], category: consumer_app}
   - {name: OBS, aliases: [OBS, obs studio], category: consumer_app}
   - {name: VLC, aliases: [VLC, mpv], category: consumer_app}
   - {name: yt-dlp, aliases: [yt-dlp, youtube-dl], category: consumer_app}
-  - {name: Uber, aliases: [uber, lyft], category: consumer_app}
+  - {name: Uber, aliases: [uber, lyft], category: consumer_app, name_case: true}
   - {name: Airbnb, aliases: [airbnb], category: consumer_app}
   - {name: Ticketmaster, aliases: [ticketmaster], category: consumer_app}
   - {name: Duolingo, aliases: [duolingo], category: consumer_app}
   - {name: Strava, aliases: [strava], category: consumer_app}
   # saas_business
-  - {name: Slack, aliases: [slack app, slack channel, slack message, slack workspace, on slack], category: saas_business}
+  - {name: Slack, aliases: [slack app, slack channel, slack message, slack workspace, on slack], category: saas_business, name_case: true}
   - {name: Microsoft Teams, aliases: [ms teams, microsoft teams], category: saas_business}
-  - {name: Zoom, aliases: [zoom call, zoom meeting, zoom.us], category: saas_business}
+  - {name: Zoom, aliases: [zoom call, zoom meeting, zoom.us], category: saas_business, name_case: true}
   - {name: Google Meet, aliases: [google meet], category: saas_business}
   - {name: Google Workspace, aliases: [google workspace, google docs, google sheets], category: saas_business}
   - {name: Microsoft 365, aliases: [microsoft 365, office 365, microsoft office, microsoft excel, ms excel, microsoft word, ms word, powerpoint], category: saas_business}
   - {name: Jira, aliases: [jira], category: saas_business}
   - {name: Confluence, aliases: [confluence], category: saas_business}
-  - {name: Linear, aliases: [linear app, linear.app], category: saas_business}
+  - {name: Linear, aliases: [linear app, linear.app], category: saas_business, name_case: true}
   - {name: Asana, aliases: [asana], category: saas_business}
   - {name: Trello, aliases: [trello], category: saas_business}
   - {name: Salesforce, aliases: [salesforce], category: saas_business}
@@ -345,22 +346,22 @@ tools:
   - {name: Squarespace, aliases: [squarespace, wix, webflow], category: saas_business}
   - {name: QuickBooks, aliases: [quickbooks, intuit, xero], category: saas_business}
   - {name: PayPal, aliases: [paypal, venmo], category: saas_business}
-  - {name: Wise, aliases: [wise.com, transferwise], category: saas_business}
-  - {name: Revolut, aliases: [revolut], category: saas_business}
-  - {name: Plaid, aliases: [plaid api], category: saas_business}
-  - {name: Workday, aliases: [workday], category: saas_business}
-  - {name: Greenhouse, aliases: [greenhouse.io, lever.co], category: saas_business}
-  - {name: Okta, aliases: [okta, auth0], category: saas_business}
-  - {name: Twilio, aliases: [twilio, sendgrid], category: saas_business}
+  - {name: Wise, aliases: [wise.com, transferwise], category: saas_business, name_case: true}
+  - {name: Revolut, aliases: [revolut], category: saas_business, name_case: true}
+  - {name: Plaid, aliases: [plaid api], category: saas_business, name_case: true}
+  - {name: Workday, aliases: [workday], category: saas_business, name_case: true}
+  - {name: Greenhouse, aliases: [greenhouse.io, lever.co], category: saas_business, name_case: true}
+  - {name: Okta, aliases: [okta, auth0], category: saas_business, name_case: true}
+  - {name: Twilio, aliases: [twilio, sendgrid], category: saas_business, name_case: true}
   - {name: Mailchimp, aliases: [mailchimp], category: saas_business}
-  - {name: Epic, aliases: [epic systems, mychart], category: saas_business}
+  - {name: Epic, aliases: [epic systems, mychart], category: saas_business, name_case: true}
   - {name: SAP, aliases: [SAP], category: saas_business}
-  - {name: Oracle, aliases: [oracle], category: saas_business}
+  - {name: Oracle, aliases: [oracle], category: saas_business, name_case: true}
   - {name: Atlassian, aliases: [atlassian], category: saas_business}
   - {name: Namecheap, aliases: [namecheap, godaddy, porkbun], category: saas_business}
   - {name: DocuSign, aliases: [docusign], category: saas_business}
-  - {name: Calendly, aliases: [calendly], category: saas_business}
-  - {name: Airtable, aliases: [airtable], category: saas_business}
-  - {name: Zapier, aliases: [zapier, n8n, make.com], category: saas_business}
-  - {name: Palantir, aliases: [palantir], category: other}
-  - {name: Flock, aliases: [flock safety], category: other}
+  - {name: Calendly, aliases: [calendly], category: saas_business, name_case: true}
+  - {name: Airtable, aliases: [airtable], category: saas_business, name_case: true}
+  - {name: Zapier, aliases: [zapier, n8n, make.com], category: saas_business, name_case: true}
+  - {name: Palantir, aliases: [palantir], category: other, name_case: true}
+  - {name: Flock, aliases: [flock safety], category: other, name_case: true}
