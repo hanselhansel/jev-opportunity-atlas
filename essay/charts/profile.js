@@ -43,8 +43,8 @@ export function prepare(story, cardId) {
     {
       title: "Who",
       lines: [
-        { label: "severe 3 of 3", est: c.quality?.severe3 },
-        { label: "specific 3 of 3", est: c.quality?.specific3 },
+        { label: "real cost or worse", est: c.quality?.severe3 },
+        { label: "very specific", est: c.quality?.specific3 },
         { label: "top-3 threads carry", text: c.concentration ? `${(c.concentration.top3_threads * 100).toFixed(1)}%` : "n/a" },
       ],
     },
@@ -77,7 +77,8 @@ export function sheetHtml(card, story, fmt) {
     .map((s) => `<h4 style="margin:10px 0 4px">${esc(s.title)}</h4><table>${s.lines.map(estLine).join("")}</table>`)
     .join("");
   return `<h3>${esc(p.label)}</h3>
-    <p class="def">${esc(p.statement)} ${esc(p.group)}.</p>
+    <p class="def">${esc(p.statement)}</p>
+    <p class="def"><span class="gchip">${esc(p.group)}</span></p>
     <p>${esc(p.summary)}</p>${secs}`;
 }
 

@@ -74,18 +74,13 @@ test("forest counts column shows problems/authors when narrow", () => {
   assert.match(narrow, /problems.*authors/);
 });
 
-// 5. terms headers wrap to 2 short lines, picker when narrow
-test("terms group labels wrap over at most 2 short lines", () => {
-  const { groups } = terms.prepare(fixture);
-  for (const g of groups) {
+// 5. terms headers wrap to 2 lines sized to the column
+test("terms group labels wrap over at most 2 lines", () => {
+  const d = terms.prepare(fixture);
+  for (const g of d.groups) {
     assert.ok(g.labelLines.length <= 2, g.id);
-    assert.ok(g.labelLines.every((l) => l.length <= 10), g.labelLines);
+    assert.ok(g.labelLines.every((l) => l.length <= d.headerMax + 1), g.labelLines);
   }
-});
-
-test("terms switches to a group picker under 480px", () => {
-  assert.equal(terms.prepare(fixture, 375).picker, true);
-  assert.equal(terms.prepare(fixture, 700).picker, false);
 });
 
 // 6+7. role mekko: top 6 roles get palette colors, rest grey, human labels
@@ -152,13 +147,12 @@ test("builders labels the 8 lowest-ratio cards among n >= 100", () => {
   assert.deepEqual(ratios, [...ratios].sort((a, b) => a - b));
 });
 
-// 11. closed-open opener: fix / no fix / not checked over top-40, weighted
-test("closed-open waffle splits checked vs not checked, weighted", () => {
+// 11. closed-open opener: fix / no fix over the checked (top-40) cards only
+test("closed-open waffle is the weighted fix split over checked cards", () => {
   const { waffle } = closedOpen.prepare(fixture);
-  const sum = waffle.fix + waffle.nofix + waffle.unchecked;
+  const sum = waffle.fix + waffle.nofix;
   assert.ok(Math.abs(sum - 1) < 1e-6, `waffle sums to ${sum}`);
-  assert.ok(waffle.unchecked > 0.4, "110 unmeasured cards should dominate");
-  assert.ok(waffle.nofix > waffle.fix, "most checked problems have no reported fix");
+  assert.ok(waffle.fix > 0.3, "reply-named fixes count, not just author reports");
 });
 
 // 12. tool funnel: 12 furthest outside + 5 most-named

@@ -11,14 +11,32 @@ const MARKERS = {
   placed: "estimated for all eligible comments",
 };
 
+// Each step's share is measured against the denominator that makes sense:
+// the sample and both estimates are shares of eligible comments, and placed
+// is a share of firsthand problems. Sequencing count/prev would divide an
+// estimate by the sample size and understate it.
+const SHARE_OF = {
+  eligible: { base: "all", fmt: (p) => `${p} kept` },
+  screened: { base: "eligible", fmt: (p) => `sample: ${p} of eligible` },
+  firsthand: { base: "eligible", fmt: (p) => `${p} of eligible comments` },
+  placed: { base: "firsthand", fmt: (p) => `${p} of firsthand problems` },
+};
+
+const pctAuto = (v) => (v == null ? null : (v * 100 < 10 ? (v * 100).toFixed(1) : String(Math.round(v * 100))) + "%");
+
 export function prepare(story) {
-  const steps = story.funnel.steps.map((s, i, all) => ({
-    key: s.key,
-    label: s.label,
-    count: s.count,
-    retention: i === 0 ? null : s.count / all[i - 1].count,
-    marker: MARKERS[s.key] || null,
-  }));
+  const countOf = Object.fromEntries(story.funnel.steps.map((s) => [s.key, s.count]));
+  const steps = story.funnel.steps.map((s) => {
+    const rule = SHARE_OF[s.key];
+    const shareText = rule ? rule.fmt(pctAuto(s.count / countOf[rule.base])) : null;
+    return {
+      key: s.key,
+      label: s.label,
+      count: s.count,
+      shareText,
+      marker: MARKERS[s.key] || null,
+    };
+  });
   const at = (key) => steps.find((s) => s.key === key).count;
   const [all, eligible, screened, firsthand, placed] = [
     at("all"), at("eligible"), at("screened"), at("firsthand"), at("placed"),
@@ -132,10 +150,10 @@ export function mount(el, story, api) {
       fig.style.margin = "0 0 14px";
       const cap = document.createElement("figcaption");
       cap.className = "cap";
-      const kept = data.steps.find((s) => s.key === stage.key)?.retention;
+      const shareText = data.steps.find((s) => s.key === stage.key)?.shareText;
       cap.textContent =
         `${stage.label}: ${api.fmt.n(stage.count)}` +
-        (kept != null ? ` (${api.fmt.pct(kept, 0)} kept)` : "") +
+        (shareText != null ? ` (${shareText})` : "") +
         (stage.marker ? `. ${stage.marker}.` : ".");
       fig.append(canvas, cap);
       el.appendChild(fig);
@@ -150,11 +168,11 @@ export function mount(el, story, api) {
       const step = document.createElement("div");
       step.className = "step";
       step.dataset.stage = String(i);
-      const kept = data.steps[i].retention;
+      const shareText = data.steps[i].shareText;
       step.innerHTML =
         `<strong>${s.label}</strong><br>` +
         `<span class="cell-label">${api.fmt.n(s.count)}` +
-        (kept != null ? ` · ${api.fmt.pct(kept, 0)} kept` : "") +
+        (shareText != null ? ` · ${shareText}` : "") +
         `</span>` +
         (s.marker ? `<br><span class="cell-label marker">${s.marker}</span>` : "");
       stepsEl.appendChild(step);

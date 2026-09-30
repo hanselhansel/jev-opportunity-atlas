@@ -8,7 +8,10 @@ export function prepare(story) {
   const cards = [];
   for (const c of story.cards) {
     const k = c.coping || {};
-    const n = Math.max(k.paid?.n || 0, k.workaround?.n || 0, k.abandoned?.n || 0);
+    const n = Math.max(
+      k.paid?.n || 0, k.switched?.n || 0, k.abandoned?.n || 0,
+      k.workaround?.n || 0, k.commercial?.n || 0,
+    );
     const p = k.paid?.est ?? 0, w = k.workaround?.est ?? 0, a = k.abandoned?.est ?? 0;
     const sum = p + w + a;
     if (n < MIN_RESPOND || sum <= 0) continue;
@@ -16,16 +19,19 @@ export function prepare(story) {
     cards.push({
       id: c.id, label: c.short, group: c.group, n,
       ...t,
+      commercial: k.commercial?.est ?? 0,
       coverage: Math.min(1, n / Math.max(1, c.n_problems)),
       raw: { paid: p, workaround: w, abandoned: a },
     });
   }
-  return { cards, corners: ["They pay", "They hack", "They quit"] };
+  // side column ranks by commercial: paid, switched or abandoned per problem
+  const side = [...cards].sort((x, y) => y.commercial - x.commercial).slice(0, 15);
+  return { cards, corners: ["They pay", "They hack", "They quit"], side, sideTitle: "Pay, switch, or quit" };
 }
 
 export function mount(el, story, api) {
   const d3 = api.d3;
-  const { cards, corners } = prepare(story);
+  const { cards, corners, side, sideTitle } = prepare(story);
   el.innerHTML = "";
   const W = 700, H = 340;
   const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
@@ -65,13 +71,12 @@ export function mount(el, story, api) {
     .append("title")
     .text((d) => `${d.label}: paid ${api.fmt.pct(d.raw.paid, 0)}, hack ${api.fmt.pct(d.raw.workaround, 0)}, quit ${api.fmt.pct(d.raw.abandoned, 0)}`);
 
-  // side column: top 15 cards by paid rate
-  const top = [...cards].sort((a, b) => b.raw.paid - a.raw.paid).slice(0, 15);
+  // side column: top 15 cards by commercial rate (paid, switched or abandoned)
   const cx = ax + size + 30;
-  svg.append("text").attr("class", "axis").attr("x", cx).attr("y", 24).text("Highest paid rate");
-  top.forEach((d, i) => {
+  svg.append("text").attr("class", "axis").attr("x", cx).attr("y", 24).text(sideTitle);
+  side.forEach((d, i) => {
     const y = 40 + i * 18;
-    svg.append("text").attr("class", "cell-label").attr("x", cx).attr("y", y).text(`${d.label} ${api.fmt.pct(d.raw.paid, 0)}`);
+    svg.append("text").attr("class", "cell-label").attr("x", cx).attr("y", y).text(`${d.label} ${api.fmt.pct(d.commercial, 0)}`);
   });
 
   const cap = document.createElement("div");

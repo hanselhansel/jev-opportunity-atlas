@@ -1,6 +1,7 @@
-// Closed or open: a 100-unit opener splits every 100 problems into "a reply
-// named a fix", "no reply fixed it", and "not checked". Then aligned columns
-// for the top-40 replies-checked cards: author reports a fix vs unresolved.
+// Closed or open: a 100-unit opener splits every 100 checked problems into
+// "a reply named a fix" and "no reply fixed it" (authors almost never post
+// one themselves, so "fixed" means the replies). Then aligned columns for
+// the top-40 replies-checked cards: author reports a fix vs unresolved.
 import { drawGlyph, tooFew } from "../lib/glyph.js";
 import { groupColor } from "../lib/palette.js";
 
@@ -18,22 +19,18 @@ export function prepare(story) {
     }))
     .sort((a, b) => b.share - a.share);
 
-  // weighted over the measured (top-40) cards, normalized to all placed cards
-  const placedShare = story.cards.reduce((a, c) => a + (c.share?.est ?? 0), 0) || 1;
-  const fix = measured.reduce((a, c) => a + c.share.est * (c.unsolved.author_solved?.est ?? 0), 0);
-  const nofix = measured.reduce((a, c) => a + c.share.est * (c.unsolved.unsolved?.est ?? 0), 0);
-  const waffle = {
-    fix: fix / placedShare,
-    nofix: nofix / placedShare,
-    unchecked: Math.max(0, 1 - (fix + nofix) / placedShare),
-  };
+  // opener: share-weighted mean over checked cards only. A card where replies
+  // were read counts as fixed when some reply named a fix (1 - unsolved).
+  const wcards = measured.filter((c) => c.unsolved.unsolved != null);
+  const wsum = wcards.reduce((a, c) => a + c.share.est, 0) || 1;
+  const nofix = wcards.reduce((a, c) => a + c.share.est * c.unsolved.unsolved.est, 0) / wsum;
+  const waffle = { fix: 1 - nofix, nofix };
   return { waffle, rows, unmeasured: story.cards.length - measured.length };
 }
 
 const WAF = [
   { key: "fix", label: "a reply named a fix", fill: "var(--good)" },
   { key: "nofix", label: "no reply fixed it", fill: "var(--accent)" },
-  { key: "unchecked", label: "not checked", fill: "var(--line)" },
 ];
 
 export function mount(el, story, api) {
@@ -98,6 +95,6 @@ export function mount(el, story, api) {
 
   const cap = document.createElement("div");
   cap.className = "cap";
-  cap.textContent = `Of every 100 problems, few get a reported fix; authors rarely report back. Top ${rows.length} cards with replies checked. Other ${unmeasured}: not measured.`;
+  cap.textContent = `Replies checked on the top ${rows.length} cards only; the other ${unmeasured} were not checked. Authors rarely report back.`;
   el.appendChild(cap);
 }
