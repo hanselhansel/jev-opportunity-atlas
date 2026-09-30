@@ -133,7 +133,9 @@ A complaint is cheap. Paying, hacking, or quitting is a stronger signal.
 
 Paid products getting worse leads. 60% of those writers already pay, switch, or quit.
 
-Subscriptions replacing purchases follow at 50%. Three in four name a money cost.
+Costly care and junk reviews follow near 58%.
+
+Subscriptions replacing purchases reach 50%. Three in four name a money cost.
 
 AI plans and terms reach 43%. AI coding costs reach 41%.
 
