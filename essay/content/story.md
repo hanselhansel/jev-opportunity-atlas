@@ -19,6 +19,13 @@ We answer six questions. Each one tests something a real opportunity needs.
 - Existing fixes fall short.
 - Few people are building for it.
 
+Four findings stand out.
+
+- AI coding complaints jumped from 2.8% to 6.1% in one quarter. They stayed there.
+- Consumer tech is 6.9% of talk but 17.1% of complaints.
+- 60% of people whose paid products got worse already pay, switch, or quit.
+- Rebuilding small tools draws 8 times more launches than its share of complaints.
+
 ## 0. The raw material
 
 HN produced 3,991,507 comments between 28 September 2025 and 28 September 2026.
@@ -103,7 +110,9 @@ Six months is enough to see the ground move.
 
 <!-- chart:need-stripes -->
 
-AI coding complaints doubled in one quarter. They went from 2.8% to 6.1%.
+AI coding complaints jumped from 2.8% to 6.1% in one quarter. They stayed there.
+
+The next two quarters held between 5.5% and 5.9%.
 
 AI chatbot complaints kept climbing all year, from 3.6% to 6.3%.
 
@@ -161,9 +170,9 @@ We checked three things. Replies, named tools, and product launches.
 
 <!-- chart:closed-open -->
 
-For the 40 biggest needs, replies rarely close the loop.
+Replies rarely close the loop.
 
-In the median need, 69% of problems got no reply naming a fix.
+In the 40 biggest needs, 68 of 100 problems got no reply naming a fix.
 
 Authors almost never come back to say it worked. That happens under 1% of the time.
 
@@ -189,6 +198,8 @@ That is eight times more launches than complaints.
 
 Other needs get almost no launches. Early hardware failure with no repair got none.
 
+Show HN is mostly software, so hardware needs draw few launches anyway.
+
 Broken websites and updates that break devices got almost none too.
 
 For a builder: pain with few launches is the gap. Crowded needs are a warning.
@@ -201,7 +212,7 @@ You choose the weights. The ranking updates live.
 
 <!-- chart:opportunity -->
 
-With equal weights, five needs rank highest:
+With equal weights, five needs lead. Their order is not stable.
 
 - Early failure with no repair.
 - Data taken without consent.
@@ -212,6 +223,8 @@ With equal weights, five needs rank highest:
 Ranks move under resampling. The dots show how far each rank can drift.
 
 Switch to the underbuilt preset. Outages of code hosts and AI services rise to the top.
+
+That preset leans on the Show HN sample. Read it as a lead.
 
 Some needs cluster, so one product could serve several.
 
