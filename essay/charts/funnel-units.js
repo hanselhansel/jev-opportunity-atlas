@@ -168,7 +168,7 @@ export function mount(el, story, api) {
       const step = document.createElement("div");
       step.className = "step";
       step.dataset.stage = String(i);
-      const shareText = data.steps[i].shareText;
+      const shareText = data.steps.find((x) => x.key === s.key)?.shareText;
       step.innerHTML =
         `<strong>${s.label}</strong><br>` +
         `<span class="cell-label">${api.fmt.n(s.count)}` +
