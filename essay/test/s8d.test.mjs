@@ -164,3 +164,13 @@ test("terms tick uses delta, on the interval's scale", () => {
   assert.ok(t.delta >= t.lo95 && t.delta <= t.hi95);
   assert.ok(Math.abs(t.delta - 2.185) < 1e-9);
 });
+
+// Every group column wide enough for one line of text carries a name.
+test("mekko names every column whose pitch fits a vertical label", () => {
+  const { columns } = mekko.prepare(fixture);
+  for (const c of columns) {
+    if (c.id === "__unplaced") continue;
+    if (c.px + 3 >= 13) assert.ok(c.labeled || c.vertical, `${c.id} px=${c.px.toFixed(1)} has no label`);
+    assert.ok(!(c.labeled && c.vertical));
+  }
+});

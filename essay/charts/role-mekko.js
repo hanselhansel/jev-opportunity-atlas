@@ -8,6 +8,8 @@ import { labelFor } from "../lib/labels.js";
 const TOP_ROLES = 6;
 // Bottom labels only fit on columns wider than this (viewBox px at W = 700).
 export const LABEL_MIN_PX = 80;
+// A vertical 10px label needs about 13px of column pitch.
+export const VERTICAL_MIN_PITCH = 13;
 const VW = 700, EDGE = 10, GAP = 3;
 
 export function prepare(story) {
@@ -49,6 +51,8 @@ export function prepare(story) {
     c.px = ((VW - 2 * EDGE) * c.width) / totalW - GAP;
     c.x = cx;
     c.labeled = c.px > LABEL_MIN_PX;
+    // narrower group columns get a vertical label when their pitch fits one line
+    c.vertical = !c.labeled && c.id !== "__unplaced" && c.px + GAP >= VERTICAL_MIN_PITCH;
     cx += c.px + GAP;
   }
   return { columns, roles, colorOf };
@@ -60,9 +64,11 @@ export function mount(el, story, api) {
   const d3 = api.d3;
   const { columns, roles, colorOf } = prepare(story);
   el.innerHTML = "";
-  const W = 700, H = 330, stripH = 26;
+  // room under the body for vertical labels of the narrow columns
+  const W = 700, stripH = 26, bodyH = 274;
+  const vLen = Math.max(0, ...columns.filter((c) => c.vertical).map((c) => c.label.length));
+  const H = stripH + bodyH + Math.max(30, 12 + vLen * 5.6);
   const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
-  const bodyH = H - stripH - 30;
   let tapLabel = null;
 
   for (const c of columns) {
@@ -84,8 +90,12 @@ export function mount(el, story, api) {
         .append("title").text(`${c.label} / ${t.label}: ${api.fmt.pct(t.share, 0)}`);
       ty += th;
     }
-    if (c.labeled) {
+    if (c.id === "__unplaced") {
+      g.append("text").attr("class", "cell-label").attr("x", w / 2).attr("y", bodyH / 2).attr("text-anchor", "middle").text(c.label);
+    } else if (c.labeled) {
       g.append("text").attr("class", "cell-label").attr("x", w / 2).attr("y", bodyH + 14).attr("text-anchor", "middle").text(c.label);
+    } else if (c.vertical) {
+      g.append("text").attr("class", "cell-label").attr("transform", `translate(${w / 2 - 3},${bodyH + 6}) rotate(90)`).attr("text-anchor", "start").text(c.label);
     } else {
       // narrow columns label on hover (title) or tap (transient text below)
       g.append("title").text(c.label);
@@ -94,7 +104,7 @@ export function mount(el, story, api) {
         tapLabel = svg.append("text")
           .attr("class", "cell-label")
           .attr("x", c.x + w / 2)
-          .attr("y", stripH + bodyH + 14)
+          .attr("y", H - 4)
           .attr("text-anchor", "middle")
           .attr("fill", "var(--accent)")
           .text(c.label);
@@ -117,6 +127,6 @@ export function mount(el, story, api) {
 
   const cap = document.createElement("div");
   cap.className = "cap";
-  cap.textContent = "Role mix among problems whose commenter states a role. Strip: share who state one. Narrow columns label on hover.";
+  cap.textContent = "Role mix among problems whose commenter states a role. Strip: share who state one. The thinnest columns label on hover.";
   el.appendChild(cap);
 }

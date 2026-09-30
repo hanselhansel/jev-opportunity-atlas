@@ -42,7 +42,8 @@ export function mount(el, story, api) {
   const d3 = api.d3;
   const { rows, maxAbs } = prepare(story);
   el.innerHTML = "";
-  const W = 700, rowH = 26, labelW = 110, cellW = (W - labelW - 20) / 4;
+  // labelW fits the longest short group label at the 12px row-label size
+  const W = 700, rowH = 26, labelW = 180, cellW = (W - labelW - 20) / 4;
   const H = rows.length * rowH + 40;
   const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
 
