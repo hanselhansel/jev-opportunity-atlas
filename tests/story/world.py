@@ -234,7 +234,7 @@ def build_world(root: Path, monkeypatch) -> dict:
     (cfg / "cards" / f"syn.{TV}.yaml").write_text(CARDSET_YAML)
     (cfg / "cards" / f"syn.{TV}.labels.yaml").write_text(LABELS_YAML)
     for f in ("questions/facets.v2.json", "tools.v1.yaml",
-              "cards/planted.v1.yaml"):
+              "cards/planted.v1.yaml", "story_labels.toml"):
         shutil.copy(REPO / "configs" / f, cfg / f)
     (cfg / "run_phases.toml").write_text(RUN_PHASES)
 

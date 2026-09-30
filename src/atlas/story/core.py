@@ -13,7 +13,9 @@ from __future__ import annotations
 
 import json
 import math
+import tomllib
 from datetime import UTC, datetime
+from pathlib import Path
 
 import numpy as np
 import pyarrow.parquet as pq
@@ -326,6 +328,24 @@ def _funnel(frame, snapshot_id, screen_run, rep_all):
     return {"steps": steps, "months": months}
 
 
+def load_story_labels(toml_path=None) -> dict:
+    """The ``labels`` section: human labels for the facets@2 domain and
+    user_role choice keys, from ``configs/story_labels.toml``."""
+    path = (
+        Path(toml_path)
+        if toml_path
+        else paths.CONFIGS / "story_labels.toml"
+    )
+    if not path.exists():
+        return {"domains": {}, "roles": {}}
+    with path.open("rb") as f:
+        data = tomllib.load(f)
+    return {
+        "domains": dict(data.get("domains") or {}),
+        "roles": dict(data.get("roles") or {}),
+    }
+
+
 def build_core(frame, snapshot_id, screen_run=None, R: int = 1000, seed: int = 0):
     """The S1 sections of ``story.json`` (everything except ``meta`` and
     ``method``, which the CLI writes around this call)."""
@@ -349,6 +369,7 @@ def build_core(frame, snapshot_id, screen_run=None, R: int = 1000, seed: int = 0
         "unplaced": _unplaced(fh, rep_fh),
         "domains": build_domains(frame, rep_all),
         "roles": _roles(fh, rep_fh, sorted(cs.groups)),
+        "labels": load_story_labels(),
     }
 
 

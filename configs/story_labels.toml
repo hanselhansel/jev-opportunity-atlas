@@ -1,0 +1,39 @@
+# Human-readable labels for the facets@2 choice keys, written into
+# story.json's `labels` section so the essay can show words instead of ids.
+# Keys must cover every `domain` and `user_role` criterion in
+# configs/questions/facets.v2.json.
+[domains]
+software_development = "Software development"
+infrastructure_ops = "Infrastructure and ops"
+data_ml_ai = "Data, ML, and AI"
+security_privacy = "Security and privacy"
+product_design = "Product and design"
+business_operations = "Business operations"
+finance_payments = "Finance and payments"
+sales_marketing = "Sales and marketing"
+work_careers = "Work and careers"
+legal_government = "Legal and government"
+hardware_electronics = "Hardware and electronics"
+consumer_tech = "Consumer tech"
+health_medical = "Health and medical"
+education_learning = "Education and learning"
+science_research = "Science and research"
+media_publishing = "Media and publishing"
+home_life = "Home and daily life"
+other = "Other"
+mixed = "Mixed"
+unclear = "Unclear"
+
+[roles]
+software_engineer = "Software engineer"
+data_ml_practitioner = "Data or ML practitioner"
+ops_sre_it = "Ops, SRE, or IT"
+founder_executive = "Founder or executive"
+product_or_designer = "Product or designer"
+manager = "Manager"
+researcher_academic = "Researcher or academic"
+student = "Student"
+freelancer_consultant = "Freelancer or consultant"
+end_user_consumer = "End user or consumer"
+other = "Other"
+unclear = "Unclear"
