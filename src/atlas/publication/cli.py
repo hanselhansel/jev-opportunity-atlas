@@ -171,7 +171,9 @@ def _release_pages(args) -> None:
     from atlas.publication.pages import PagesError, publish_pages
 
     try:
-        result = publish_pages(Path(args.dist), dry_run=not args.push)
+        result = publish_pages(
+            Path(args.dist), dry_run=not args.push, kind=args.kind
+        )
     except PagesError as exc:
         print(exc, file=sys.stderr)
         raise SystemExit(1) from exc
@@ -272,9 +274,18 @@ def register(sub) -> None:
     )
     rep.set_defaults(func=_release_replay)
     pages = rsub.add_parser(
-        "pages", help="Build the gh-pages commit for a site build (dry run)"
+        "pages",
+        help="Build the gh-pages commit for a site or essay build (dry run)",
     )
-    pages.add_argument("--dist", default="site/dist", help="Built site dir")
+    pages.add_argument(
+        "--dist", default="site/dist", help="Built site or essay dist dir"
+    )
+    pages.add_argument(
+        "--kind",
+        choices=("site", "essay"),
+        default="site",
+        help="What --dist contains (default: site)",
+    )
     pages.add_argument(
         "--push", action="store_true", help="Push to gh-pages (main session only)"
     )

@@ -161,7 +161,91 @@ def test_cli_pages_is_a_dry_run_without_push(tmp_path, repo, monkeypatch, capsys
 
     monkeypatch.setattr(paths, "ROOT", repo)
     dist = make_dist(tmp_path)
-    pubcli._release_pages(argparse.Namespace(dist=str(dist), push=False))
+    pubcli._release_pages(
+        argparse.Namespace(dist=str(dist), push=False, kind="site")
+    )
+    out = json.loads(capsys.readouterr().out)
+    assert out["pushed"] is False and out["dry_run"] is True
+    assert git(repo, "cat-file", "-t", out["commit"]) == "commit"
+    assert git(repo, "branch", "--list", "gh-pages") == ""
+
+
+ESSAY_INDEX = """<!doctype html>
+<html><head>
+<script type="importmap">
+{"imports": {"d3": "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm"}}
+</script>
+</head><body><script type="module" src="./app.js"></script></body></html>
+"""
+
+
+def make_essay_dist(tmp_path, story='{"meta": {"schema": "story.v1"}}\n'):
+    dist = tmp_path / "essay-dist"
+    (dist / "data").mkdir(parents=True)
+    (dist / "index.html").write_text(ESSAY_INDEX)
+    (dist / "app.js").write_text("export const x = 1;\n")
+    (dist / "data" / "story.json").write_text(story)
+    return dist
+
+
+def test_essay_dry_run_builds_commit_without_moving_refs(tmp_path, repo):
+    dist = make_essay_dist(tmp_path)
+    head = git(repo, "rev-parse", "HEAD")
+    result = publish_pages(dist, repo_root=repo, kind="essay")
+    assert result["pushed"] is False and result["dry_run"] is True
+    assert result["branch"] == "gh-pages" and result["parent"] is None
+    sha = result["commit"]
+    assert git(repo, "cat-file", "-t", sha) == "commit"
+    files = git(repo, "ls-tree", "-r", "--name-only", sha).splitlines()
+    assert sorted(files) == sorted(
+        [".nojekyll", "index.html", "app.js", "data/story.json"]
+    )
+    assert git(repo, "branch", "--list", "gh-pages") == ""
+    assert git(repo, "rev-parse", "HEAD") == head
+    assert len(git(repo, "worktree", "list").splitlines()) == 1
+
+
+def test_essay_refuses_missing_story_json(tmp_path, repo):
+    dist = make_essay_dist(tmp_path)
+    (dist / "data" / "story.json").unlink()
+    with pytest.raises(PagesError, match="story.json"):
+        publish_pages(dist, repo_root=repo, kind="essay")
+
+
+def test_essay_refuses_missing_app_js(tmp_path, repo):
+    dist = make_essay_dist(tmp_path)
+    (dist / "app.js").unlink()
+    with pytest.raises(PagesError, match="app.js"):
+        publish_pages(dist, repo_root=repo, kind="essay")
+
+
+def test_essay_refuses_story_check_failure(tmp_path, repo):
+    dist = make_essay_dist(
+        tmp_path, story='{"meta": {"schema": "story.v1"}, "title": "free text"}\n'
+    )
+    with pytest.raises(PagesError, match="story check"):
+        publish_pages(dist, repo_root=repo, kind="essay")
+
+
+def test_essay_refuses_secret(tmp_path, repo):
+    def add_secret(dist):
+        (dist / "leak.js").write_text(f'const k = "{CANARY}";\n')
+
+    dist = make_essay_dist(tmp_path)
+    add_secret(dist)
+    with pytest.raises(PagesError, match="typesafe-api-key"):
+        publish_pages(dist, repo_root=repo, kind="essay")
+
+
+def test_cli_pages_essay_is_a_dry_run(tmp_path, repo, monkeypatch, capsys):
+    from atlas import paths
+    from atlas.publication import cli as pubcli
+
+    monkeypatch.setattr(paths, "ROOT", repo)
+    dist = make_essay_dist(tmp_path)
+    pubcli._release_pages(
+        argparse.Namespace(dist=str(dist), push=False, kind="essay")
+    )
     out = json.loads(capsys.readouterr().out)
     assert out["pushed"] is False and out["dry_run"] is True
     assert git(repo, "cat-file", "-t", out["commit"]) == "commit"

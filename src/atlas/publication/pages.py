@@ -1,11 +1,13 @@
-"""Publish the built site to a `gh-pages` branch (this project has no GitHub Actions).
+"""Publish the built site or essay to a `gh-pages` branch (no GitHub Actions here).
 
-`publish_pages` refuses unless the built data says `meta.mode == "real"` and passes
-the text gate. It copies the build into a temporary, detached, no-checkout git
-worktree, adds `.nojekyll`, scans the result with the release secret scanner and
-gitleaks, and writes an orphan (or gh-pages-parented) commit with `commit-tree`.
-Nothing moves a ref or pushes unless `dry_run=False`, which only the main session
-uses.
+For ``kind="site"`` (the default) `publish_pages` refuses unless the built data
+says `meta.mode == "real"` and passes the text gate. For ``kind="essay"`` it
+refuses unless the `story dist` output is present and `data/story.json` passes
+`story check`. Either way it copies the build into a temporary, detached,
+no-checkout git worktree, adds `.nojekyll`, scans the result with the release
+secret scanner and gitleaks, and writes an orphan (or gh-pages-parented) commit
+with `commit-tree`. Nothing moves a ref or pushes unless `dry_run=False`, which
+only the main session uses.
 """
 
 from __future__ import annotations
@@ -107,6 +109,22 @@ def _check_data(dist: Path) -> None:
         raise PagesError("text gate blocked the build:\n" + "\n".join(problems))
 
 
+def _check_essay(dist: Path) -> None:
+    """Essay gate: the files `story dist` ships, plus `story check` on the data."""
+    from atlas.story.check import check_story
+
+    for rel in ("index.html", "app.js", "data/story.json"):
+        if not (dist / rel).is_file():
+            raise PagesError(
+                f"{dist} is missing {rel}; run `atlas story dist` first"
+            )
+    problems = check_story(dist / "data" / "story.json")
+    if problems:
+        raise PagesError(
+            "story check blocked the build:\n" + "\n".join(problems)
+        )
+
+
 def _scan(tree: Path, repo: Path) -> None:
     from atlas.publication.allowlist import scan_release
 
@@ -137,6 +155,7 @@ def publish_pages(
     repo_root: Path | None = None,
     branch: str = "gh-pages",
     remote: str = "origin",
+    kind: str = "site",
 ) -> dict:
     """Build the gh-pages commit for `dist_dir`; push it only when dry_run=False."""
     from atlas import paths
@@ -145,7 +164,12 @@ def publish_pages(
     repo = Path(repo_root) if repo_root else paths.ROOT
     if shutil.which("gitleaks") is None:
         raise PagesError("gitleaks is required to publish pages: brew install gitleaks")
-    _check_data(dist)
+    if kind == "essay":
+        _check_essay(dist)
+    elif kind == "site":
+        _check_data(dist)
+    else:
+        raise PagesError(f"unknown pages kind {kind!r}")
     parent = _tip(repo, branch, remote)
     tmp = Path(tempfile.mkdtemp(prefix="atlas-pages-"))
     wt = tmp / "worktree"
@@ -159,7 +183,7 @@ def publish_pages(
         _git(wt, "add", "--all", "--force", ".")
         tree = _git(wt, "write-tree")
         files = len(_git(wt, "ls-files").splitlines())
-        args = ["commit-tree", tree, "-m", "Publish atlas site"]
+        args = ["commit-tree", tree, "-m", f"Publish atlas {kind}"]
         if parent:
             args[2:2] = ["-p", parent]
         commit = _git(wt, *args)

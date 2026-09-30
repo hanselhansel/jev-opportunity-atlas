@@ -133,3 +133,24 @@ It prints a summary such as:
 `match` means the current text hashes to the published `text_sha256`. `changed`
 means the comment was edited after the snapshot. `missing` means it is deleted,
 dead, or gone. Text is written only to `data/rehydrated/<tag>/`, which git ignores.
+
+## Publish the essay
+
+The interactive essay in `essay/` goes through the same guarded `gh-pages`
+path as the site. Both commands are local; nothing here publishes.
+
+```bash
+uv run --no-sync atlas story dist --out essay-dist
+uv run --no-sync atlas release pages --dist essay-dist --kind essay
+```
+
+`story dist` copies the publishable files (`index.html`, `app.js`,
+`style.css`, `charts/`, `lib/`, `content/story.md`, `data/story.json`; tests
+and fixtures stay behind), runs `story check` on the copied `story.json`,
+and applies a privacy gate: no URLs outside `index.html`'s cdn.jsdelivr.net
+importmap, no email addresses, no local absolute paths, no secrets.
+
+`release pages --kind essay` is a dry run. It re-checks the dist, builds an
+orphan `gh-pages` commit with a `.nojekyll` file in a temporary worktree,
+scans it, and prints the commit it would push. The push itself is a
+separate, human-approved step: rerun with `--push` in the main session only.
