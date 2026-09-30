@@ -39,7 +39,8 @@ export function mount(el, story, api) {
   const { rows } = prepare(story);
   el.innerHTML = "";
   const narrow = (el.clientWidth || 700) < 700;
-  const rowH = 22, labelW = 150, countsW = 150, W = 700, H = rows.length * rowH + 30;
+  // the wide counts line runs ~210px at the tick-label size
+  const rowH = 22, labelW = 150, countsW = narrow ? 150 : 220, W = 700, H = rows.length * rowH + 30;
   const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
   const x = d3.scaleLinear().domain([0, d3.max(rows, (r) => r.share.hi95) * 1.05]).range([0, W - labelW - countsW - 20]);
 

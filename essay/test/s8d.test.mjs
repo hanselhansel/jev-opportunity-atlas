@@ -154,3 +154,13 @@ test("terms columns stay wide enough for the longest term", () => {
     assert.ok(d.colW >= d.needW, `width ${w}: colW ${d.colW} < needW ${d.needW}`);
   }
 });
+
+// Real data: z is ~50 while lo95/hi95 bound delta (~2). The tick must sit on
+// the interval's scale, inside [lo95, hi95].
+test("terms tick uses delta, on the interval's scale", () => {
+  const story = { groups: [{ id: "g01", short: "AI coding" }],
+    terms: { g01: [{ term: "code", z: 50.2, lo95: 2.10, hi95: 2.27, n_comments: 1000, n_authors: 882 }] } };
+  const t = terms.prepare(story, 700).groups[0].terms[0];
+  assert.ok(t.delta >= t.lo95 && t.delta <= t.hi95);
+  assert.ok(Math.abs(t.delta - 2.185) < 1e-9);
+});
