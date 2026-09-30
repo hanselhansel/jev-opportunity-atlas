@@ -85,7 +85,9 @@ def _para_run(root, run_id, cards, per_card):
 def _cardset(cards):
     return SimpleNamespace(
         all_cards={c: SimpleNamespace(group_id="g01") for c in cards},
+        cards={c: SimpleNamespace(group_id="g01") for c in cards},
         version=TV,
+        try_resolve=lambda c: c,
     )
 
 

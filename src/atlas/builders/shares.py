@@ -80,18 +80,22 @@ def _ratio_est(est_launch, reps_launch, complaint, n):
     return _est(est_launch / c_est, reps, n)
 
 
-def builder_shares(assign_rows, sample, story_cards, R=R_DEFAULT, seed=SEED):
+def builder_shares(assign_rows, sample, story_cards, R=R_DEFAULT, seed=SEED,
+                   resolve=None):
     """(builders, per_card) from the builders-run assignments.
 
     assign_rows carry comment_id = story_id plus card_id/card_p; `sample` is
     the builders-<seed> table (story_id, period, weight); `story_cards` maps
     card_id -> {"est", "reps"} complaint shares from the S1 bootstrap.
+    ``resolve`` maps merged card ids to their final card before bucketing.
     """
     rows = sample.to_pylist() if hasattr(sample, "to_pylist") else list(sample)
     assigned: dict[int, str | None] = {}
     for a in assign_rows:
         card = a.get("card_id")
         p = a.get("card_p") or 0.0
+        if card not in (None, "none") and resolve is not None:
+            card = resolve(card)
         assigned[int(a["comment_id"])] = (
             card if card not in (None, "none") and p >= MIN_CARD_P else None
         )

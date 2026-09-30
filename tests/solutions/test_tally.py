@@ -69,6 +69,25 @@ def test_tally_counts_and_fix_share():
     assert card_tools["c2"]["blamed"] == []
 
 
+def test_tally_resolves_merged_card_ids():
+    """Mentions on a merged card union their threads under the target."""
+    mentions = [
+        _m(1, 100, "n136", 10, "problem", "AWS"),
+        _m(2, 200, "n014", 20, "problem", "AWS"),
+        _m(3, 300, "n136", 30, "reply", "AWS"),
+    ]
+    confirmed = {tally.hit_id(3, "AWS")}
+    resolve = lambda c: {"n136": "n014"}.get(c, c)
+    _, card_tools = tally.tally(
+        mentions, confirmed, TOOLS, n_boot=50, resolve=resolve
+    )
+    assert "n136" not in card_tools
+    blamed = {b["name"]: b["threads"] for b in card_tools["n014"]["blamed"]}
+    fixes = {f["name"]: f["threads"] for f in card_tools["n014"]["fixes"]}
+    assert blamed == {"AWS": 2}  # threads 10 and 20 both blame under n014
+    assert fixes == {"AWS": 1}
+
+
 def test_sparse_boundary_at_ten_threads():
     mentions = [
         _m(1000 + i, 100, "c1", 1000 + i, "problem", "AWS")

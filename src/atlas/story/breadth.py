@@ -89,7 +89,7 @@ def card_breadth(frame, R: int = 1000, seed: int = 0) -> dict:
     cards = sorted(
         placed["card"].unique()
         if frame.attrs.get("cardset") is None
-        else frame.attrs["cardset"].all_cards
+        else frame.attrs["cardset"].cards
     )
     domains = sorted({d for d in fh["domain"] if isinstance(d, str)})
     dpos = {d: j for j, d in enumerate(domains)}

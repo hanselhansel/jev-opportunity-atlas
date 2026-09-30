@@ -73,6 +73,25 @@ def test_match_rate_and_card_shares():
     assert per_card["cB"]["launch_share"]["sparse"] is True
 
 
+def test_merged_card_resolves_into_target():
+    """Launch assignments on a merged card bucket under its target."""
+    ids = [9_000_000_001 + i for i in range(4)]
+    table = _sample_table(ids, ["P01", "P01", "P02", "P02"], [4.0] * 4)
+    assigns = [
+        _assign_row(ids[0], "n136", 0.9),
+        _assign_row(ids[1], "n014", 0.9),
+        _assign_row(ids[2], "none", 0.9),
+        _assign_row(ids[3], "n136", 0.3),  # below MIN_CARD_P: not a match
+    ]
+    resolve = lambda c: {"n136": "n014"}.get(c, c)
+    _, per_card = shares.builder_shares(
+        assigns, table, {}, resolve=resolve
+    )
+    assert "n136" not in per_card
+    assert per_card["n014"]["launch_share"]["est"] == pytest.approx(0.5)
+    assert per_card["n014"]["launch_share"]["n"] == 2
+
+
 def test_weighted_share_uses_month_weights():
     ids = [9_000_000_001 + i for i in range(4)]
     # P01 rows weigh 8 each, P02 rows weigh 1 each

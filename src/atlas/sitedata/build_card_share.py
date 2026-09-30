@@ -192,7 +192,7 @@ def card_share_rows(ctx, cs, n_boot=2000, seed=0, short_labels=None) -> list[dic
         items = _items(ctx, cs, phases)
         for level, ids in (
             ("group", sorted(cs.groups)),
-            ("card", sorted(cs.all_cards)),
+            ("card", sorted(cs.cards)),
         ):
             if not ids:
                 continue

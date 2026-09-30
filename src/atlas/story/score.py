@@ -347,12 +347,15 @@ def story_section(args, story_path) -> None:
         if merge_path.exists()
         else {}
     )
+    cs = fr.attrs.get("cardset")
+    resolve = getattr(cs, "try_resolve", None)
     bundle_list, edges = bundles.build_bundles(
         merge_json,
         story,
         share_reps={
             c: reps[c]["share"] for c in scoreable if c in reps
         },
+        resolve=resolve,
     )
     io.merge_section(story_path, "bundles", bundle_list)
     io.merge_section(story_path, "edges", edges)
