@@ -8,23 +8,25 @@ export function prepare(story) {
     .map((g) => {
       const cells = ["Q1", "Q2", "Q3", "Q4"].map((q) => {
         const est = g.quarters[q];
-        const logRatio = est ? Math.log(est.est / Math.max(1e-9, g.share.est / 4)) : 0;
+        // quarter share is normalized within its quarter; compare to the
+        // full-year share so flat groups sit at log 0
+        const logRatio = est ? Math.log(Math.max(1e-9, est.est) / Math.max(1e-9, g.share.est)) : 0;
         return { q: q, est, logRatio, fade: fade(est), sparse: est?.sparse === true };
       });
       return { id: g.id, label: g.short || g.label, change: g.change.est, cells };
     })
     .sort((a, b) => b.change - a.change);
-  return { rows };
+  const maxAbs = Math.max(1e-6, ...rows.flatMap((r) => r.cells.map((c) => Math.abs(c.logRatio))));
+  return { rows, maxAbs };
 }
 
 export function mount(el, story, api) {
   const d3 = api.d3;
-  const { rows } = prepare(story);
+  const { rows, maxAbs } = prepare(story);
   el.innerHTML = "";
   const W = 700, rowH = 26, labelW = 110, cellW = (W - labelW - 20) / 4;
   const H = rows.length * rowH + 40;
   const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
-  const maxAbs = d3.max(rows, (r) => d3.max(r.cells, (c) => Math.abs(c.logRatio))) || 1;
   const color = d3.scaleDiverging(["var(--h0)", "var(--paper)", "var(--accent)"]).domain([-maxAbs, 0, maxAbs]);
 
   const row = svg.selectAll("g.r").data(rows).join("g").attr("transform", (d, i) => `translate(0,${i * rowH + 16})`);

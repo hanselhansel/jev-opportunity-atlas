@@ -1,6 +1,7 @@
 // Domain bubbles settle into a complaint-rate lollipop. Rendered as one
 // aligned view: talk share on the left, complaint rate as a lollipop.
 import { drawGlyph, fade } from "../lib/glyph.js";
+import { labelFor } from "../lib/labels.js";
 
 export function prepare(story) {
   const totTalk = story.domains.reduce((a, d) => a + d.discussion.est, 0);
@@ -9,6 +10,7 @@ export function prepare(story) {
   const rows = story.domains
     .map((d) => ({
       id: d.id,
+      label: labelFor(story, "domains", d.id),
       discussion: d.discussion,
       complaints: d.complaints,
       rate: d.rate,
@@ -36,7 +38,7 @@ export function mount(el, story, api) {
     .attr("transform", (d, i) => `translate(0,${i * rowH + 14})`)
     .attr("opacity", (d) => d.fade);
 
-  row.append("text").attr("class", "row-label").attr("x", 0).attr("y", 4).text((d) => d.id);
+  row.append("text").attr("class", "row-label").attr("x", 0).attr("y", 4).text((d) => d.label);
   row
     .append("circle")
     .attr("cx", labelW + 20)

@@ -15,7 +15,7 @@ export function prepare(story, cardId) {
         { label: "first half", est: c.h1 },
         { label: "second half", est: c.h2 },
         { label: "problems", text: `${c.n_problems} from ${c.n_authors} authors, ${c.n_threads} threads` },
-        { label: "change q", text: c.change?.p_adj != null ? String(c.change.p_adj) : "n/a" },
+        { label: "change q", text: c.change?.p_adj != null ? c.change.p_adj.toFixed(2) : "n/a" },
       ],
     },
     {
@@ -45,15 +45,21 @@ export function prepare(story, cardId) {
       lines: [
         { label: "severe 3 of 3", est: c.quality?.severe3 },
         { label: "specific 3 of 3", est: c.quality?.specific3 },
-        { label: "top-3 threads carry", text: c.concentration ? `${Math.round(c.concentration.top3_threads * 100)}%` : "n/a" },
+        { label: "top-3 threads carry", text: c.concentration ? `${(c.concentration.top3_threads * 100).toFixed(1)}%` : "n/a" },
       ],
     },
   ];
+  const pct1 = (v) => `${((v ?? 0) * 100).toFixed(1)}%`;
+  const trend = !c.change
+    ? null
+    : c.change.p_adj < 0.05
+      ? `${c.change.est >= 0 ? "rising" : "cooling"} (q ${c.change.p_adj.toFixed(2)})`
+      : "no clear change";
   const summaryBits = [
-    `${Math.round((c.share?.est || 0) * 1000) / 10}% of problems`,
-    c.change ? `${c.change.est >= 0 ? "rising" : "cooling"} (q ${c.change.p_adj})` : null,
-    c.coping?.paid ? `${Math.round(c.coping.paid.est * 100)}% paid` : null,
-    c.unsolved ? `${Math.round(c.unsolved.unsolved.est * 100)}% unsolved` : "replies not measured",
+    `${pct1(c.share?.est)} of problems`,
+    trend,
+    c.coping?.paid ? `${pct1(c.coping.paid.est)} paid` : null,
+    c.unsolved ? `${pct1(c.unsolved.unsolved.est)} unsolved` : "replies not measured",
   ].filter(Boolean);
   return { id: c.id, label: c.short, statement: c.statement, group: g?.label || c.group, summary: summaryBits.join(", ") + ".", sections };
 }
@@ -66,7 +72,7 @@ export function sheetHtml(card, story, fmt) {
       ? `<tr><td>${esc(l.label)}</td><td>${esc(l.text || "n/a")}</td></tr>`
       : tooFew(l.est)
         ? `<tr><td>${esc(l.label)}</td><td><em>too few mentions to show</em></td></tr>`
-        : `<tr><td>${esc(l.label)}</td><td>${fmt.pct(l.est.est)} <span class="cell-label">95% ${fmt.pct(l.est.lo95)}-${fmt.pct(l.est.hi95)}, n=${fmt.n(l.est.n)}</span></td></tr>`;
+        : `<tr><td>${esc(l.label)}</td><td>${fmt.pct(l.est.est, 1)} <span class="cell-label">95% ${fmt.pct(l.est.lo95, 1)}-${fmt.pct(l.est.hi95, 1)}, n=${fmt.n(l.est.n)}</span></td></tr>`;
   const secs = p.sections
     .map((s) => `<h4 style="margin:10px 0 4px">${esc(s.title)}</h4><table>${s.lines.map(estLine).join("")}</table>`)
     .join("");

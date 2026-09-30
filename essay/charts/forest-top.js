@@ -1,4 +1,6 @@
 // Forest plot of the top 30 cards with the interval glyph and counts columns.
+// Counts are right-aligned inside the container; under 700px wide only
+// "problems / authors" is shown so the column never clips.
 import { drawGlyph, tooFew } from "../lib/glyph.js";
 import { groupColor } from "../lib/palette.js";
 
@@ -25,10 +27,18 @@ export function prepare(story, topN = 30) {
   return { rows, cut };
 }
 
+export function countsLine(d, narrow, fmt) {
+  const f = fmt || { n: (x) => (x == null ? "n/a" : x.toLocaleString("en-US")) };
+  return narrow
+    ? `${f.n(d.n_problems)} problems / ${f.n(d.n_authors)} authors`
+    : `${f.n(d.n_problems)} problems / ${f.n(d.n_authors)} authors / ${f.n(d.n_threads)} threads`;
+}
+
 export function mount(el, story, api) {
   const d3 = api.d3;
   const { rows } = prepare(story);
   el.innerHTML = "";
+  const narrow = (el.clientWidth || 700) < 700;
   const rowH = 22, labelW = 150, countsW = 150, W = 700, H = rows.length * rowH + 30;
   const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
   const x = d3.scaleLinear().domain([0, d3.max(rows, (r) => r.share.hi95) * 1.05]).range([0, W - labelW - countsW - 20]);
@@ -56,9 +66,10 @@ export function mount(el, story, api) {
   row
     .append("text")
     .attr("class", "tick-label")
-    .attr("x", labelW + x.range()[1] + 12)
+    .attr("x", W - 8)
     .attr("y", 4)
-    .text((d) => `${api.fmt.n(d.n_problems)} problems / ${api.fmt.n(d.n_authors)} authors / ${api.fmt.n(d.n_threads)} threads`);
+    .attr("text-anchor", "end")
+    .text((d) => countsLine(d, narrow, api.fmt));
 
   const cap = document.createElement("div");
   cap.className = "cap";
