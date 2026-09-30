@@ -35,6 +35,7 @@ TV = "t9"
 SNAPSHOT, SAMPLE = "snap-syn", "facet-syn"
 SCREEN_RUN, FACETS_RUN, ASSIGN_RUN = "screen-syn", "facets-syn", "assign-syn"
 AUDIT_RUN, BENCH_RUN, PLANTED_RUN = "audit-syn", "bench-syn", "planted-syn"
+BUILDERS_RUN = "builders-syn"
 N_POS, N_P12, N_NEG = 230, 10, 20
 DOMAINS = ("software_development", "infrastructure_ops", "health_medical")
 ROLES = ("software_engineer", "manager", "founder_executive", "unclear")
@@ -67,9 +68,11 @@ RUN_PHASES = """[runs]
 "facets-syn" = "facets"
 "assign-syn" = "assign"
 "assign-syn/replies" = "replies"
+"assign-syn/solutions" = "named fixes"
 "audit-syn" = "checks"
 "bench-syn" = "checks"
 "planted-syn" = "checks"
+"builders-syn" = "builders"
 """
 
 ROBUST_SCREEN = {
@@ -440,6 +443,14 @@ def build_world(root: Path, monkeypatch) -> dict:
     )
     _ledger(assign, ASSIGN_RUN, f"assign-g@{TV}", 40, rng)
     _ledger(assign / "replies", f"{ASSIGN_RUN}/replies", "reply@1", 12, rng)
+    _ledger(
+        assign / "solutions",
+        f"{ASSIGN_RUN}/solutions",
+        "solutions@1",
+        8,
+        rng,
+    )
+    _ledger(paths.run_dir(BUILDERS_RUN), BUILDERS_RUN, "builders@1", 10, rng)
 
     audit = paths.run_dir(AUDIT_RUN)
     _ledger(audit, AUDIT_RUN, f"assign-g@{TV}", 30, rng)
