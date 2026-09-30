@@ -110,9 +110,15 @@ def _cmd_planted(args) -> None:
     ctx = cli._run_ctx(args, price_row, cap, worst, usd_per_token)
     try:
         result = cli._run_or_exit(assign(ctx, items, cs))
+        score = planted_score(result.rows, planted)
+        run_dir = paths.run_dir(args.run)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / f"planted-{cs.version}.json").write_text(
+            json.dumps(score, indent=1) + "\n", encoding="utf-8"
+        )
     finally:
         ctx.guard.close()
-    print(json.dumps(planted_score(result.rows, planted), indent=1))
+    print(json.dumps(score, indent=1))
 
 
 def _cmd_combine(args) -> None:

@@ -76,6 +76,13 @@ def _vocabulary(doc: dict) -> set:
             vocab.add(t["name"])
             vocab.add(t.get("category"))
             vocab |= set(t.get("aliases") or [])
+    labels_path = paths.CONFIGS / "story_labels.toml"
+    if labels_path.exists():
+        import tomllib
+
+        labels = tomllib.loads(labels_path.read_text(encoding="utf-8"))
+        for table in ("domains", "roles"):
+            vocab |= set((labels.get(table) or {}).values())
     for rid in (meta.get("runs") or {}).values():
         if rid:
             vocab.add(rid)

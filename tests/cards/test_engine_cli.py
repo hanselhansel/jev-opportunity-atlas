@@ -11,6 +11,7 @@ import pytest
 
 from atlas import cli, paths
 from atlas.cards.engine import cli as cards_cli
+from atlas.cards.engine.planted import load_planted
 from atlas.inference import keys
 from tests.cards.test_engine_support import CANARY, make_transport
 
@@ -155,6 +156,34 @@ def test_assign_yes_then_residue(tmp_path, monkeypatch, capsys):
     out = json.loads(capsys.readouterr().out)
     assert out["n_total"] == 3 and out["n_residue"] == 1
     assert out["sample"] == [9_000_000_503]
+
+
+def test_planted_yes_writes_result_json(tmp_path, monkeypatch, capsys):
+    planted = load_planted("v1")
+    truth = {c["text"]: c["card_id"] for c in planted.comments}
+
+    def chooser(state, qid, options):
+        card = truth.get(state["problem"])
+        if qid == "group":
+            return "gp1" if card else "none"
+        return card or "none"
+
+    _yes_env(tmp_path, monkeypatch, make_transport(chooser=chooser))
+    args = _parse(
+        ["cards", "planted", "--cardset", "example", "--version", "t0",
+         "--run", "r1", "--yes"]
+    )
+    args.func(args)
+    out = capsys.readouterr().out
+    dec = json.JSONDecoder()
+    _, end = dec.raw_decode(out, out.index("{"))
+    printed, _ = dec.raw_decode(out, out.index("{", end))
+    assert printed["recovery"] == 1.0
+    assert printed["decoy_false_rate"] == 0.0
+    assert printed["n_planted"] == 50 and printed["n_decoys"] == 10
+    path = tmp_path / "runs" / "r1" / "planted-t0+planted-v1.json"
+    assert path.exists()
+    assert json.loads(path.read_text()) == printed
 
 
 def test_verify_yes_rewrites_assignments(tmp_path, monkeypatch, capsys):
