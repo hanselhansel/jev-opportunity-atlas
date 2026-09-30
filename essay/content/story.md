@@ -1,5 +1,14 @@
 # Startup opportunities identified via Hacker News conversations between 2025-26
 
+## Executive summary
+
+- AI coding complaints jumped from 2.7% to 5.9% in one quarter, then held.
+- Consumer tech is 6.9% of talk but 17.1% of complaints.
+- 60% of people whose paid products got worse already pay, switch, or quit.
+- Rebuilding small tools draws 8 times more launches than its share of complaints.
+- TypeSafe Jev did all the classifying for $22.51. Staying current costs about $1.60 a month.
+- Mainstream LLMs would cost $184 to $2,930 for the same calls.
+
 Founders ask one question first. What hurts, for whom, and is anyone fixing it?
 
 Hacker News is a year-long public log of people hitting problems. We read it at scale.
@@ -19,13 +28,6 @@ We answer six questions. Each one tests something a real opportunity needs.
 - Existing fixes fall short.
 - Few people are building for it.
 
-Four findings stand out.
-
-- AI coding complaints jumped from 2.7% to 5.9% in one quarter. They stayed there.
-- Consumer tech is 6.9% of talk but 17.1% of complaints.
-- 60% of people whose paid products got worse already pay, switch, or quit.
-- Rebuilding small tools draws 8 times more launches than its share of complaints.
-
 ## 0. The raw material
 
 HN produced 3,991,507 comments between 28 September 2025 and 28 September 2026.
@@ -44,7 +46,9 @@ The monthly rate barely moves. It stays between 5.5% and 7.1% of comments.
 
 So HN does not get angrier. What changes is what people complain about.
 
-For a builder: the 58% on cards is the map. The other 42% is noise and one-offs.
+For a builder: the 58% on cards is the map.
+
+The other 42% are real problems too specific for any card.
 
 ## 1. What people complain about
 
@@ -247,6 +251,20 @@ For a builder: pick one need. Follow its evidence. Then go talk to those people.
 ## How we know
 
 This whole study cost $22.51 of classifier credit, over 501,082 calls.
+
+That bought 547 million input tokens and 116 million output tokens.
+
+The same tokens on general LLMs, at September 2026 list prices:
+
+- GPT-5 nano, batched: about $37. Untested on this task.
+- GPT-5 mini, batched: about $184.
+- Claude Haiku 4.5, batched: about $563.
+- Claude Sonnet 5: about $1,460 batched, $2,930 at standard prices.
+- Claude Opus 5.5: about $5,860 at standard prices.
+
+Our 50% confidence rule also needs probabilities. Many LLM APIs do not return them.
+
+A monthly refresh with Jev costs about $1.60.
 
 <!-- chart:receipt -->
 
